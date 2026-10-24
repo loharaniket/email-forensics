@@ -12,10 +12,12 @@ import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.dto.infrastructure.IpArtifactDto;
 import com.emailforensics.backend.dto.urlintel.ExtractedUrlDto;
+import com.emailforensics.backend.dto.visual.VisualArtifactDto;
 import com.emailforensics.backend.headers.HeaderForensicService;
 import com.emailforensics.backend.infrastructure.InfrastructureService;
 import com.emailforensics.backend.security.UserPrincipal;
 import com.emailforensics.backend.urlintel.UrlIntelService;
+import com.emailforensics.backend.visual.VisualAnalysisService;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,15 +45,18 @@ public class EvidenceController {
     private final HeaderForensicService headerForensicService;
     private final UrlIntelService urlIntelService;
     private final InfrastructureService infrastructureService;
+    private final VisualAnalysisService visualAnalysisService;
 
     public EvidenceController(EvidenceService evidenceService,
                               HeaderForensicService headerForensicService,
                               UrlIntelService urlIntelService,
-                              InfrastructureService infrastructureService) {
+                              InfrastructureService infrastructureService,
+                              VisualAnalysisService visualAnalysisService) {
         this.evidenceService = evidenceService;
         this.headerForensicService = headerForensicService;
         this.urlIntelService = urlIntelService;
         this.infrastructureService = infrastructureService;
+        this.visualAnalysisService = visualAnalysisService;
     }
 
     @PostMapping(value = "/cases/{caseId}/evidence/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -140,6 +145,12 @@ public class EvidenceController {
     @GetMapping("/evidence/{emailId}/infrastructure")
     public ResponseEntity<List<IpArtifactDto>> getInfrastructure(@PathVariable UUID emailId) {
         List<IpArtifactDto> response = infrastructureService.getInfrastructure(emailId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/visuals")
+    public ResponseEntity<List<VisualArtifactDto>> getVisualArtifacts(@PathVariable UUID emailId) {
+        List<VisualArtifactDto> response = visualAnalysisService.getVisualArtifacts(emailId);
         return ResponseEntity.ok(response);
     }
 }

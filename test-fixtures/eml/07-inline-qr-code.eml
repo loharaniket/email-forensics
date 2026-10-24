@@ -1,0 +1,29 @@
+Received: from mail-relay.phish-domain.test (mail-relay.phish-domain.test [198.51.100.55]) by mx.emailforensics.local with ESMTP id 9988CC; Sat, 24 Oct 2026 12:00:00 +0000
+From: Security Team <security@it-support-notice.test>
+To: analyst@emailforensics.local
+Subject: Urgent MFA Device Re-authentication Required
+Date: Sat, 24 Oct 2026 12:00:00 +0000
+Message-ID: <qr-mfa-security-notice-20261024@phish-domain.test>
+MIME-Version: 1.0
+Content-Type: multipart/related; boundary="----=_Part_Boundary_Visual_001"
+
+------=_Part_Boundary_Visual_001
+Content-Type: text/html; charset=UTF-8
+
+<html><body><h2>Urgent Multi-Factor Authentication Reset</h2><p>Please scan the QR code below using your mobile authenticator app to complete verification:</p><p><img src="cid:mfa_qr_code" alt="MFA QR Code" /></p><p>Thank you,<br/>IT Security</p></body></html>
+------=_Part_Boundary_Visual_001
+Content-Type: image/png
+Content-Disposition: inline; filename="mfa_qr_verify.png"
+Content-ID: <mfa_qr_code>
+Content-Transfer-Encoding: base64
+
+iVBORw0KGgoAAAANSUhEUgAAAPoAAAD6AQAAAACgl2eQAAABwUlEQVR4Xu2XwY3DMAwECbgAl6TW
+VZILEMDbIX2JLo/cewETRiBRk8daXEqO/B4zPjMf8QAdD9DxAB0FzFCceWSuMzXMKxapXrMBkqV5
+XHFcQ5hgkZ03AiSqBI4VgxzTGacjIJkj6renngD7pcmi1oYjQP6cYqg6pow7bwSgDGB7SPWaC/AK
+8upggX1+UzYAMtFVZdbGoZtdYEYAZVZNWCGNMCcOsgLqQEQaj5YC1+Qm0wOQUzgNVWlXkGM6qwMY
+AfjlVWa1NKubmQEyTef1MMY7LdkJkMbgKKzCqwMFhZv9HQBKrqYsSSB4HfdWAE5ZXN1Vady1Vhln
+fw8OwN1+68aOZXrjjnfJeQBSRJImgP2DvcM+XoCEJR+Ag9pTLloyS0YAzFliKbxqAtqp/T0YAOUa
+pmishob3t5JzAaaSGmnL0Kv0/Rcv4Ja5wGZdV5p0Am6mWvHxq5pu7AR0MI3eNYpt0sqcAJLdfrM+
+PQ4u8HO3vwWQ3FKq6mjIxIdMC2DRtfQ7sr6e3t3AEMA4jOtYubuZH5D0rtYIE6XaCMi+vdPEmB9s
+2R+ZFoAKLGqzbu9zRRn4yAn4Fg/Q8QAdD9DxP/AD4kaDyJA7eGAAAAAASUVORK5CYII=
+------=_Part_Boundary_Visual_001--

@@ -78,4 +78,9 @@ export const getEvidenceInfrastructure = async (emailId) => {
   return response.data;
 };
 
+export const getEvidenceVisuals = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/visuals`);
+  return response.data;
+};
+
 
