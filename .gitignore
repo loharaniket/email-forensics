@@ -1,0 +1,44 @@
+# IDE & Editors
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.sw?
+.DS_Store
+Thumbs.db
+
+# Environment & Local Configuration
+.env
+.env.local
+.env.*.local
+*.local
+
+# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Java & Backend
+target/
+backend/target/
+build/
+.mvn/wrapper/maven-wrapper.jar
+*.class
+
+# Evidence Vault & Raw Storage
+evidence_vault/
+vault/
+*.eml.vault
+
+# Temporary files and logs
+logs/
+*.log
+scratch/
+
+# Documentation
+docs/
