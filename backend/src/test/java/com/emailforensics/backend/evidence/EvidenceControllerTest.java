@@ -137,6 +137,18 @@ class EvidenceControllerTest {
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/headers")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.fromAddress").value("alice@test.org"))
+                .andExpect(jsonPath("$.fromDomain").value("test.org"))
+                .andExpect(jsonPath("$.verificationNote").isNotEmpty());
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/hops")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test

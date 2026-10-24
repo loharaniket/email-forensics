@@ -8,6 +8,9 @@ import com.emailforensics.backend.dto.evidence.EvidenceOverviewDto;
 import com.emailforensics.backend.dto.evidence.EvidenceStatusResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceSummaryDto;
 import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
+import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
+import com.emailforensics.backend.dto.headers.ReceivedHopDto;
+import com.emailforensics.backend.headers.HeaderForensicService;
 import com.emailforensics.backend.security.UserPrincipal;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
@@ -33,9 +36,11 @@ import java.util.UUID;
 public class EvidenceController {
 
     private final EvidenceService evidenceService;
+    private final HeaderForensicService headerForensicService;
 
-    public EvidenceController(EvidenceService evidenceService) {
+    public EvidenceController(EvidenceService evidenceService, HeaderForensicService headerForensicService) {
         this.evidenceService = evidenceService;
+        this.headerForensicService = headerForensicService;
     }
 
     @PostMapping(value = "/cases/{caseId}/evidence/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -100,6 +105,18 @@ public class EvidenceController {
     @GetMapping("/evidence/{emailId}/attachments")
     public ResponseEntity<List<AttachmentMetaDto>> getEvidenceAttachments(@PathVariable UUID emailId) {
         List<AttachmentMetaDto> response = evidenceService.getEvidenceAttachments(emailId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/headers")
+    public ResponseEntity<HeaderAnalysisDto> getHeaderAnalysis(@PathVariable UUID emailId) {
+        HeaderAnalysisDto response = headerForensicService.getHeaderAnalysis(emailId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/hops")
+    public ResponseEntity<List<ReceivedHopDto>> getReceivedHops(@PathVariable UUID emailId) {
+        List<ReceivedHopDto> response = headerForensicService.getReceivedHops(emailId);
         return ResponseEntity.ok(response);
     }
 }

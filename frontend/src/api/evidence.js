@@ -57,3 +57,14 @@ export const getEvidenceAttachments = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/attachments`);
   return response.data;
 };
+
+export const getEvidenceHeaders = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/headers`);
+  return response.data;
+};
+
+export const getEvidenceHops = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/hops`);
+  return response.data;
+};
+

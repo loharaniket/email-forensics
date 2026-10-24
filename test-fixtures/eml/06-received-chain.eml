@@ -1,0 +1,16 @@
+Received: from relay2.corp.test (relay2.corp.test [198.51.100.22]) by mx.emailforensics.local with ESMTP id 8899AA; Wed, 21 Oct 2026 10:02:15 +0000
+Received: from outbound.phish-sender.test (outbound.phish-sender.test [203.0.113.45]) by relay2.corp.test with ESMTP id 7788BB; Wed, 21 Oct 2026 10:01:45 +0000
+Received: from mail-client.local (client [192.0.2.10]) by outbound.phish-sender.test with HTTP; Wed, 21 Oct 2026 10:00:00 +0000
+Authentication-Results: mx.emailforensics.local; spf=pass (mx.emailforensics.local: domain of bounce@unrelated-bounce.org designates 203.0.113.45 as permitted sender); dkim=pass header.i=@phish-sender.test; dmarc=fail action=none; arc=none
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=phish-sender.test; s=default; h=from:to:subject:date; bh=abc123xyz=; b=sig123456=
+From: "IT Support <support@legit-company.com>" <attacker@phish-sender.test>
+To: target-user@emailforensics.local
+Reply-To: phish-collector@external-evil.com
+Return-Path: <bounce@unrelated-bounce.org>
+Subject: Urgent Security Notice
+Date: Wed, 21 Oct 2026 10:00:00 +0000
+Message-ID: <hop-chain-threat-20261021@phish-sender.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Please verify your credentials immediately at the link below.
