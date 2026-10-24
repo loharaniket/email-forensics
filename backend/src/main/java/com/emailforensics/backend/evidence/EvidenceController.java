@@ -1,5 +1,7 @@
 package com.emailforensics.backend.evidence;
 
+import com.emailforensics.backend.content.ContentAnalysisService;
+import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.InvestigationDetailDto;
 import com.emailforensics.backend.dto.common.PageResponse;
@@ -46,17 +48,20 @@ public class EvidenceController {
     private final UrlIntelService urlIntelService;
     private final InfrastructureService infrastructureService;
     private final VisualAnalysisService visualAnalysisService;
+    private final ContentAnalysisService contentAnalysisService;
 
     public EvidenceController(EvidenceService evidenceService,
                               HeaderForensicService headerForensicService,
                               UrlIntelService urlIntelService,
                               InfrastructureService infrastructureService,
-                              VisualAnalysisService visualAnalysisService) {
+                              VisualAnalysisService visualAnalysisService,
+                              ContentAnalysisService contentAnalysisService) {
         this.evidenceService = evidenceService;
         this.headerForensicService = headerForensicService;
         this.urlIntelService = urlIntelService;
         this.infrastructureService = infrastructureService;
         this.visualAnalysisService = visualAnalysisService;
+        this.contentAnalysisService = contentAnalysisService;
     }
 
     @PostMapping(value = "/cases/{caseId}/evidence/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -152,5 +157,12 @@ public class EvidenceController {
     public ResponseEntity<List<VisualArtifactDto>> getVisualArtifacts(@PathVariable UUID emailId) {
         List<VisualArtifactDto> response = visualAnalysisService.getVisualArtifacts(emailId);
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/content-analysis")
+    public ResponseEntity<ContentAnalysisDto> getContentAnalysis(@PathVariable UUID emailId) {
+        return contentAnalysisService.getContentAnalysis(emailId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.notFound().build());
     }
 }

@@ -8,6 +8,7 @@ import {
   getEvidenceUrls,
   getEvidenceInfrastructure,
   getEvidenceVisuals,
+  getEvidenceContentAnalysis,
   downloadOriginalEvidence
 } from '../api/evidence'
 import {
@@ -37,7 +38,11 @@ import {
   Activity,
   Link2,
   Network,
-  QrCode
+  QrCode,
+  Brain,
+  AlertOctagon,
+  Cpu,
+  Sparkles
 } from 'lucide-react'
 
 export default function InvestigationPage() {
@@ -50,6 +55,7 @@ export default function InvestigationPage() {
   const [urls, setUrls] = useState([])
   const [infrastructure, setInfrastructure] = useState([])
   const [visuals, setVisuals] = useState([])
+  const [contentAnalysis, setContentAnalysis] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('headers')
@@ -60,18 +66,23 @@ export default function InvestigationPage() {
   const [urlSearch, setUrlSearch] = useState('')
   const [infraSearch, setInfraSearch] = useState('')
   const [visualSearch, setVisualSearch] = useState('')
+  const [contentCategoryFilter, setContentCategoryFilter] = useState('ALL')
+  const [contentChannelFilter, setContentChannelFilter] = useState('ALL')
+  const [contentSearch, setContentSearch] = useState('')
+  const [showMetricsDrawer, setShowMetricsDrawer] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const [detailData, headersData, hopsData, urlsData, infraData, visualsData] = await Promise.all([
+      const [detailData, headersData, hopsData, urlsData, infraData, visualsData, contentData] = await Promise.all([
         getInvestigationDetail(emailId),
         getEvidenceHeaders(emailId).catch(() => null),
         getEvidenceHops(emailId).catch(() => []),
         getEvidenceUrls(emailId).catch(() => []),
         getEvidenceInfrastructure(emailId).catch(() => []),
-        getEvidenceVisuals(emailId).catch(() => [])
+        getEvidenceVisuals(emailId).catch(() => []),
+        getEvidenceContentAnalysis(emailId).catch(() => null)
       ])
       setDetail(detailData)
       setHeaderAnalysis(headersData)
@@ -79,6 +90,7 @@ export default function InvestigationPage() {
       setUrls(urlsData || [])
       setInfrastructure(infraData || [])
       setVisuals(visualsData || [])
+      setContentAnalysis(contentData)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load email investigation details.')
     } finally {
@@ -115,6 +127,18 @@ export default function InvestigationPage() {
     const rem = sec % 60
     return rem > 0 ? `${mins}m ${rem}s (${sec}s)` : `${mins}m (${sec}s)`
   }
+
+  const predictedLabel = contentAnalysis?.predictedLabel || contentAnalysis?.mlPredictedLabel || 'INSUFFICIENT_DATA'
+  const probability = contentAnalysis?.probability != null ? contentAnalysis.probability : (contentAnalysis?.mlProbability != null ? contentAnalysis.mlProbability : 0)
+  const urgencyDetected = !!(contentAnalysis?.urgency || contentAnalysis?.urgencyDetected)
+  const credentialRequestDetected = !!(contentAnalysis?.credentialRequest || contentAnalysis?.credentialRequestDetected)
+  const paymentInstructionDetected = !!(contentAnalysis?.paymentInstruction || contentAnalysis?.paymentInstructionDetected)
+  const impersonationDetected = !!(contentAnalysis?.impersonation || contentAnalysis?.impersonationDetected)
+  const secrecyDetected = !!(contentAnalysis?.secrecy || contentAnalysis?.secrecyDetected)
+  const promptMatches = contentAnalysis?.promptMatches || contentAnalysis?.promptInjectionMatches || []
+  const socialMatches = contentAnalysis?.socialEngineeringMatches || []
+  const metrics = contentAnalysis?.modelMetrics || contentAnalysis?.evaluationMetrics || null
+  const promptInjectionDetected = !!(contentAnalysis?.promptInjectionDetected || promptMatches.length > 0)
 
   const getAuthBadge = (val) => {
     if (!val) {
@@ -499,6 +523,22 @@ export default function InvestigationPage() {
               >
                 <QrCode className="h-3.5 w-3.5" />
                 <span>Visuals &amp; QR ({visuals.length})</span>
+              </button>
+
+              <button
+                id="tab-content"
+                onClick={() => setActiveTab('content')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === 'content'
+                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Brain className="h-3.5 w-3.5" />
+                <span>Content &amp; ML</span>
+                {contentAnalysis && (contentAnalysis.promptInjectionDetected || (contentAnalysis.socialEngineeringMatches && contentAnalysis.socialEngineeringMatches.length > 0)) && (
+                  <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                )}
               </button>
 
               <button
@@ -1468,6 +1508,554 @@ export default function InvestigationPage() {
                       )
                     })}
                   </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'content' && (
+              <div className="space-y-6">
+                {!contentAnalysis ? (
+                  <div className="p-8 text-center text-slate-500 bg-slate-950/60 rounded-xl border border-slate-800">
+                    No content analysis data available for this evidence item.
+                  </div>
+                ) : (
+                  <>
+                      <div id="ml-baseline-card" className="p-5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-4 shadow-lg shadow-black/40">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800/80">
+                          <div className="flex items-center gap-2.5">
+                            <div className="p-2 rounded-lg bg-cyan-950/60 border border-cyan-800 text-cyan-400">
+                              <Brain className="h-5 w-5" />
+                            </div>
+                            <div>
+                              <div className="flex items-center gap-2">
+                                <h3 className="text-sm font-bold text-white tracking-wide">
+                                  Tribuo ML Baseline Classifier
+                                </h3>
+                                <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-950 text-cyan-300 border border-cyan-800/80">
+                                  {contentAnalysis.mlModelVersion || 'tribuo-logreg-tfidf-v1.0.0'}
+                                </span>
+                              </div>
+                              <span className="text-xs text-slate-400 font-mono">
+                                Logistic Regression with TF-IDF Word N-Grams
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <span className="text-[11px] font-mono text-slate-400">
+                              Status: <span className="text-emerald-400 font-bold">{contentAnalysis.mlStatus}</span>
+                            </span>
+                            <button
+                              id="toggle-metrics-btn"
+                              onClick={() => setShowMetricsDrawer(!showMetricsDrawer)}
+                              className="flex items-center gap-1.5 px-3 py-1 rounded-lg bg-slate-900 hover:bg-slate-800 border border-slate-700 text-xs font-mono text-slate-200 transition-colors cursor-pointer"
+                            >
+                              <Cpu className="h-3.5 w-3.5 text-cyan-400" />
+                              <span>Evaluation Metrics</span>
+                              {showMetricsDrawer ? (
+                                <ChevronDown className="h-3.5 w-3.5 text-slate-400" />
+                              ) : (
+                                <ChevronRight className="h-3.5 w-3.5 text-slate-400" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center pt-1">
+                          <div className="space-y-1.5">
+                            <span className="text-[11px] font-mono uppercase tracking-wider text-slate-400 block">
+                              Model Classification
+                            </span>
+                            <div
+                              id="ml-predicted-label"
+                              className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-lg border text-xs font-mono font-bold tracking-wider ${
+                                predictedLabel === 'PHISHING'
+                                  ? 'bg-rose-950/70 border-rose-700 text-rose-300'
+                                  : predictedLabel === 'BENIGN'
+                                  ? 'bg-emerald-950/70 border-emerald-700 text-emerald-300'
+                                  : 'bg-slate-900 border-slate-700 text-slate-300'
+                              }`}
+                            >
+                              {predictedLabel === 'PHISHING' && (
+                                <AlertOctagon className="h-4 w-4 text-rose-400" />
+                              )}
+                              {predictedLabel === 'BENIGN' && (
+                                <ShieldCheck className="h-4 w-4 text-emerald-400" />
+                              )}
+                              {predictedLabel !== 'PHISHING' &&
+                                predictedLabel !== 'BENIGN' && (
+                                  <HelpCircle className="h-4 w-4 text-slate-400" />
+                                )}
+                              <span>PREDICTED: {predictedLabel}</span>
+                            </div>
+                          </div>
+
+                          <div className="md:col-span-2 space-y-1.5">
+                            <div className="flex items-center justify-between text-xs font-mono">
+                              <span className="text-slate-400">Phishing Probability Score</span>
+                              <span
+                                className={`font-bold ${
+                                  probability >= 0.7
+                                    ? 'text-rose-400'
+                                    : probability >= 0.4
+                                    ? 'text-amber-400'
+                                    : 'text-emerald-400'
+                                }`}
+                              >
+                                {(probability * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div
+                              id="ml-probability-bar"
+                              className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800 p-0.5"
+                            >
+                              <div
+                                className={`h-full rounded-full transition-all duration-700 ${
+                                  probability >= 0.7
+                                    ? 'bg-gradient-to-r from-amber-500 to-rose-600'
+                                    : probability >= 0.4
+                                    ? 'bg-gradient-to-r from-cyan-500 to-amber-500'
+                                    : 'bg-gradient-to-r from-teal-500 to-emerald-500'
+                                }`}
+                                style={{
+                                  width: `${Math.min(100, Math.max(2, probability * 100))}%`
+                                }}
+                              />
+                            </div>
+                            <span className="text-[10px] font-mono text-slate-500 block">
+                              Evaluated on TF-IDF token distributions extracted from message subject and body channels.
+                            </span>
+                          </div>
+                        </div>
+
+                        {showMetricsDrawer && metrics && (
+                          <div
+                            id="metrics-drawer"
+                            className="mt-4 p-4 rounded-xl bg-slate-900/70 border border-slate-800 space-y-4"
+                          >
+                            <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+                                <Sparkles className="h-4 w-4 text-cyan-400" />
+                                <span>Held-Out Test Set Performance Benchmark</span>
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-400">
+                                Training: {metrics.trainingSampleCount != null ? metrics.trainingSampleCount : metrics.trainingSetSize} samples | Test: {metrics.testSampleCount != null ? metrics.testSampleCount : metrics.testSetSize} samples
+                              </span>
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-center space-y-0.5">
+                                <span className="text-[10px] font-mono text-slate-400 uppercase block">Accuracy</span>
+                                <span className="text-lg font-bold font-mono text-cyan-300">
+                                  {(metrics.accuracy * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-center space-y-0.5">
+                                <span className="text-[10px] font-mono text-slate-400 uppercase block">Precision</span>
+                                <span className="text-lg font-bold font-mono text-emerald-300">
+                                  {(metrics.precision * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-center space-y-0.5">
+                                <span className="text-[10px] font-mono text-slate-400 uppercase block">Recall</span>
+                                <span className="text-lg font-bold font-mono text-cyan-300">
+                                  {(metrics.recall * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                              <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 text-center space-y-0.5">
+                                <span className="text-[10px] font-mono text-slate-400 uppercase block">F1 Score</span>
+                                <span className="text-lg font-bold font-mono text-purple-300">
+                                  {((metrics.f1 != null ? metrics.f1 : metrics.f1Score) * 100).toFixed(1)}%
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="p-3 rounded-lg bg-slate-950/80 border border-slate-800 space-y-2">
+                              <span className="text-xs font-semibold text-slate-300 block">
+                                Held-Out Confusion Matrix
+                              </span>
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
+                                <div className="p-2 rounded bg-emerald-950/30 border border-emerald-900/60 text-emerald-300">
+                                  <span className="text-[10px] block text-emerald-400">True Positives (TP)</span>
+                                  <span className="text-base font-bold">{metrics.truePositives}</span>
+                                </div>
+                                <div className="p-2 rounded bg-rose-950/30 border border-rose-900/60 text-rose-300">
+                                  <span className="text-[10px] block text-rose-400">False Positives (FP)</span>
+                                  <span className="text-base font-bold">{metrics.falsePositives}</span>
+                                </div>
+                                <div className="p-2 rounded bg-emerald-950/30 border border-emerald-900/60 text-emerald-300">
+                                  <span className="text-[10px] block text-emerald-400">True Negatives (TN)</span>
+                                  <span className="text-base font-bold">{metrics.trueNegatives}</span>
+                                </div>
+                                <div className="p-2 rounded bg-rose-950/30 border border-rose-900/60 text-rose-300">
+                                  <span className="text-[10px] block text-rose-400">False Negatives (FN)</span>
+                                  <span className="text-base font-bold">{metrics.falseNegatives}</span>
+                                </div>
+                              </div>
+                              <span className="text-[10px] font-mono text-slate-500 block pt-1">
+                                Rigorous evaluation guarantees: TF-IDF vectorizer fit strictly on the training partition to prevent test set data leakage.
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-3">
+                        {promptInjectionDetected ? (
+                          <div
+                            id="prompt-injection-alert"
+                            className="p-4 rounded-xl bg-rose-950/50 border-2 border-rose-600/90 shadow-xl shadow-rose-950/30 space-y-3"
+                          >
+                            <div className="flex items-center gap-2.5 text-rose-300 font-bold text-sm">
+                              <AlertOctagon className="h-5 w-5 text-rose-400 animate-pulse shrink-0" />
+                              <span>CRITICAL ALERT: Prompt Injection &amp; LLM Override Attempt Detected</span>
+                            </div>
+                            <p className="text-xs text-rose-200/90 leading-relaxed font-mono">
+                              Adversarial instruction overrides or exfiltration triggers were identified. Forensic AI agents, summarizers, and automated triage pipelines must treat this email as untrusted code.
+                            </p>
+
+                            <div className="space-y-2 pt-1">
+                              {promptMatches.map((m, idx) => (
+                                <div
+                                  key={idx}
+                                  className="p-3 rounded-lg bg-black/60 border border-rose-700/80 space-y-1.5"
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="text-xs font-mono font-bold text-rose-300">
+                                        {m.category || m.patternName}
+                                      </span>
+                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-rose-900/80 text-rose-200 border border-rose-700">
+                                        {m.severity || 'CRITICAL'}
+                                      </span>
+                                    </div>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-900 text-slate-300 border border-slate-700">
+                                      Channel: {m.sourceChannel || m.channel}
+                                    </span>
+                                  </div>
+                                  <div className="p-2 rounded bg-slate-950 border border-slate-800 font-mono text-xs text-rose-200 select-all break-all font-semibold">
+                                    &quot;{m.matchedPattern || m.matchedText}&quot;
+                                  </div>
+                                  {m.explanation && (
+                                    <p className="text-[11px] text-rose-300/80 font-sans leading-relaxed">
+                                      {m.explanation}
+                                    </p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            id="prompt-injection-clean"
+                            className="p-3.5 rounded-xl bg-emerald-950/40 border border-emerald-800/60 flex items-center gap-3 text-emerald-300 text-xs font-mono"
+                          >
+                            <ShieldCheck className="h-5 w-5 text-emerald-400 shrink-0" />
+                            <div>
+                              <span className="font-bold text-white block">
+                                No Prompt Injection Indicators Detected
+                              </span>
+                              <span className="text-emerald-300/80 text-[11px]">
+                                Scanned email body, HTML text, OCR extracts, and QR payloads for adversarial AI overrides without triggering alerts.
+                              </span>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="space-y-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-200">
+                            <Activity className="h-4 w-4 text-cyan-400" />
+                            <span>Social Engineering Indicator Flags (5 Categories)</span>
+                          </div>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            Multi-channel scan: Body Text, HTML, OCR Text, QR Payload
+                          </span>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+                          <div
+                            id="social-card-urgency"
+                            className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                              urgencyDetected
+                                ? 'bg-rose-950/40 border-rose-700/80 text-rose-300'
+                                : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white">Urgency &amp; Coercion</span>
+                              <span
+                                className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                                  urgencyDetected
+                                    ? 'bg-rose-900 text-rose-200 border border-rose-700'
+                                    : 'bg-slate-900 text-slate-500'
+                                }`}
+                              >
+                                {urgencyDetected ? 'TRIGGERED' : 'CLEAR'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] leading-relaxed text-slate-400">
+                              Deadlines, suspension threats, urgent demands.
+                            </p>
+                            <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/50">
+                              {socialMatches.filter((m) => m.category === 'URGENCY').length} matches
+                            </div>
+                          </div>
+
+                          <div
+                            id="social-card-credential"
+                            className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                              credentialRequestDetected
+                                ? 'bg-rose-950/40 border-rose-700/80 text-rose-300'
+                                : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white">Credential Request</span>
+                              <span
+                                className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                                  credentialRequestDetected
+                                    ? 'bg-rose-900 text-rose-200 border border-rose-700'
+                                    : 'bg-slate-900 text-slate-500'
+                                }`}
+                              >
+                                {credentialRequestDetected ? 'TRIGGERED' : 'CLEAR'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] leading-relaxed text-slate-400">
+                              Password resets, MFA prompts, login verifications.
+                            </p>
+                            <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/50">
+                              {socialMatches.filter((m) => m.category === 'CREDENTIAL_REQUEST').length} matches
+                            </div>
+                          </div>
+
+                          <div
+                            id="social-card-payment"
+                            className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                              paymentInstructionDetected
+                                ? 'bg-rose-950/40 border-rose-700/80 text-rose-300'
+                                : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white">Payment Instruction</span>
+                              <span
+                                className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                                  paymentInstructionDetected
+                                    ? 'bg-rose-900 text-rose-200 border border-rose-700'
+                                    : 'bg-slate-900 text-slate-500'
+                                }`}
+                              >
+                                {paymentInstructionDetected ? 'TRIGGERED' : 'CLEAR'}
+                              </span>
+                            </div>
+                            <p className="text-[11px] leading-relaxed text-slate-400">
+                              Wire transfers, routing changes, gift cards, invoices.
+                            </p>
+                            <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/50">
+                              {socialMatches.filter((m) => m.category === 'PAYMENT_INSTRUCTION').length} matches
+                            </div>
+                          </div>
+
+                          <div
+                            id="social-card-impersonation"
+                            className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                              impersonationDetected
+                                ? 'bg-rose-950/40 border-rose-700/80 text-rose-300'
+                                : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-xs font-bold text-white">Impersonation</span>
+                              <span
+                                className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                                  impersonationDetected
+                                    ? 'bg-rose-900 text-rose-200 border border-rose-700'
+                                    : 'bg-slate-900 text-slate-500'
+                              }`}
+                            >
+                              {impersonationDetected ? 'TRIGGERED' : 'CLEAR'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] leading-relaxed text-slate-400">
+                            IT support, executive leadership, HR, compliance.
+                          </p>
+                          <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/50">
+                            {socialMatches.filter((m) => m.category === 'IMPERSONATION').length} matches
+                          </div>
+                        </div>
+
+                        <div
+                          id="social-card-secrecy"
+                          className={`p-3.5 rounded-xl border space-y-2 transition-all ${
+                            secrecyDetected
+                              ? 'bg-rose-950/40 border-rose-700/80 text-rose-300'
+                              : 'bg-slate-950/60 border-slate-800/80 text-slate-400'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-white">Secrecy &amp; Bypass</span>
+                            <span
+                              className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold ${
+                                secrecyDetected
+                                  ? 'bg-rose-900 text-rose-200 border border-rose-700'
+                                  : 'bg-slate-900 text-slate-500'
+                              }`}
+                            >
+                              {secrecyDetected ? 'TRIGGERED' : 'CLEAR'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] leading-relaxed text-slate-400">
+                            Strict confidentiality, do not call, bypass protocol.
+                          </p>
+                          <div className="text-[10px] font-mono text-slate-400 pt-1 border-t border-slate-800/50">
+                            {socialMatches.filter((m) => m.category === 'SECRECY').length} matches
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 space-y-3">
+                        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-mono text-slate-400">Filter Category:</span>
+                            {['ALL', 'URGENCY', 'CREDENTIAL_REQUEST', 'PAYMENT_INSTRUCTION', 'IMPERSONATION', 'SECRECY'].map((cat) => (
+                              <button
+                                key={cat}
+                                onClick={() => setContentCategoryFilter(cat)}
+                                className={`px-2.5 py-1 rounded-lg text-[10px] font-mono transition-colors cursor-pointer ${
+                                  contentCategoryFilter === cat
+                                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                }`}
+                              >
+                                {cat === 'CREDENTIAL_REQUEST'
+                                  ? 'CREDENTIALS'
+                                  : cat === 'PAYMENT_INSTRUCTION'
+                                  ? 'PAYMENTS'
+                                  : cat}
+                              </button>
+                            ))}
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-mono text-slate-400">Channel:</span>
+                            {['ALL', 'BODY_TEXT', 'HTML_TEXT', 'OCR_TEXT', 'QR_PAYLOAD'].map((chan) => (
+                              <button
+                                key={chan}
+                                onClick={() => setContentChannelFilter(chan)}
+                                className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                                  contentChannelFilter === chan
+                                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                                    : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                                }`}
+                              >
+                                {chan === 'ALL' ? 'ALL CHANNELS' : chan.replace('_TEXT', '').replace('_PAYLOAD', '')}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div className="relative">
+                          <Search className="h-4 w-4 absolute left-3 top-2.5 text-slate-500" />
+                          <input
+                            id="content-search-input"
+                            type="text"
+                            placeholder="Search matched phrases, categories, or channels..."
+                            value={contentSearch}
+                            onChange={(e) => setContentSearch(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                          />
+                        </div>
+
+                        <div className="space-y-2 max-h-96 overflow-y-auto pt-1">
+                          {(() => {
+                            const filtered = socialMatches.filter((m) => {
+                              const chan = m.sourceChannel || m.channel || ''
+                              const matchCat = contentCategoryFilter === 'ALL' || m.category === contentCategoryFilter
+                              const matchChan = contentChannelFilter === 'ALL' || chan === contentChannelFilter
+                              const matchTerm =
+                                !contentSearch ||
+                                m.matchedPattern.toLowerCase().includes(contentSearch.toLowerCase()) ||
+                                m.category.toLowerCase().includes(contentSearch.toLowerCase()) ||
+                                chan.toLowerCase().includes(contentSearch.toLowerCase())
+                              return matchCat && matchChan && matchTerm
+                            })
+
+                            if (filtered.length === 0) {
+                              return (
+                                <div className="p-6 text-center text-slate-500 bg-slate-900/40 rounded-lg border border-slate-800/80 font-mono text-xs">
+                                  No social engineering matches found for the selected filters.
+                                </div>
+                              )
+                            }
+
+                            return filtered.map((m, idx) => (
+                              <div
+                                key={idx}
+                                className="p-3 rounded-lg bg-slate-900/60 border border-slate-800 hover:border-slate-700 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2"
+                              >
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2">
+                                    <span
+                                      className={`text-[10px] font-mono px-2 py-0.5 rounded font-bold border ${
+                                        m.category === 'URGENCY'
+                                          ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                                          : m.category === 'CREDENTIAL_REQUEST'
+                                          ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                                          : m.category === 'PAYMENT_INSTRUCTION'
+                                          ? 'bg-purple-950/80 text-purple-300 border-purple-800'
+                                          : m.category === 'IMPERSONATION'
+                                          ? 'bg-blue-950/80 text-blue-300 border-blue-800'
+                                          : 'bg-indigo-950/80 text-indigo-300 border-indigo-800'
+                                      }`}
+                                    >
+                                      {m.category}
+                                    </span>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700">
+                                      Channel: {m.sourceChannel || m.channel}
+                                    </span>
+                                    {m.severity && (
+                                      <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400 border border-slate-700">
+                                        {m.severity}
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="font-mono text-xs text-slate-200 select-all font-semibold">
+                                    &quot;{m.matchedPattern}&quot;
+                                  </div>
+                                  {m.explanation && (
+                                    <p className="text-[11px] text-slate-400 font-sans leading-relaxed">
+                                      {m.explanation}
+                                    </p>
+                                  )}
+                                </div>
+
+                                <button
+                                  id={`copy-social-match-${idx}`}
+                                  onClick={() => copyValue(`social-match-${idx}`, m.matchedPattern)}
+                                  className="text-[11px] font-mono text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer shrink-0"
+                                >
+                                  {copiedKey === `social-match-${idx}` ? (
+                                    <>
+                                      <Check className="h-3 w-3 text-emerald-400" />
+                                      <span className="text-emerald-400">Copied</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Copy className="h-3 w-3" />
+                                      <span>Copy</span>
+                                    </>
+                                  )}
+                                </button>
+                              </div>
+                            ))
+                          })()}
+                        </div>
+                      </div>
+                    </div>
+                  </>
                 )}
               </div>
             )}

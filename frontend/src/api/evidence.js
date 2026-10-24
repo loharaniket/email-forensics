@@ -83,4 +83,9 @@ export const getEvidenceVisuals = async (emailId) => {
   return response.data;
 };
 
+export const getEvidenceContentAnalysis = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/content-analysis`);
+  return response.data;
+};
+
 

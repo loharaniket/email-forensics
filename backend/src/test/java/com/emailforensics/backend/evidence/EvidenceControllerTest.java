@@ -164,6 +164,12 @@ class EvidenceControllerTest {
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/content-analysis")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.mlModelVersion").value("tribuo-logreg-tfidf-v1.0.0"))
+                .andExpect(jsonPath("$.predictedLabel").isNotEmpty());
     }
 
     @Test
