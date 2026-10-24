@@ -1,0 +1,15 @@
+From: security-alert@internal-corp.test
+To: analyst@emailforensics.local
+Subject: Scheduled Security Maintenance Notice
+Date: Wed, 21 Oct 2026 09:30:00 +0000
+Message-ID: <maintenance-20261021-001@internal-corp.test>
+MIME-Version: 1.0
+Content-Type: text/plain; charset=UTF-8
+
+Hello Security Operations,
+
+This is a scheduled notification regarding upcoming internal security maintenance on Friday at 22:00 UTC.
+All systems are expected to remain operational.
+
+Regards,
+IT Operations Team
