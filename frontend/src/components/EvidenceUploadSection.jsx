@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Upload,
   FileCheck,
@@ -11,7 +12,8 @@ import {
   CheckCircle2,
   FileText,
   ShieldAlert,
-  HardDrive
+  HardDrive,
+  Eye
 } from 'lucide-react'
 import {
   uploadEvidence,
@@ -22,6 +24,7 @@ import {
 } from '../api/evidence'
 
 export default function EvidenceUploadSection({ caseId }) {
+  const navigate = useNavigate()
   const [evidenceList, setEvidenceList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [selectedFile, setSelectedFile] = useState(null)
@@ -402,6 +405,15 @@ export default function EvidenceUploadSection({ caseId }) {
                       </div>
 
                       <div className="flex items-center gap-2">
+                        <button
+                          id={`inspect-btn-${item.id}`}
+                          onClick={() => navigate(`/cases/${caseId}/evidence/${item.id}`)}
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow shadow-cyan-600/20 transition-all cursor-pointer"
+                        >
+                          <Eye className="h-3 w-3" />
+                          <span>Inspect Artifact</span>
+                        </button>
+
                         <button
                           id={`verify-btn-${item.id}`}
                           onClick={() => handleVerifyIntegrity(item.id)}

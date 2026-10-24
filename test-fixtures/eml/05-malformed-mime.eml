@@ -1,0 +1,6 @@
+From: broken-sender@corrupt-domain.test
+Subject: Malformed MIME Test
+Date: invalid-date-format-string-that-fails-standard-parsing
+Content-Type: multipart/mixed; boundary="non_matching_boundary"
+
+This message has broken boundary definitions and should be handled gracefully without crashing the parser.

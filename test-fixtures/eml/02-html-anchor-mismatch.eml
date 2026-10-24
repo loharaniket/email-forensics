@@ -1,0 +1,20 @@
+From: billing-update@secure-bank.test
+To: victim@example.org
+Subject: Urgent Action Required: Verify Account Access
+Date: Thu, 22 Oct 2026 14:15:00 +0000
+Message-ID: <alert-20261022-9988@secure-bank.test>
+MIME-Version: 1.0
+Content-Type: text/html; charset=UTF-8
+
+<!DOCTYPE html>
+<html>
+<body>
+  <h2>Urgent Banking Security Notification</h2>
+  <p>Dear customer,</p>
+  <p>We observed unauthorized sign-in attempts on your corporate account.</p>
+  <p>Please click here to confirm your credentials: 
+     <a href="http://198.51.100.44:8080/login/verify">https://secure.chase-internal-portal.test/login</a>
+  </p>
+  <p>Security Operations Department</p>
+</body>
+</html>

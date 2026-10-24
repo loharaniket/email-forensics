@@ -47,3 +47,13 @@ export const downloadOriginalEvidence = async (emailId, originalFilename) => {
   link.remove();
   window.URL.revokeObjectURL(url);
 };
+
+export const getInvestigationDetail = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/investigation`);
+  return response.data;
+};
+
+export const getEvidenceAttachments = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/attachments`);
+  return response.data;
+};

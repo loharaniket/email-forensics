@@ -124,6 +124,19 @@ class EvidenceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"sample-evidence.eml\""))
                 .andExpect(content().bytes(emlBytes));
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/investigation")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.evidenceId").value(emailId))
+                .andExpect(jsonPath("$.parsedEmail.subject").value("Test Evidence Email"))
+                .andExpect(jsonPath("$.parsedEmail.from").value("alice@test.org"))
+                .andExpect(jsonPath("$.parsedEmail.extractedText").value("This is the raw content of evidence."));
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/attachments")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
     }
 
     @Test

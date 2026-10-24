@@ -1,5 +1,7 @@
 package com.emailforensics.backend.evidence;
 
+import com.emailforensics.backend.dto.email.AttachmentMetaDto;
+import com.emailforensics.backend.dto.email.InvestigationDetailDto;
 import com.emailforensics.backend.dto.common.PageResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceIntegrityResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceOverviewDto;
@@ -23,6 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -86,5 +89,17 @@ public class EvidenceController {
                 .contentType(MediaType.parseMediaType("message/rfc822"))
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .body(resource);
+    }
+
+    @GetMapping("/evidence/{emailId}/investigation")
+    public ResponseEntity<InvestigationDetailDto> getInvestigationDetail(@PathVariable UUID emailId) {
+        InvestigationDetailDto response = evidenceService.getInvestigationDetail(emailId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/attachments")
+    public ResponseEntity<List<AttachmentMetaDto>> getEvidenceAttachments(@PathVariable UUID emailId) {
+        List<AttachmentMetaDto> response = evidenceService.getEvidenceAttachments(emailId);
+        return ResponseEntity.ok(response);
     }
 }

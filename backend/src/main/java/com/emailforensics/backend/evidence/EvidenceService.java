@@ -10,6 +10,10 @@ import com.emailforensics.backend.dto.evidence.EvidenceOverviewDto;
 import com.emailforensics.backend.dto.evidence.EvidenceStatusResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceSummaryDto;
 import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
+import com.emailforensics.backend.dto.email.AttachmentMetaDto;
+import com.emailforensics.backend.dto.email.InvestigationDetailDto;
+import com.emailforensics.backend.dto.email.ParsedEmailDto;
+import com.emailforensics.backend.email.EmailParserService;
 import com.emailforensics.backend.security.UserPrincipal;
 import com.emailforensics.backend.user.User;
 import com.emailforensics.backend.user.UserRepository;
@@ -37,6 +41,7 @@ public class EvidenceService {
     private final CaseRepository caseRepository;
     private final UserRepository userRepository;
     private final EvidenceStorageService storageService;
+    private final EmailParserService emailParserService;
     private final String pipelineVersion;
 
     public EvidenceService(EmailEvidenceRepository evidenceRepository,
@@ -44,12 +49,14 @@ public class EvidenceService {
                            CaseRepository caseRepository,
                            UserRepository userRepository,
                            EvidenceStorageService storageService,
+                           EmailParserService emailParserService,
                            @Value("${emailforensics.pipeline.version:1.0.0}") String pipelineVersion) {
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.caseRepository = caseRepository;
         this.userRepository = userRepository;
         this.storageService = storageService;
+        this.emailParserService = emailParserService;
         this.pipelineVersion = pipelineVersion;
     }
 
@@ -91,6 +98,15 @@ public class EvidenceService {
                 stored.getSha256Hash(),
                 uploader
         );
+
+        try (InputStream streamForParse = storageService.loadAsResource(stored.getStorageKey()).getInputStream()) {
+            ParsedEmailDto parsed = emailParserService.parse(streamForParse);
+            if (parsed.getSubject() != null) evidence.setSubject(parsed.getSubject());
+            if (parsed.getMessageId() != null) evidence.setMessageId(parsed.getMessageId());
+            if (parsed.getSentDate() != null) evidence.setSentDate(parsed.getSentDate());
+        } catch (Exception ignored) {
+        }
+
         evidence = evidenceRepository.save(evidence);
 
         AnalysisRun run = new AnalysisRun(
@@ -236,5 +252,81 @@ public class EvidenceService {
         EmailEvidence evidence = evidenceRepository.findById(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
         return evidence.getOriginalFilename();
+    }
+
+    @Transactional
+    public InvestigationDetailDto getInvestigationDetail(UUID emailId) {
+        EmailEvidence evidence = evidenceRepository.findById(emailId)
+                .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
+
+        AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
+                .orElse(null);
+
+        AnalysisStatus status = run != null ? run.getStatus() : AnalysisStatus.QUEUED;
+        String currentStage = run != null ? run.getCurrentStage() : "QUEUED";
+
+        ParsedEmailDto parsed;
+        try (InputStream inputStream = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
+            parsed = emailParserService.parse(inputStream);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read evidence stream for parsing", e);
+        }
+
+        boolean updated = false;
+        if (evidence.getSubject() == null && parsed.getSubject() != null) {
+            evidence.setSubject(parsed.getSubject());
+            updated = true;
+        }
+        if (evidence.getMessageId() == null && parsed.getMessageId() != null) {
+            evidence.setMessageId(parsed.getMessageId());
+            updated = true;
+        }
+        if (evidence.getSentDate() == null && parsed.getSentDate() != null) {
+            evidence.setSentDate(parsed.getSentDate());
+            updated = true;
+        }
+        if (updated) {
+            evidenceRepository.save(evidence);
+        }
+
+        if (run != null && (run.getStatus() == AnalysisStatus.QUEUED || run.getStatus() == AnalysisStatus.RUNNING)) {
+            run.setStatus(AnalysisStatus.COMPLETED);
+            run.setCurrentStage("MIME_PARSED");
+            if (run.getStartedAt() == null) {
+                run.setStartedAt(Instant.now());
+            }
+            run.setCompletedAt(Instant.now());
+            analysisRunRepository.save(run);
+            status = run.getStatus();
+            currentStage = run.getCurrentStage();
+        }
+
+        return new InvestigationDetailDto(
+                evidence.getId(),
+                evidence.getCaseFile().getId(),
+                evidence.getCaseFile().getCaseNumber(),
+                evidence.getCaseFile().getTitle(),
+                evidence.getOriginalFilename(),
+                evidence.getFileSizeBytes(),
+                evidence.getSha256Hash(),
+                evidence.getUploadedAt(),
+                evidence.getUploadedBy().getUsername(),
+                status,
+                currentStage,
+                parsed
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public List<AttachmentMetaDto> getEvidenceAttachments(UUID emailId) {
+        EmailEvidence evidence = evidenceRepository.findById(emailId)
+                .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
+
+        try (InputStream inputStream = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
+            ParsedEmailDto parsed = emailParserService.parse(inputStream);
+            return parsed.getAttachments();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to read evidence stream for attachments", e);
+        }
     }
 }
