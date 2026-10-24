@@ -5,6 +5,8 @@ import {
   getInvestigationDetail,
   getEvidenceHeaders,
   getEvidenceHops,
+  getEvidenceUrls,
+  getEvidenceInfrastructure,
   downloadOriginalEvidence
 } from '../api/evidence'
 import {
@@ -31,7 +33,9 @@ import {
   CheckCircle2,
   XCircle,
   HelpCircle,
-  Activity
+  Activity,
+  Link2,
+  Network
 } from 'lucide-react'
 
 export default function InvestigationPage() {
@@ -41,6 +45,8 @@ export default function InvestigationPage() {
   const [detail, setDetail] = useState(null)
   const [headerAnalysis, setHeaderAnalysis] = useState(null)
   const [hops, setHops] = useState([])
+  const [urls, setUrls] = useState([])
+  const [infrastructure, setInfrastructure] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('headers')
@@ -48,19 +54,25 @@ export default function InvestigationPage() {
   const [copiedKey, setCopiedKey] = useState(null)
   const [expandedHops, setExpandedHops] = useState({})
   const [rawHeaderSearch, setRawHeaderSearch] = useState('')
+  const [urlSearch, setUrlSearch] = useState('')
+  const [infraSearch, setInfraSearch] = useState('')
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const [detailData, headersData, hopsData] = await Promise.all([
+      const [detailData, headersData, hopsData, urlsData, infraData] = await Promise.all([
         getInvestigationDetail(emailId),
         getEvidenceHeaders(emailId).catch(() => null),
-        getEvidenceHops(emailId).catch(() => [])
+        getEvidenceHops(emailId).catch(() => []),
+        getEvidenceUrls(emailId).catch(() => []),
+        getEvidenceInfrastructure(emailId).catch(() => [])
       ])
       setDetail(detailData)
       setHeaderAnalysis(headersData)
       setHops(hopsData || [])
+      setUrls(urlsData || [])
+      setInfrastructure(infraData || [])
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load email investigation details.')
     } finally {
@@ -195,6 +207,30 @@ export default function InvestigationPage() {
     if (!rawHeaderSearch) return true
     const q = rawHeaderSearch.toLowerCase()
     return k.toLowerCase().includes(q) || values.some((v) => v.toLowerCase().includes(q))
+  })
+
+  const filteredUrls = urls.filter((u) => {
+    if (!urlSearch) return true
+    const q = urlSearch.toLowerCase()
+    return (
+      (u.domain && u.domain.toLowerCase().includes(q)) ||
+      (u.normalizedUrl && u.normalizedUrl.toLowerCase().includes(q)) ||
+      (u.sourceType && u.sourceType.toLowerCase().includes(q)) ||
+      (u.anchorText && u.anchorText.toLowerCase().includes(q))
+    )
+  })
+
+  const filteredInfra = infrastructure.filter((item) => {
+    if (!infraSearch) return true
+    const q = infraSearch.toLowerCase()
+    return (
+      (item.ipAddress && item.ipAddress.toLowerCase().includes(q)) ||
+      (item.sourceContext && item.sourceContext.toLowerCase().includes(q)) ||
+      (item.asnNumber && item.asnNumber.toLowerCase().includes(q)) ||
+      (item.organization && item.organization.toLowerCase().includes(q)) ||
+      (item.country && item.country.toLowerCase().includes(q)) ||
+      (item.city && item.city.toLowerCase().includes(q))
+    )
   })
 
   return (
@@ -361,6 +397,32 @@ export default function InvestigationPage() {
               >
                 <Server className="h-3.5 w-3.5" />
                 <span>Mail Route &amp; Hops ({hops.length})</span>
+              </button>
+
+              <button
+                id="tab-urls"
+                onClick={() => setActiveTab('urls')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === 'urls'
+                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Link2 className="h-3.5 w-3.5" />
+                <span>URLs &amp; Links ({urls.length})</span>
+              </button>
+
+              <button
+                id="tab-infrastructure"
+                onClick={() => setActiveTab('infrastructure')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === 'infrastructure'
+                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Network className="h-3.5 w-3.5" />
+                <span>Network &amp; Infrastructure ({infrastructure.length})</span>
               </button>
 
               <button
@@ -748,6 +810,328 @@ export default function InvestigationPage() {
                         </div>
                       )
                     })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'urls' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="h-3.5 w-3.5 text-slate-500 absolute left-3 top-2.5" />
+                    <input
+                      id="url-search-input"
+                      type="text"
+                      placeholder="Search URLs by domain, host, or source..."
+                      value={urlSearch}
+                      onChange={(e) => setUrlSearch(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-mono text-slate-400">
+                      Total: <strong className="text-white">{urls.length}</strong>
+                    </span>
+                    {urls.filter((u) => u.anchorMismatch).length > 0 && (
+                      <span className="text-[11px] font-mono text-rose-400 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-800/60">
+                        {urls.filter((u) => u.anchorMismatch).length} Anchor Mismatch
+                      </span>
+                    )}
+                    {urls.filter((u) => (u.urlRiskScore || 0) >= 70).length > 0 && (
+                      <span className="text-[11px] font-mono text-rose-400 bg-rose-950/60 px-2 py-0.5 rounded border border-rose-800/60">
+                        {urls.filter((u) => (u.urlRiskScore || 0) >= 70).length} High Risk
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                {filteredUrls.length === 0 ? (
+                  <div className="p-8 rounded-xl bg-slate-950/60 border border-slate-800 text-center text-xs font-mono text-slate-400">
+                    {urls.length === 0
+                      ? 'No URLs or links extracted from this email.'
+                      : 'No URLs match the search filter.'}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {filteredUrls.map((u, idx) => {
+                      const isHighRisk = (u.urlRiskScore || 0) >= 70
+                      const isMedRisk = (u.urlRiskScore || 0) >= 40 && (u.urlRiskScore || 0) < 70
+                      const riskBadgeClass = isHighRisk
+                        ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                        : isMedRisk
+                        ? 'bg-amber-950/80 text-amber-300 border-amber-800'
+                        : 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+
+                      return (
+                        <div
+                          key={idx}
+                          className={`p-4 rounded-xl bg-slate-950/80 border transition-all ${
+                            u.anchorMismatch || isHighRisk
+                              ? 'border-rose-800/80 bg-rose-950/15'
+                              : 'border-slate-800 hover:border-slate-700'
+                          }`}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 pb-3 border-b border-slate-800/60">
+                            <div className="space-y-1">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-bold font-mono text-white">
+                                  {u.domain || 'Unknown Host'}
+                                </span>
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-800 text-slate-300">
+                                  {u.sourceType}
+                                </span>
+                                {u.dnsStatus && (
+                                  <span
+                                    className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
+                                      u.dnsStatus === 'ACTIVE' || u.dnsStatus === 'RESOLVED'
+                                        ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                                        : u.dnsStatus === 'NXDOMAIN'
+                                        ? 'bg-rose-950/60 text-rose-300 border-rose-800/60'
+                                        : u.dnsStatus === 'SKIPPED_IP'
+                                        ? 'bg-blue-950/60 text-blue-300 border-blue-800/60'
+                                        : 'bg-slate-900 text-slate-400 border-slate-700'
+                                    }`}
+                                  >
+                                    DNS: {u.dnsStatus}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span
+                                className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${riskBadgeClass}`}
+                              >
+                                Risk Score: {u.urlRiskScore ?? 0}/100
+                              </span>
+                            </div>
+                          </div>
+
+                          {u.anchorMismatch && (
+                            <div className="mt-3 p-3 rounded-lg bg-rose-950/40 border border-rose-800/80 text-xs font-mono text-rose-300 flex items-start gap-2.5">
+                              <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0 mt-0.5" />
+                              <div className="space-y-1">
+                                <span className="font-bold text-white block">
+                                  Anchor Text Mismatch Detected!
+                                </span>
+                                <p className="text-[11px] text-rose-300/90 leading-relaxed">
+                                  The text visible to the recipient claims to be{' '}
+                                  <strong className="text-white underline">{u.anchorText}</strong>, but
+                                  the actual hyperlink destination connects to an entirely different
+                                  host (<strong className="text-rose-200">{u.domain}</strong>).
+                                </p>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="flex flex-wrap items-center gap-1.5 pt-3">
+                            {u.isIpUrl && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-rose-950/80 text-rose-300 border border-rose-800">
+                                IP Literal Host
+                              </span>
+                            )}
+                            {u.isShortened && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/80 text-amber-300 border border-amber-800">
+                                URL Shortener
+                              </span>
+                            )}
+                            {u.unusualPort && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/80 text-amber-300 border border-amber-800">
+                                Non-Standard Port
+                              </span>
+                            )}
+                            {u.subdomainExcess && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-amber-950/80 text-amber-300 border border-amber-800">
+                                Subdomain Excess (&gt;3)
+                              </span>
+                            )}
+                            {u.lookalike && (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-purple-950/80 text-purple-300 border border-purple-800">
+                                Lookalike / Homoglyph Pattern
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="mt-3 space-y-2 text-xs font-mono">
+                            <div className="bg-slate-900/60 p-2.5 rounded-lg border border-slate-800/80 flex items-start justify-between gap-3">
+                              <div className="break-all flex-1">
+                                <span className="text-slate-500 block text-[10px] uppercase">
+                                  Normalized URL (Safe Forensic Inert Text):
+                                </span>
+                                <span className="text-slate-200 select-all font-semibold">
+                                  {u.normalizedUrl}
+                                </span>
+                              </div>
+                              <button
+                                onClick={() => copyValue(`norm-${idx}`, u.normalizedUrl)}
+                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0"
+                                title="Copy Normalized URL"
+                              >
+                                {copiedKey === `norm-${idx}` ? (
+                                  <Check className="h-3.5 w-3.5 text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3.5 w-3.5" />
+                                )}
+                              </button>
+                            </div>
+
+                            {u.rawUrl && u.rawUrl !== u.normalizedUrl && (
+                              <div className="bg-slate-900/40 p-2 rounded-lg border border-slate-800/60 flex items-start justify-between gap-3 text-[11px]">
+                                <div className="break-all flex-1">
+                                  <span className="text-slate-500 block text-[10px] uppercase">
+                                    Raw Extracted URL:
+                                  </span>
+                                  <span className="text-slate-400 select-all">{u.rawUrl}</span>
+                                </div>
+                                <button
+                                  onClick={() => copyValue(`raw-${idx}`, u.rawUrl)}
+                                  className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0"
+                                  title="Copy Raw URL"
+                                >
+                                  {copiedKey === `raw-${idx}` ? (
+                                    <Check className="h-3 w-3 text-emerald-400" />
+                                  ) : (
+                                    <Copy className="h-3 w-3" />
+                                  )}
+                                </button>
+                              </div>
+                            )}
+
+                            {u.anchorText && (
+                              <div className="text-[11px] text-slate-400">
+                                <span className="text-slate-500">Anchor Text: </span>
+                                <span className="text-slate-300">"{u.anchorText}"</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'infrastructure' && (
+              <div className="space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-slate-950 p-3 rounded-xl border border-slate-800">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="h-3.5 w-3.5 text-slate-500 absolute left-3 top-2.5" />
+                    <input
+                      id="infra-search-input"
+                      type="text"
+                      placeholder="Search by IP, ASN, Organization, Country, or Context..."
+                      value={infraSearch}
+                      onChange={(e) => setInfraSearch(e.target.value)}
+                      className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-[11px] font-mono text-slate-400">
+                      Discovered IPs: <strong className="text-white">{infrastructure.length}</strong>
+                    </span>
+                    <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60">
+                      {infrastructure.filter((i) => !i.isPrivate).length} Public
+                    </span>
+                    <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
+                      {infrastructure.filter((i) => i.isPrivate).length} Internal / Reserved
+                    </span>
+                  </div>
+                </div>
+
+                {filteredInfra.length === 0 ? (
+                  <div className="p-8 rounded-xl bg-slate-950/60 border border-slate-800 text-center text-xs font-mono text-slate-400">
+                    {infrastructure.length === 0
+                      ? 'No IP artifacts or network infrastructure discovered for this message.'
+                      : 'No IP artifacts match the search filter.'}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {filteredInfra.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="p-4 rounded-xl bg-slate-950/80 border border-slate-800 hover:border-slate-700 transition-all space-y-3"
+                      >
+                        <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-slate-800/60">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-sm font-bold text-white select-all">
+                                {item.ipAddress}
+                              </span>
+                              <button
+                                onClick={() => copyValue(`ip-${idx}`, item.ipAddress)}
+                                className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 shrink-0"
+                                title="Copy IP Address"
+                              >
+                                {copiedKey === `ip-${idx}` ? (
+                                  <Check className="h-3 w-3 text-emerald-400" />
+                                ) : (
+                                  <Copy className="h-3 w-3" />
+                                )}
+                              </button>
+                            </div>
+                            <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-2 py-0.5 rounded border border-cyan-800/60 inline-block">
+                              Context: {item.sourceContext}
+                            </span>
+                          </div>
+
+                          <div className="flex flex-col items-end gap-1">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono border ${
+                                item.isPrivate
+                                  ? 'bg-slate-900 text-slate-400 border-slate-700'
+                                  : 'bg-cyan-950/80 text-cyan-300 border-cyan-800'
+                              }`}
+                            >
+                              {item.isPrivate ? 'Internal / RFC 1918' : 'Public Routable IP'}
+                            </span>
+                            <span
+                              className={`px-2 py-0.5 rounded text-[9px] font-mono border ${
+                                item.lookupStatus === 'ENRICHED'
+                                  ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800/60'
+                                  : item.lookupStatus === 'PRIVATE_IP_SKIPPED'
+                                  ? 'bg-slate-900 text-slate-400 border-slate-800'
+                                  : 'bg-amber-950/60 text-amber-300 border-amber-800/60'
+                              }`}
+                            >
+                              {item.lookupStatus}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 text-xs font-mono">
+                          <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60">
+                            <span className="text-[10px] text-slate-500 block uppercase">
+                              ASN &amp; Provider:
+                            </span>
+                            <span className="text-slate-200 font-semibold truncate block">
+                              {item.asnNumber ? `${item.asnNumber}` : 'N/A'}
+                            </span>
+                            <span className="text-[11px] text-slate-400 truncate block">
+                              {item.organization || (item.isPrivate ? 'Internal Network' : 'Unknown Provider')}
+                            </span>
+                          </div>
+
+                          <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60">
+                            <span className="text-[10px] text-slate-500 block uppercase">
+                              Geolocation:
+                            </span>
+                            <span className="text-slate-200 font-semibold truncate block">
+                              {item.country || (item.isPrivate ? 'Private Range' : 'Unknown Country')}
+                            </span>
+                            <span className="text-[11px] text-slate-400 truncate block">
+                              {item.city || (item.latitude ? `${item.latitude}, ${item.longitude}` : 'No City Data')}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-800/40">
+                          <span>Source: {item.dataSource || 'Heuristic Classifier'}</span>
+                          <span>{item.observedAt ? new Date(item.observedAt).toLocaleString() : ''}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 )}
               </div>

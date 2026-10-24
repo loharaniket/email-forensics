@@ -68,3 +68,14 @@ export const getEvidenceHops = async (emailId) => {
   return response.data;
 };
 
+export const getEvidenceUrls = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/urls`);
+  return response.data;
+};
+
+export const getEvidenceInfrastructure = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/infrastructure`);
+  return response.data;
+};
+
+
