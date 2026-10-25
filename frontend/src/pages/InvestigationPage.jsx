@@ -9,6 +9,7 @@ import {
   getEvidenceInfrastructure,
   getEvidenceVisuals,
   getEvidenceContentAnalysis,
+  getEvidenceRiskBreakdown,
   downloadOriginalEvidence
 } from '../api/evidence'
 import {
@@ -56,6 +57,7 @@ export default function InvestigationPage() {
   const [infrastructure, setInfrastructure] = useState([])
   const [visuals, setVisuals] = useState([])
   const [contentAnalysis, setContentAnalysis] = useState(null)
+  const [riskBreakdown, setRiskBreakdown] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('headers')
@@ -69,20 +71,24 @@ export default function InvestigationPage() {
   const [contentCategoryFilter, setContentCategoryFilter] = useState('ALL')
   const [contentChannelFilter, setContentChannelFilter] = useState('ALL')
   const [contentSearch, setContentSearch] = useState('')
+  const [riskSeverityFilter, setRiskSeverityFilter] = useState('ALL')
+  const [riskCategoryFilter, setRiskCategoryFilter] = useState('ALL')
+  const [riskSearch, setRiskSearch] = useState('')
   const [showMetricsDrawer, setShowMetricsDrawer] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
-      const [detailData, headersData, hopsData, urlsData, infraData, visualsData, contentData] = await Promise.all([
+      const [detailData, headersData, hopsData, urlsData, infraData, visualsData, contentData, riskData] = await Promise.all([
         getInvestigationDetail(emailId),
         getEvidenceHeaders(emailId).catch(() => null),
         getEvidenceHops(emailId).catch(() => []),
         getEvidenceUrls(emailId).catch(() => []),
         getEvidenceInfrastructure(emailId).catch(() => []),
         getEvidenceVisuals(emailId).catch(() => []),
-        getEvidenceContentAnalysis(emailId).catch(() => null)
+        getEvidenceContentAnalysis(emailId).catch(() => null),
+        getEvidenceRiskBreakdown(emailId).catch(() => null)
       ])
       setDetail(detailData)
       setHeaderAnalysis(headersData)
@@ -91,6 +97,7 @@ export default function InvestigationPage() {
       setInfrastructure(infraData || [])
       setVisuals(visualsData || [])
       setContentAnalysis(contentData)
+      setRiskBreakdown(riskData)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load email investigation details.')
     } finally {
@@ -403,7 +410,7 @@ export default function InvestigationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
               <span className="text-[11px] font-mono text-slate-400 block mb-1">Message Date</span>
               <span className="text-xs font-mono text-slate-200 block truncate">
@@ -440,6 +447,27 @@ export default function InvestigationPage() {
               <span className="text-xs font-mono font-bold block">
                 {attachments.length} files{' '}
                 {riskyAttachmentsCount > 0 && `(${riskyAttachmentsCount} RISKY)`}
+              </span>
+            </div>
+
+            <div
+              id="header-risk-pill"
+              onClick={() => setActiveTab('risk')}
+              className={`p-3.5 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] ${
+                riskBreakdown
+                  ? riskBreakdown.riskLevel === 'CRITICAL'
+                    ? 'bg-rose-950/50 border-rose-700/80 text-rose-300'
+                    : riskBreakdown.riskLevel === 'HIGH'
+                    ? 'bg-orange-950/50 border-orange-700/80 text-orange-300'
+                    : riskBreakdown.riskLevel === 'MEDIUM'
+                    ? 'bg-amber-950/50 border-amber-700/80 text-amber-300'
+                    : 'bg-emerald-950/50 border-emerald-700/80 text-emerald-300'
+                  : 'bg-slate-950/60 border-slate-800/80 text-slate-300'
+              }`}
+            >
+              <span className="text-[11px] font-mono text-slate-400 block mb-1">Risk Score</span>
+              <span className="text-xs font-mono font-bold block truncate">
+                {riskBreakdown ? `${riskBreakdown.deterministicRiskScore}/100 (${riskBreakdown.riskLevel})` : 'Evaluating...'}
               </span>
             </div>
           </div>
@@ -538,6 +566,34 @@ export default function InvestigationPage() {
                 <span>Content &amp; ML</span>
                 {contentAnalysis && (contentAnalysis.promptInjectionDetected || (contentAnalysis.socialEngineeringMatches && contentAnalysis.socialEngineeringMatches.length > 0)) && (
                   <span className="h-2 w-2 rounded-full bg-rose-500 animate-pulse" />
+                )}
+              </button>
+
+              <button
+                id="tab-risk"
+                onClick={() => setActiveTab('risk')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === 'risk'
+                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800 shadow-lg shadow-cyan-950/50'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <ShieldAlert className="h-3.5 w-3.5" />
+                <span>Risk &amp; Confidence</span>
+                {riskBreakdown && (
+                  <span
+                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                      riskBreakdown.riskLevel === 'CRITICAL'
+                        ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                        : riskBreakdown.riskLevel === 'HIGH'
+                        ? 'bg-orange-950 text-orange-300 border border-orange-800'
+                        : riskBreakdown.riskLevel === 'MEDIUM'
+                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                        : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                    }`}
+                  >
+                    {riskBreakdown.deterministicRiskScore}/100
+                  </span>
                 )}
               </button>
 
@@ -2054,6 +2110,404 @@ export default function InvestigationPage() {
                           })()}
                         </div>
                       </div>
+                    </div>
+                  </>
+                )}
+              </div>
+            )}
+
+            {activeTab === 'risk' && (
+              <div className="space-y-6">
+                {!riskBreakdown ? (
+                  <div className="p-8 text-center text-slate-400 bg-slate-950/60 rounded-xl border border-slate-800 space-y-2">
+                    <Activity className="h-6 w-6 text-cyan-400 mx-auto animate-spin" />
+                    <p className="text-xs font-mono">Evaluating deterministic risk and evidence confidence...</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                      <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4 relative overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <ShieldAlert className="h-5 w-5 text-rose-400" />
+                            <h2 className="text-sm font-bold text-white tracking-wide">
+                              Deterministic Threat Risk Score
+                            </h2>
+                          </div>
+                          <span
+                            id="risk-band-badge"
+                            className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase tracking-wider border ${
+                              riskBreakdown.riskLevel === 'CRITICAL'
+                                ? 'bg-rose-950 text-rose-300 border-rose-700'
+                                : riskBreakdown.riskLevel === 'HIGH'
+                                ? 'bg-orange-950 text-orange-300 border-orange-700'
+                                : riskBreakdown.riskLevel === 'MEDIUM'
+                                ? 'bg-amber-950 text-amber-300 border-amber-700'
+                                : 'bg-emerald-950 text-emerald-300 border-emerald-700'
+                            }`}
+                          >
+                            {riskBreakdown.riskLevel} BAND ({
+                              riskBreakdown.riskLevel === 'CRITICAL'
+                                ? '75–100'
+                                : riskBreakdown.riskLevel === 'HIGH'
+                                ? '50–74'
+                                : riskBreakdown.riskLevel === 'MEDIUM'
+                                ? '25–49'
+                                : '0–24'
+                            })
+                          </span>
+                        </div>
+
+                        <div className="flex items-baseline gap-3">
+                          <span
+                            id="risk-score-value"
+                            className={`text-4xl sm:text-5xl font-black font-mono tracking-tight ${
+                              riskBreakdown.riskLevel === 'CRITICAL'
+                                ? 'text-rose-400'
+                                : riskBreakdown.riskLevel === 'HIGH'
+                                ? 'text-orange-400'
+                                : riskBreakdown.riskLevel === 'MEDIUM'
+                                ? 'text-amber-400'
+                                : 'text-emerald-400'
+                            }`}
+                          >
+                            {riskBreakdown.deterministicRiskScore}
+                          </span>
+                          <span className="text-lg font-mono text-slate-500 font-bold">/ 100</span>
+                          <span className="text-xs font-mono text-slate-400 ml-auto">
+                            Uncapped findings weight: <strong className="text-slate-200">{riskBreakdown.totalUncappedScore} pts</strong>
+                          </span>
+                        </div>
+
+                        <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800">
+                          <div
+                            className={`h-full transition-all duration-500 ${
+                              riskBreakdown.riskLevel === 'CRITICAL'
+                                ? 'bg-gradient-to-r from-orange-500 to-rose-600'
+                                : riskBreakdown.riskLevel === 'HIGH'
+                                ? 'bg-gradient-to-r from-amber-500 to-orange-500'
+                                : riskBreakdown.riskLevel === 'MEDIUM'
+                                ? 'bg-gradient-to-r from-yellow-500 to-amber-500'
+                                : 'bg-gradient-to-r from-emerald-500 to-teal-500'
+                            }`}
+                            style={{ width: `${Math.max(4, Math.min(100, riskBreakdown.deterministicRiskScore))}%` }}
+                          />
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[11px] text-slate-400 font-mono">
+                          <span>Engine: {riskBreakdown.engineVersion}</span>
+                          <span>Evaluated: {new Date(riskBreakdown.evaluatedAt).toLocaleString()}</span>
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 font-sans leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                          Primary deterministic score calculated as a capped sum of deduplicated technical indicators across 7 forensic channels. AI models cannot alter this score.
+                        </p>
+                      </div>
+
+                      <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4 relative overflow-hidden">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <ShieldCheck className="h-5 w-5 text-cyan-400" />
+                            <h2 className="text-sm font-bold text-white tracking-wide">
+                              Heuristic Evidence Confidence
+                            </h2>
+                          </div>
+                          <span
+                            id="confidence-level-badge"
+                            className={`px-2.5 py-1 rounded-md text-xs font-mono font-bold uppercase tracking-wider border ${
+                              riskBreakdown.confidenceLevel === 'HIGH'
+                                ? 'bg-blue-950 text-blue-300 border-blue-700'
+                                : riskBreakdown.confidenceLevel === 'MODERATE'
+                                ? 'bg-purple-950 text-purple-300 border-purple-700'
+                                : 'bg-slate-900 text-slate-400 border-slate-700'
+                            }`}
+                          >
+                            {riskBreakdown.confidenceLevel} CONFIDENCE ({
+                              riskBreakdown.confidenceLevel === 'HIGH'
+                                ? '75–100'
+                                : riskBreakdown.confidenceLevel === 'MODERATE'
+                                ? '50–74'
+                                : '0–49'
+                            })
+                          </span>
+                        </div>
+
+                        <div className="flex items-baseline gap-3">
+                          <span
+                            id="confidence-score-value"
+                            className={`text-4xl sm:text-5xl font-black font-mono tracking-tight ${
+                              riskBreakdown.confidenceLevel === 'HIGH'
+                                ? 'text-blue-400'
+                                : riskBreakdown.confidenceLevel === 'MODERATE'
+                                ? 'text-purple-400'
+                                : 'text-slate-400'
+                            }`}
+                          >
+                            {riskBreakdown.evidenceConfidenceScore}
+                          </span>
+                          <span className="text-lg font-mono text-slate-500 font-bold">/ 100</span>
+                          <span className="text-xs font-mono text-slate-400 ml-auto">
+                            Corroboration: <strong className="text-slate-200">
+                              {riskBreakdown.categoryScores ? riskBreakdown.categoryScores.filter(c => c.score > 0).length : 0} active categories
+                            </strong>
+                          </span>
+                        </div>
+
+                        <div className="w-full bg-slate-900 rounded-full h-3 overflow-hidden border border-slate-800">
+                          <div
+                            className={`h-full transition-all duration-500 ${
+                              riskBreakdown.confidenceLevel === 'HIGH'
+                                ? 'bg-gradient-to-r from-cyan-500 to-blue-500'
+                                : riskBreakdown.confidenceLevel === 'MODERATE'
+                                ? 'bg-gradient-to-r from-blue-500 to-purple-500'
+                                : 'bg-gradient-to-r from-slate-600 to-slate-400'
+                            }`}
+                            style={{ width: `${Math.max(4, Math.min(100, riskBreakdown.evidenceConfidenceScore))}%` }}
+                          />
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800/80 text-[11px] text-cyan-300 font-mono bg-cyan-950/30 p-2.5 rounded-lg border border-cyan-800/50">
+                          {riskBreakdown.confidenceExplanation}
+                        </div>
+
+                        <p className="text-[11px] text-slate-400 font-sans leading-relaxed bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
+                          Evidence confidence measures data completeness across forensic channels and cross-category corroboration. It is strictly not a calibrated statistical probability.
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Activity className="h-4 w-4 text-cyan-400" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-300 font-mono">
+                            Forensic Category Contributions (7 Channels)
+                          </h3>
+                        </div>
+                        <span className="text-[11px] font-mono text-slate-400">
+                          Click any category to filter risk factors below
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
+                        {riskBreakdown.categoryScores && riskBreakdown.categoryScores.map((cat) => {
+                          const isSelected = riskCategoryFilter === cat.category
+                          const hasFindings = cat.score > 0
+                          return (
+                            <button
+                              key={cat.category}
+                              id={`cat-card-${cat.category.toLowerCase()}`}
+                              onClick={() => setRiskCategoryFilter(isSelected ? 'ALL' : cat.category)}
+                              className={`p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                                isSelected
+                                  ? 'bg-cyan-950/80 border-cyan-500 shadow-md shadow-cyan-950/50 ring-1 ring-cyan-500'
+                                  : hasFindings
+                                  ? 'bg-slate-950/80 border-slate-700 hover:border-slate-600'
+                                  : 'bg-slate-950/40 border-slate-800/60 opacity-75 hover:opacity-100 hover:border-slate-700'
+                              }`}
+                            >
+                              <div className="flex items-center justify-between mb-1.5">
+                                <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${
+                                  hasFindings
+                                    ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                                    : 'bg-slate-900 text-slate-500'
+                                }`}>
+                                  {cat.factorCount} {cat.factorCount === 1 ? 'FINDING' : 'FINDINGS'}
+                                </span>
+                                <span className={`text-xs font-mono font-bold ${hasFindings ? 'text-rose-400' : 'text-slate-500'}`}>
+                                  +{cat.score}
+                                </span>
+                              </div>
+                              <span className="text-xs font-bold text-white block truncate mb-1">
+                                {cat.displayName}
+                              </span>
+                              <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                                <div
+                                  className={`h-full ${
+                                    cat.score >= 50
+                                      ? 'bg-rose-500'
+                                      : cat.score >= 25
+                                      ? 'bg-amber-500'
+                                      : cat.score > 0
+                                      ? 'bg-cyan-500'
+                                      : 'bg-slate-800'
+                                  }`}
+                                  style={{ width: `${Math.min(100, Math.max(0, cat.score))}%` }}
+                                />
+                              </div>
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-950/80 border border-slate-800 rounded-2xl p-5 space-y-4">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                        <div className="flex items-center gap-2">
+                          <Layers className="h-4 w-4 text-cyan-400" />
+                          <h3 className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">
+                            Triggered Risk Factors &amp; Evidence References ({riskBreakdown.factors ? riskBreakdown.factors.length : 0})
+                          </h3>
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className="text-[11px] font-mono text-slate-400">Severity:</span>
+                          {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((sev) => (
+                            <button
+                              key={sev}
+                              id={`risk-filter-sev-${sev.toLowerCase()}`}
+                              onClick={() => setRiskSeverityFilter(sev)}
+                              className={`px-2 py-0.5 rounded text-[10px] font-mono transition-colors cursor-pointer ${
+                                riskSeverityFilter === sev
+                                  ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                                  : 'bg-slate-900 text-slate-400 hover:text-slate-200 border border-slate-800'
+                              }`}
+                            >
+                              {sev}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                        <div className="relative flex-1 max-w-md">
+                          <Search className="h-3.5 w-3.5 absolute left-3 top-2.5 text-slate-500" />
+                          <input
+                            id="risk-factor-search-input"
+                            type="text"
+                            placeholder="Search factor code, explanation, or evidence reference..."
+                            value={riskSearch}
+                            onChange={(e) => setRiskSearch(e.target.value)}
+                            className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
+                          />
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          {riskCategoryFilter !== 'ALL' && (
+                            <span className="text-[11px] font-mono px-2 py-1 rounded bg-cyan-950 text-cyan-300 border border-cyan-800 flex items-center gap-1">
+                              Category: {riskCategoryFilter}
+                              <button
+                                onClick={() => setRiskCategoryFilter('ALL')}
+                                className="ml-1 text-cyan-400 hover:text-white cursor-pointer"
+                              >
+                                &times;
+                              </button>
+                            </span>
+                          )}
+                          {(riskSeverityFilter !== 'ALL' || riskCategoryFilter !== 'ALL' || riskSearch) && (
+                            <button
+                              onClick={() => {
+                                setRiskSeverityFilter('ALL')
+                                setRiskCategoryFilter('ALL')
+                                setRiskSearch('')
+                              }}
+                              className="text-[11px] font-mono text-slate-400 hover:text-slate-200 underline cursor-pointer"
+                            >
+                              Clear filters
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {(() => {
+                        const factors = riskBreakdown.factors || []
+                        const filtered = factors.filter((f) => {
+                          const matchSev = riskSeverityFilter === 'ALL' || f.severity === riskSeverityFilter
+                          const matchCat = riskCategoryFilter === 'ALL' || f.category === riskCategoryFilter
+                          const matchTerm =
+                            !riskSearch ||
+                            f.factorCode.toLowerCase().includes(riskSearch.toLowerCase()) ||
+                            f.explanation.toLowerCase().includes(riskSearch.toLowerCase()) ||
+                            (f.evidenceReference && f.evidenceReference.toLowerCase().includes(riskSearch.toLowerCase()))
+                          return matchSev && matchCat && matchTerm
+                        })
+
+                        if (factors.length === 0) {
+                          return (
+                            <div
+                              id="risk-factors-clean"
+                              className="p-8 rounded-xl bg-emerald-950/30 border border-emerald-800/60 text-center space-y-2"
+                            >
+                              <ShieldCheck className="h-8 w-8 text-emerald-400 mx-auto" />
+                              <h4 className="text-sm font-bold text-white">No Suspicious Risk Factors Detected</h4>
+                              <p className="text-xs text-emerald-300/80 font-mono max-w-lg mx-auto">
+                                All evaluated forensic channels (Headers, Authentication, Route Hops, URLs, Visuals, Content, Machine Learning) are within normal benign thresholds.
+                              </p>
+                            </div>
+                          )
+                        }
+
+                        if (filtered.length === 0) {
+                          return (
+                            <div className="p-8 text-center text-slate-500 bg-slate-900/40 rounded-xl border border-slate-800 text-xs font-mono">
+                              No risk factors match the active filters.
+                            </div>
+                          )
+                        }
+
+                        return (
+                          <div className="space-y-2.5 max-h-[500px] overflow-y-auto">
+                            {filtered.map((factor, idx) => (
+                              <div
+                                key={factor.id || idx}
+                                id={`risk-factor-item-${idx}`}
+                                className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800 hover:border-slate-700 transition-all flex flex-col md:flex-row md:items-start justify-between gap-3 text-xs"
+                              >
+                                <div className="space-y-1.5 flex-1">
+                                  <div className="flex flex-wrap items-center gap-2">
+                                    <span
+                                      className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                                        factor.severity === 'CRITICAL'
+                                          ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                          : factor.severity === 'HIGH'
+                                          ? 'bg-orange-950 text-orange-300 border-orange-800'
+                                          : factor.severity === 'MEDIUM'
+                                          ? 'bg-amber-950 text-amber-300 border-amber-800'
+                                          : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                      }`}
+                                    >
+                                      {factor.severity}
+                                    </span>
+                                    <span className="font-mono text-cyan-300 font-bold">
+                                      {factor.factorCode}
+                                    </span>
+                                    <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-slate-800 text-slate-400">
+                                      {factor.category}
+                                    </span>
+                                    <span className="text-[11px] font-mono font-bold text-rose-400 ml-auto md:ml-0">
+                                      +{factor.weightPoints} pts
+                                    </span>
+                                  </div>
+
+                                  <p className="text-slate-300 leading-relaxed font-sans text-xs">
+                                    {factor.explanation}
+                                  </p>
+
+                                  {factor.evidenceReference && (
+                                    <div className="flex items-center gap-2 pt-1 font-mono text-[11px]">
+                                      <span className="text-slate-500 shrink-0">Evidence:</span>
+                                      <code className="text-slate-300 bg-slate-950 px-2 py-0.5 rounded border border-slate-800 break-all select-all">
+                                        {factor.evidenceReference}
+                                      </code>
+                                      <button
+                                        onClick={() => copyValue(`evidence-ref-${idx}`, factor.evidenceReference)}
+                                        className="p-1 hover:bg-slate-800 rounded text-slate-400 hover:text-cyan-300 transition-colors cursor-pointer shrink-0"
+                                        title="Copy Evidence Reference"
+                                      >
+                                        {copiedKey === `evidence-ref-${idx}` ? (
+                                          <Check className="h-3 w-3 text-emerald-400" />
+                                        ) : (
+                                          <Copy className="h-3 w-3" />
+                                        )}
+                                      </button>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        )
+                      })()}
                     </div>
                   </>
                 )}

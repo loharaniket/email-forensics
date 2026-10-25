@@ -88,4 +88,10 @@ export const getEvidenceContentAnalysis = async (emailId) => {
   return response.data;
 };
 
+export const getEvidenceRiskBreakdown = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/risk-breakdown`);
+  return response.data;
+};
+
+
 

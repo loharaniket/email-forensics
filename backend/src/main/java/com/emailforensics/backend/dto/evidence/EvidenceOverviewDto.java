@@ -20,6 +20,9 @@ public class EvidenceOverviewDto {
     private String uploadedByUsername;
     private AnalysisStatus processingStatus;
     private String currentStage;
+    private Integer riskScore;
+    private String riskLevel;
+    private Integer confidenceScore;
 
     public EvidenceOverviewDto() {
     }
@@ -29,6 +32,17 @@ public class EvidenceOverviewDto {
                                String messageId, Instant sentDate, Instant uploadedAt,
                                String uploadedByUsername, AnalysisStatus processingStatus,
                                String currentStage) {
+        this(emailId, caseId, caseNumber, originalFilename, fileSizeBytes, sha256Hash, subject,
+                messageId, sentDate, uploadedAt, uploadedByUsername, processingStatus, currentStage,
+                null, null, null);
+    }
+
+    public EvidenceOverviewDto(UUID emailId, UUID caseId, String caseNumber, String originalFilename,
+                               Long fileSizeBytes, String sha256Hash, String subject,
+                               String messageId, Instant sentDate, Instant uploadedAt,
+                               String uploadedByUsername, AnalysisStatus processingStatus,
+                               String currentStage, Integer riskScore, String riskLevel,
+                               Integer confidenceScore) {
         this.emailId = emailId;
         this.caseId = caseId;
         this.caseNumber = caseNumber;
@@ -42,6 +56,9 @@ public class EvidenceOverviewDto {
         this.uploadedByUsername = uploadedByUsername;
         this.processingStatus = processingStatus;
         this.currentStage = currentStage;
+        this.riskScore = riskScore;
+        this.riskLevel = riskLevel;
+        this.confidenceScore = confidenceScore;
     }
 
     public UUID getEmailId() {
@@ -146,5 +163,29 @@ public class EvidenceOverviewDto {
 
     public void setCurrentStage(String currentStage) {
         this.currentStage = currentStage;
+    }
+
+    public Integer getRiskScore() {
+        return riskScore;
+    }
+
+    public void setRiskScore(Integer riskScore) {
+        this.riskScore = riskScore;
+    }
+
+    public String getRiskLevel() {
+        return riskLevel;
+    }
+
+    public void setRiskLevel(String riskLevel) {
+        this.riskLevel = riskLevel;
+    }
+
+    public Integer getConfidenceScore() {
+        return confidenceScore;
+    }
+
+    public void setConfidenceScore(Integer confidenceScore) {
+        this.confidenceScore = confidenceScore;
     }
 }

@@ -91,8 +91,15 @@ public class HeaderForensicService {
         entity.setReportedArc(dto.getReportedArc());
         entity.setIdentityMismatchFlags(formatFlagsJson(dto.getIdentityMismatchFlags()));
         entity.setRawHeadersJson(formatRawHeadersJson(dto.getRawHeaders()));
-        headerAnalysisRepository.save(entity);
-        headerAnalysisRepository.flush();
+        try {
+            headerAnalysisRepository.save(entity);
+            headerAnalysisRepository.flush();
+        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+            HeaderAnalysis existing = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
+            if (existing == null) {
+                throw ex;
+            }
+        }
 
         List<ReceivedHop> existingHops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
         if (existingHops.isEmpty()) {
@@ -111,9 +118,15 @@ public class HeaderForensicService {
                         hopDto.getRawHopLine(),
                         hopDto.getParsingWarning()
                 );
-                receivedHopRepository.save(hopEntity);
+                try {
+                    receivedHopRepository.save(hopEntity);
+                } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
+                }
             }
-            receivedHopRepository.flush();
+            try {
+                receivedHopRepository.flush();
+            } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
+            }
             dto.setTotalHopsCount(hops.size());
         } else {
             dto.setTotalHopsCount(existingHops.size());
@@ -138,7 +151,14 @@ public class HeaderForensicService {
 
         HeaderAnalysis entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
         if (entity == null) {
-            return analyzeAndSaveHeaders(emailId);
+            try {
+                return analyzeAndSaveHeaders(emailId);
+            } catch (org.springframework.dao.DataIntegrityViolationException ex) {
+                entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
+                if (entity == null) {
+                    throw ex;
+                }
+            }
         }
 
         List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
@@ -175,7 +195,10 @@ public class HeaderForensicService {
 
         List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
         if (hops.isEmpty()) {
-            analyzeAndSaveHeaders(emailId);
+            try {
+                analyzeAndSaveHeaders(emailId);
+            } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
+            }
             hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
         }
 

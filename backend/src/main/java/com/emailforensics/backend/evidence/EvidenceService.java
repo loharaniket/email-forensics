@@ -42,6 +42,7 @@ public class EvidenceService {
     private final UserRepository userRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
+    private final com.emailforensics.backend.risk.RiskAssessmentRepository riskAssessmentRepository;
     private final String pipelineVersion;
 
     public EvidenceService(EmailEvidenceRepository evidenceRepository,
@@ -50,6 +51,7 @@ public class EvidenceService {
                            UserRepository userRepository,
                            EvidenceStorageService storageService,
                            EmailParserService emailParserService,
+                           com.emailforensics.backend.risk.RiskAssessmentRepository riskAssessmentRepository,
                            @Value("${emailforensics.pipeline.version:1.0.0}") String pipelineVersion) {
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
@@ -57,6 +59,7 @@ public class EvidenceService {
         this.userRepository = userRepository;
         this.storageService = storageService;
         this.emailParserService = emailParserService;
+        this.riskAssessmentRepository = riskAssessmentRepository;
         this.pipelineVersion = pipelineVersion;
     }
 
@@ -204,6 +207,20 @@ public class EvidenceService {
         AnalysisStatus status = latestRun.map(AnalysisRun::getStatus).orElse(AnalysisStatus.QUEUED);
         String currentStage = latestRun.map(AnalysisRun::getCurrentStage).orElse("QUEUED");
 
+        Integer riskScore = null;
+        String riskLevel = null;
+        Integer confidenceScore = null;
+        if (latestRun.isPresent()) {
+            Optional<com.emailforensics.backend.risk.RiskAssessment> assessmentOpt =
+                    riskAssessmentRepository.findByAnalysisRunId(latestRun.get().getId());
+            if (assessmentOpt.isPresent()) {
+                com.emailforensics.backend.risk.RiskAssessment ra = assessmentOpt.get();
+                riskScore = ra.getDeterministicRiskScore();
+                riskLevel = ra.getRiskLevel();
+                confidenceScore = ra.getEvidenceConfidenceScore();
+            }
+        }
+
         return new EvidenceOverviewDto(
                 evidence.getId(),
                 evidence.getCaseFile().getId(),
@@ -217,7 +234,10 @@ public class EvidenceService {
                 evidence.getUploadedAt(),
                 evidence.getUploadedBy().getUsername(),
                 status,
-                currentStage
+                currentStage,
+                riskScore,
+                riskLevel,
+                confidenceScore
         );
     }
 

@@ -13,10 +13,12 @@ import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.dto.infrastructure.IpArtifactDto;
+import com.emailforensics.backend.dto.risk.RiskBreakdownDto;
 import com.emailforensics.backend.dto.urlintel.ExtractedUrlDto;
 import com.emailforensics.backend.dto.visual.VisualArtifactDto;
 import com.emailforensics.backend.headers.HeaderForensicService;
 import com.emailforensics.backend.infrastructure.InfrastructureService;
+import com.emailforensics.backend.risk.RiskScoringService;
 import com.emailforensics.backend.security.UserPrincipal;
 import com.emailforensics.backend.urlintel.UrlIntelService;
 import com.emailforensics.backend.visual.VisualAnalysisService;
@@ -49,19 +51,22 @@ public class EvidenceController {
     private final InfrastructureService infrastructureService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
+    private final RiskScoringService riskScoringService;
 
     public EvidenceController(EvidenceService evidenceService,
                               HeaderForensicService headerForensicService,
                               UrlIntelService urlIntelService,
                               InfrastructureService infrastructureService,
                               VisualAnalysisService visualAnalysisService,
-                              ContentAnalysisService contentAnalysisService) {
+                              ContentAnalysisService contentAnalysisService,
+                              RiskScoringService riskScoringService) {
         this.evidenceService = evidenceService;
         this.headerForensicService = headerForensicService;
         this.urlIntelService = urlIntelService;
         this.infrastructureService = infrastructureService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
+        this.riskScoringService = riskScoringService;
     }
 
     @PostMapping(value = "/cases/{caseId}/evidence/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -164,5 +169,11 @@ public class EvidenceController {
         return contentAnalysisService.getContentAnalysis(emailId)
                 .map(ResponseEntity::ok)
                 .orElseGet(() -> ResponseEntity.notFound().build());
+    }
+
+    @GetMapping("/evidence/{emailId}/risk-breakdown")
+    public ResponseEntity<RiskBreakdownDto> getRiskBreakdown(@PathVariable UUID emailId) {
+        RiskBreakdownDto response = riskScoringService.getRiskBreakdown(emailId);
+        return ResponseEntity.ok(response);
     }
 }
