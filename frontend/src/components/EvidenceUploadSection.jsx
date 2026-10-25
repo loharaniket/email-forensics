@@ -408,7 +408,7 @@ export default function EvidenceUploadSection({ caseId }) {
                         <button
                           id={`inspect-btn-${item.id}`}
                           onClick={() => navigate(`/cases/${caseId}/evidence/${item.id}`)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow shadow-cyan-600/20 transition-all cursor-pointer"
+                          className="inspect-artifact-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow shadow-cyan-600/20 transition-all cursor-pointer"
                         >
                           <Eye className="h-3 w-3" />
                           <span>Inspect Artifact</span>

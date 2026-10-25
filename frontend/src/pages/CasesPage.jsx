@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import { getCasesApi, createCaseApi } from '../api/cases'
 import {
@@ -222,10 +222,14 @@ export default function CasesPage() {
                     <span>{c.createdByUsername || 'analyst'}</span>
                   </div>
 
-                  <div className="flex items-center gap-1 text-xs text-cyan-400 font-medium group-hover:translate-x-1 transition-transform">
+                  <Link
+                    to={`/cases/${c.id}`}
+                    id={`inspect-case-btn-${c.id}`}
+                    className="flex items-center gap-1 text-xs text-cyan-400 font-medium group-hover:translate-x-1 transition-transform"
+                  >
                     <span>Inspect</span>
                     <ArrowRight className="h-3.5 w-3.5" />
-                  </div>
+                  </Link>
                 </div>
               </div>
             ))}

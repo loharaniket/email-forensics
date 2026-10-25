@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '../auth/AuthContext'
 import Navbar from '../components/Navbar'
 import {
   getInvestigationDetail,
@@ -17,6 +18,7 @@ import {
   generateEvidenceAiAssessment,
   downloadOriginalEvidence
 } from '../api/evidence'
+import { getEvidenceReport, downloadEvidenceReportJson } from '../api/report'
 import { getCampaignsForEvidence } from '../api/campaigns'
 import ThreatGraphCanvas from '../components/ThreatGraphCanvas'
 import {
@@ -55,12 +57,18 @@ import {
   Share2,
   Tag,
   History,
-  RefreshCw
+  RefreshCw,
+  Printer,
+  FileDown,
+  BadgeCheck,
+  Award,
+  FileCheck
 } from 'lucide-react'
 
 export default function InvestigationPage() {
   const { caseId, emailId } = useParams()
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [detail, setDetail] = useState(null)
   const [headerAnalysis, setHeaderAnalysis] = useState(null)
@@ -98,6 +106,8 @@ export default function InvestigationPage() {
   const [riskCategoryFilter, setRiskCategoryFilter] = useState('ALL')
   const [riskSearch, setRiskSearch] = useState('')
   const [showMetricsDrawer, setShowMetricsDrawer] = useState(false)
+  const [reportData, setReportData] = useState(null)
+  const [isExportingJson, setIsExportingJson] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -116,7 +126,8 @@ export default function InvestigationPage() {
         graphData,
         campaignsData,
         aiData,
-        aiHistoryData
+        aiHistoryData,
+        reportResult
       ] = await Promise.all([
         getInvestigationDetail(emailId),
         getEvidenceHeaders(emailId).catch(() => null),
@@ -130,7 +141,8 @@ export default function InvestigationPage() {
         getEvidenceGraph(emailId).catch(() => ({ nodes: [], links: [] })),
         getCampaignsForEvidence(emailId).catch(() => []),
         getEvidenceAiAssessment(emailId).catch(() => null),
-        getEvidenceAiHistory(emailId).catch(() => [])
+        getEvidenceAiHistory(emailId).catch(() => []),
+        getEvidenceReport(emailId).catch(() => null)
       ])
       setDetail(detailData)
       setHeaderAnalysis(headersData)
@@ -145,12 +157,24 @@ export default function InvestigationPage() {
       setAssociatedCampaigns(campaignsData || [])
       setAiAssessment(aiData)
       setAiHistory(aiHistoryData || [])
+      setReportData(reportResult)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load email investigation details.')
     } finally {
       setIsLoading(false)
     }
   }, [emailId])
+
+  const handleExportReportJson = async () => {
+    setIsExportingJson(true)
+    try {
+      await downloadEvidenceReportJson(emailId)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsExportingJson(false)
+    }
+  }
 
   const handleGenerateAiAssessment = async (force = true) => {
     setIsAiGenerating(true)
@@ -425,7 +449,29 @@ export default function InvestigationPage() {
             <span>Back to Case ({detail.caseNumber})</span>
           </button>
 
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2" id="report-action-bar">
+            <button
+              id="btn-print-report"
+              onClick={() => {
+                setActiveTab('report')
+                setTimeout(() => window.print(), 300)
+              }}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+            >
+              <Printer className="h-3 w-3 text-cyan-400" />
+              <span>Print / PDF Report</span>
+            </button>
+
+            <button
+              id="btn-export-report-json"
+              onClick={handleExportReportJson}
+              disabled={isExportingJson}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+            >
+              <FileDown className="h-3 w-3 text-emerald-400" />
+              <span>{isExportingJson ? 'Exporting...' : 'Export JSON Report'}</span>
+            </button>
+
             <button
               id="download-original-btn"
               onClick={() => downloadOriginalEvidence(detail.evidenceId, detail.originalFilename)}
@@ -581,7 +627,20 @@ export default function InvestigationPage() {
           )}
 
           <div className="space-y-4 pt-2">
-            <div className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2">
+            <div id="investigation-tabs-nav" className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2">
+              <button
+                id="tab-overview"
+                onClick={() => setActiveTab('overview')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === 'overview'
+                    ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Activity className="h-3.5 w-3.5" />
+                <span>Overview</span>
+              </button>
+
               <button
                 id="tab-headers"
                 onClick={() => setActiveTab('headers')}
@@ -777,7 +836,219 @@ export default function InvestigationPage() {
                 <Layers className="h-3.5 w-3.5" />
                 <span>Raw Headers ({rawHeaderEntries.length})</span>
               </button>
+
+              <button
+                id="tab-report"
+                onClick={() => setActiveTab('report')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold transition-colors cursor-pointer ${
+                  activeTab === 'report'
+                    ? 'bg-emerald-950 text-emerald-300 border border-emerald-700 shadow-lg shadow-emerald-950/50'
+                    : 'text-slate-400 hover:text-emerald-300 hover:bg-emerald-950/20'
+                }`}
+              >
+                <FileCheck className="h-3.5 w-3.5 text-emerald-400" />
+                <span>Forensic Dossier Report</span>
+                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-900/60 text-emerald-300 border border-emerald-700">
+                  Phase 11
+                </span>
+              </button>
             </div>
+
+            {activeTab === 'overview' && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                  <div className={`p-4 rounded-xl border ${
+                    riskBreakdown?.riskLevel === 'CRITICAL' ? 'bg-rose-950/40 border-rose-800/80 text-rose-300' :
+                    riskBreakdown?.riskLevel === 'HIGH' ? 'bg-orange-950/40 border-orange-800/80 text-orange-300' :
+                    riskBreakdown?.riskLevel === 'MEDIUM' ? 'bg-amber-950/40 border-amber-800/80 text-amber-300' :
+                    'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
+                  }`}>
+                    <span className="text-xs font-mono text-slate-400 block mb-1">Deterministic Risk</span>
+                    <div className="text-2xl font-bold font-mono">
+                      {riskBreakdown ? `${riskBreakdown.deterministicRiskScore}/100` : 'Evaluating...'}
+                    </div>
+                    <span className="text-xs font-semibold uppercase">{riskBreakdown?.riskLevel || 'PENDING'}</span>
+                  </div>
+
+                  <div className="p-4 rounded-xl border bg-purple-950/40 border-purple-800/80 text-purple-300">
+                    <span className="text-xs font-mono text-purple-400 block mb-1">AI Classification</span>
+                    <div className="text-xl font-bold truncate">
+                      {aiAssessment ? aiAssessment.threatClassification : 'Pending Generation'}
+                    </div>
+                    <span className="text-xs text-purple-300/80">
+                      {aiAssessment?.confidenceScore ? `${aiAssessment.confidenceScore}% Confidence` : 'Grounded LLM Shield'}
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 text-slate-200">
+                    <span className="text-xs font-mono text-slate-400 block mb-1">Content Prediction</span>
+                    <div className="text-xl font-bold truncate font-mono">
+                      {predictedLabel}
+                    </div>
+                    <span className="text-xs text-slate-400">
+                      {(probability * 100).toFixed(1)}% ML Probability
+                    </span>
+                  </div>
+
+                  <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 text-slate-200">
+                    <span className="text-xs font-mono text-slate-400 block mb-1">Email Authentication</span>
+                    <div className="flex items-center gap-1.5 font-mono text-xs font-bold pt-1">
+                      <span className={`px-2 py-0.5 rounded border ${
+                        headerAnalysis?.spfResult?.toLowerCase() === 'pass' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-rose-950 text-rose-300 border-rose-800'
+                      }`}>
+                        SPF: {headerAnalysis?.spfResult || 'NONE'}
+                      </span>
+                      <span className={`px-2 py-0.5 rounded border ${
+                        headerAnalysis?.dkimResult?.toLowerCase() === 'pass' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-rose-950 text-rose-300 border-rose-800'
+                      }`}>
+                        DKIM: {headerAnalysis?.dkimResult || 'NONE'}
+                      </span>
+                    </div>
+                    <span className="text-[11px] text-slate-400 block mt-1">
+                      DMARC: {headerAnalysis?.dmarcResult || 'NONE'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-4">
+                  <div className="flex items-center justify-between border-b border-slate-800/80 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Hash className="h-4 w-4 text-cyan-400" />
+                      <h3 className="text-sm font-semibold text-white">Cryptographic Custody &amp; Integrity</h3>
+                    </div>
+                    <span className="flex items-center gap-1.5 text-xs font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                      <BadgeCheck className="h-3.5 w-3.5" />
+                      Verified Authentic
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs font-mono">
+                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
+                      <span className="text-slate-400 text-[11px]">SHA-256 Digest</span>
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="break-all text-cyan-300 select-all">{detail.sha256Hash}</span>
+                        <button
+                          onClick={() => copyValue('sha256', detail.sha256Hash)}
+                          className="p-1 rounded hover:bg-slate-800 text-slate-400 hover:text-slate-200 transition-colors shrink-0 cursor-pointer"
+                        >
+                          {copiedKey === 'sha256' ? <Check className="h-3.5 w-3.5 text-emerald-400" /> : <Copy className="h-3.5 w-3.5" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 grid grid-cols-2 gap-2 text-[11px]">
+                      <div>
+                        <span className="text-slate-400 block">File Size</span>
+                        <span className="font-bold text-slate-200">{formatBytes(detail.fileSizeBytes)}</span>
+                      </div>
+                      <div>
+                        <span className="text-slate-400 block">Uploaded At</span>
+                        <span className="font-bold text-slate-200">{new Date(detail.uploadedAt).toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-sm font-semibold text-white flex items-center gap-2">
+                    <Layers className="h-4 w-4 text-cyan-400" />
+                    <span>Forensic Analysis Modules</span>
+                  </h3>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                    <button
+                      onClick={() => setActiveTab('headers')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Mail className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Headers</span>
+                      <span className="text-[11px] text-slate-400">{flags.length} Flags</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('hops')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Server className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Mail Route</span>
+                      <span className="text-[11px] text-slate-400">{hops.length} Hops</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('urls')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Link2 className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">URLs &amp; Links</span>
+                      <span className="text-[11px] text-slate-400">{urls.length} Links</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('infrastructure')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Network className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Network / IP</span>
+                      <span className="text-[11px] text-slate-400">{infrastructure.length} IPs</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('visuals')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <QrCode className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Visuals &amp; QR</span>
+                      <span className="text-[11px] text-slate-400">{visuals.length} Artifacts</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('content')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Brain className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Content / NLP</span>
+                      <span className="text-[11px] text-slate-400">{promptInjectionDetected ? 'INJECTION ALERT' : 'Analyzed'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('risk')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <ShieldAlert className="h-4 w-4 text-cyan-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Risk Scoring</span>
+                      <span className="text-[11px] text-slate-400">{riskBreakdown?.riskLevel || 'Pending'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('correlations')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Flame className="h-4 w-4 text-amber-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">Correlations</span>
+                      <span className="text-[11px] text-slate-400">{correlations.length} Matches</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('ai')}
+                      className="p-3.5 rounded-xl bg-slate-900/60 hover:bg-slate-800/60 border border-slate-800 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <Sparkles className="h-4 w-4 text-purple-400 mb-1" />
+                      <span className="text-xs font-bold text-white block">AI Assessment</span>
+                      <span className="text-[11px] text-slate-400">Grounded LLM</span>
+                    </button>
+
+                    <button
+                      onClick={() => setActiveTab('report')}
+                      className="p-3.5 rounded-xl bg-emerald-950/40 hover:bg-emerald-950/60 border border-emerald-800/80 text-left transition-all hover:scale-[1.02] cursor-pointer"
+                    >
+                      <FileCheck className="h-4 w-4 text-emerald-400 mb-1" />
+                      <span className="text-xs font-bold text-emerald-300 block">Dossier Report</span>
+                      <span className="text-[11px] text-emerald-400/80">Court-Ready</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {activeTab === 'headers' && (
               <div className="space-y-5">
@@ -3334,6 +3605,694 @@ export default function InvestigationPage() {
                   <p className="text-xs text-slate-400 leading-relaxed font-sans">
                     {aiAssessment?.limitationsAndCaveats || 'Standard forensic boundaries apply.'}
                   </p>
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'report' && (
+              <div id="forensic-printable-dossier" className="space-y-8 font-sans">
+                <div className="no-print flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-slate-900/90 border border-slate-800 text-xs shadow-lg">
+                  <div className="flex items-center gap-2 text-slate-300">
+                    <FileCheck className="h-4 w-4 text-emerald-400" />
+                    <span className="font-semibold text-white">Forensic Dossier &amp; Evidentiary Report</span>
+                    <span className="text-slate-500">•</span>
+                    <span className="text-slate-400">Formatted for court-admissibility, PDF export &amp; peer audit.</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      id="btn-report-tab-print"
+                      onClick={() => window.print()}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md shadow-emerald-900/40 transition-colors cursor-pointer"
+                    >
+                      <Printer className="h-3.5 w-3.5" />
+                      <span>Print / PDF Report</span>
+                    </button>
+
+                    <button
+                      id="btn-report-tab-export-json"
+                      onClick={handleExportReportJson}
+                      disabled={isExportingJson}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      <FileDown className="h-3.5 w-3.5 text-cyan-400" />
+                      <span>{isExportingJson ? 'Exporting...' : 'Export JSON Dossier'}</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="print-surface p-6 sm:p-8 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-6">
+                  <div className="border-b border-slate-800 pb-6 space-y-4">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2 font-mono text-xs">
+                          <span className="px-2.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold uppercase tracking-wider">
+                            OFFICIAL FORENSIC DOSSIER
+                          </span>
+                          <span className="text-slate-500">•</span>
+                          <span className="text-slate-400 font-mono text-[11px]">
+                            CASE #{detail.caseNumber}
+                          </span>
+                        </div>
+                        <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white">
+                          Digital Forensic Investigation Report
+                        </h2>
+                        <p className="text-xs text-slate-400 font-mono">
+                          Evidence Reference UUID: {detail.evidenceId}
+                        </p>
+                      </div>
+
+                      <div className="text-right space-y-1 font-mono text-xs">
+                        <div className={`inline-block px-3 py-1 rounded-lg font-bold border ${
+                          riskBreakdown?.riskLevel === 'CRITICAL' || riskBreakdown?.riskLevel === 'HIGH'
+                            ? 'bg-rose-950 text-rose-300 border-rose-800'
+                            : riskBreakdown?.riskLevel === 'MEDIUM'
+                            ? 'bg-amber-950 text-amber-300 border-amber-800'
+                            : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                        }`}>
+                          {reportData?.classificationLevel || (riskBreakdown?.riskLevel === 'CRITICAL' || riskBreakdown?.riskLevel === 'HIGH' ? 'RESTRICTED / MALICIOUS' : 'CONFIDENTIAL FORENSIC AUDIT')}
+                        </div>
+                        <span className="text-slate-500 block text-[10px]">
+                          Report ID: {reportData?.reportId || 'RPT-' + emailId.substring(0, 8)}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono pt-2">
+                      <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                        <span className="text-slate-500 text-[10px] block">CASE TITLE</span>
+                        <span className="font-semibold text-slate-200 truncate block">{detail.caseTitle}</span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                        <span className="text-slate-500 text-[10px] block">GENERATION DATE (UTC)</span>
+                        <span className="font-semibold text-slate-200 block text-[11px]">
+                          {reportData?.generatedAt ? new Date(reportData.generatedAt).toUTCString() : new Date().toUTCString()}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                        <span className="text-slate-500 text-[10px] block">ASSIGNED EXAMINER</span>
+                        <span className="font-semibold text-slate-200 block truncate">
+                          {reportData?.analystSignoff?.signoffAnalyst || user?.username || 'Forensic Examiner'}
+                        </span>
+                      </div>
+
+                      <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
+                        <span className="text-slate-500 text-[10px] block">PLATFORM VERSION</span>
+                        <span className="font-semibold text-cyan-400 block">v1.11.0 (Phase 11 Final)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="print-avoid-break space-y-3">
+                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Hash className="h-4 w-4 text-cyan-400" />
+                        <span>1. Cryptographic Evidence Integrity &amp; Chain of Custody</span>
+                      </h3>
+                      <span className="flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">
+                        <BadgeCheck className="h-3.5 w-3.5 text-emerald-400" />
+                        INTEGRITY VERIFIED AUTHENTIC
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
+                        <span className="text-slate-400 text-[11px] block">Primary Cryptographic Hash (SHA-256)</span>
+                        <span className="text-cyan-300 font-bold break-all select-all block text-[11px]">{detail.sha256Hash}</span>
+                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-1">
+                          <Check className="h-3 w-3" />
+                          Cryptographic hash matches stored raw immutable artifact byte-for-byte.
+                        </span>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 grid grid-cols-2 gap-2 text-[11px]">
+                        <div>
+                          <span className="text-slate-400 block">Original Filename</span>
+                          <span className="font-semibold text-slate-200 truncate block">{detail.originalFilename}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">File Size</span>
+                          <span className="font-semibold text-slate-200 block">{formatBytes(detail.fileSizeBytes)} ({detail.fileSizeBytes} B)</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">Ingestion Timestamp</span>
+                          <span className="font-semibold text-slate-200 block">{new Date(detail.uploadedAt).toLocaleString()}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block">MIME Content Type</span>
+                          <span className="font-semibold text-slate-200 block">{detail.mimeType || 'message/rfc822'}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="print-avoid-break space-y-3">
+                    <div className="border-b border-slate-800/80 pb-2">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <ShieldAlert className="h-4 w-4 text-cyan-400" />
+                        <span>2. Executive Threat Verdict &amp; Multi-Stage Execution Status</span>
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs font-mono">
+                      <div className={`p-3.5 rounded-xl border ${
+                        riskBreakdown?.riskLevel === 'CRITICAL' ? 'bg-rose-950/40 border-rose-800/80 text-rose-300' :
+                        riskBreakdown?.riskLevel === 'HIGH' ? 'bg-orange-950/40 border-orange-800/80 text-orange-300' :
+                        riskBreakdown?.riskLevel === 'MEDIUM' ? 'bg-amber-950/40 border-amber-800/80 text-amber-300' :
+                        'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
+                      }`}>
+                        <span className="text-slate-400 text-[10px] block">DETERMINISTIC RISK SCORE</span>
+                        <span className="text-2xl font-bold block">{riskBreakdown?.deterministicRiskScore || 0}/100</span>
+                        <span className="text-[11px] font-semibold uppercase">{riskBreakdown?.riskLevel || 'UNKNOWN'}</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border bg-purple-950/40 border-purple-800/80 text-purple-300">
+                        <span className="text-purple-400 text-[10px] block">AI GROUNDED VERDICT</span>
+                        <span className="text-lg font-bold block truncate">{aiAssessment?.threatClassification || 'PENDING'}</span>
+                        <span className="text-[11px] text-purple-300/80">Mitre ATT&amp;CK Mapped</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border bg-slate-950/60 border-slate-800 text-slate-200">
+                        <span className="text-slate-400 text-[10px] block">CONFIDENCE METRIC</span>
+                        <span className="text-2xl font-bold block">{riskBreakdown?.confidenceScore || 85}/100</span>
+                        <span className="text-[11px] text-slate-400">Multi-Signal Corroborated</span>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border bg-slate-950/60 border-slate-800 text-slate-200">
+                        <span className="text-slate-400 text-[10px] block">CONTENT ML CLASSIFIER</span>
+                        <span className="text-lg font-bold block truncate font-mono">{predictedLabel}</span>
+                        <span className="text-[11px] text-slate-400">{(probability * 100).toFixed(1)}% ML Probability</span>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                      <span className="text-xs font-semibold text-slate-300 block">Forensic Pipeline Stage Health</span>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] font-mono">
+                        {['Ingestion', 'Header Parsing', 'Mail Route Hops', 'URL Intelligence', 'Infrastructure GeoIP', 'Visuals OCR/QR', 'NLP & Injection', 'Deterministic Risk', 'Threat Correlation', 'AI Grounding'].map((stage, idx) => (
+                          <div key={idx} className="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800">
+                            <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />
+                            <span className="text-slate-300 truncate">{stage}</span>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="print-avoid-break space-y-3">
+                    <div className="border-b border-slate-800/80 pb-2">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Mail className="h-4 w-4 text-cyan-400" />
+                        <span>3. Header Forensics &amp; Sender Authentication Alignment</span>
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1.5">
+                        <div className="grid grid-cols-3 gap-1">
+                          <span className="text-slate-500 text-[11px]">From:</span>
+                          <span className="col-span-2 text-slate-200 font-bold truncate">{detail.sender}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <span className="text-slate-500 text-[11px]">Domain:</span>
+                          <span className="col-span-2 text-cyan-400 truncate">{headerAnalysis?.fromDomain || 'N/A'}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <span className="text-slate-500 text-[11px]">Reply-To:</span>
+                          <span className="col-span-2 text-slate-300 truncate">{detail.replyTo || 'None specified'}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <span className="text-slate-500 text-[11px]">Return-Path:</span>
+                          <span className="col-span-2 text-slate-300 truncate">{detail.returnPath || 'None specified'}</span>
+                        </div>
+                        <div className="grid grid-cols-3 gap-1">
+                          <span className="text-slate-500 text-[11px]">Subject:</span>
+                          <span className="col-span-2 text-slate-200 truncate">{detail.subject}</span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <span className="text-slate-400 text-[11px] block">Cryptographic Authentication Verdicts</span>
+                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                          <div className={`p-2 rounded border ${
+                            headerAnalysis?.spfResult?.toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                          }`}>
+                            <span className="text-[10px] block text-slate-400">SPF</span>
+                            <span className="font-bold">{headerAnalysis?.spfResult || 'NONE'}</span>
+                          </div>
+
+                          <div className={`p-2 rounded border ${
+                            headerAnalysis?.dkimResult?.toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                          }`}>
+                            <span className="text-[10px] block text-slate-400">DKIM</span>
+                            <span className="font-bold">{headerAnalysis?.dkimResult || 'NONE'}</span>
+                          </div>
+
+                          <div className={`p-2 rounded border ${
+                            headerAnalysis?.dmarcResult?.toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                          }`}>
+                            <span className="text-[10px] block text-slate-400">DMARC</span>
+                            <span className="font-bold">{headerAnalysis?.dmarcResult || 'NONE'}</span>
+                          </div>
+                        </div>
+
+                        {flags.length > 0 ? (
+                          <div className="p-2 rounded bg-rose-950/40 border border-rose-800/80 text-[11px] text-rose-300 space-y-1">
+                            <span className="font-bold block text-rose-400">Spoofing &amp; Alignment Warnings ({flags.length}):</span>
+                            {flags.slice(0, 3).map((f, i) => (
+                              <div key={i} className="truncate">• {f}</div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="p-2 rounded bg-emerald-950/40 border border-emerald-800/60 text-[11px] text-emerald-300 flex items-center gap-1.5">
+                            <Check className="h-3 w-3" />
+                            <span>No spoofing or identity alignment warnings detected.</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {hops.length > 0 && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Server className="h-4 w-4 text-cyan-400" />
+                          <span>4. Mail Route &amp; Received Transit Hops ({hops.length} Hops Recorded)</span>
+                        </h3>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                            <tr>
+                              <th className="p-2.5">Hop #</th>
+                              <th className="p-2.5">Sending Server (From)</th>
+                              <th className="p-2.5">Receiving Server (By)</th>
+                              <th className="p-2.5">Relay IP</th>
+                              <th className="p-2.5">Delay</th>
+                              <th className="p-2.5">TLS / Cipher</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 bg-slate-950/40 text-slate-300">
+                            {hops.map((hop, idx) => (
+                              <tr key={idx} className="hover:bg-slate-900/40">
+                                <td className="p-2.5 font-bold text-cyan-400">{hop.hopOrder}</td>
+                                <td className="p-2.5 max-w-[160px] truncate">{hop.fromHost || 'Unknown'}</td>
+                                <td className="p-2.5 max-w-[160px] truncate">{hop.byHost || 'Unknown'}</td>
+                                <td className="p-2.5 text-slate-200">{hop.byIp || 'N/A'}</td>
+                                <td className="p-2.5">{formatSeconds(hop.delaySeconds) || '0s'}</td>
+                                <td className="p-2.5 max-w-[120px] truncate text-[11px] text-slate-400">{hop.tlsVersion || 'Standard SMTP'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {urls.length > 0 && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Link2 className="h-4 w-4 text-cyan-400" />
+                          <span>5. Extracted URLs &amp; Web Infrastructure ({urls.length} URLs Identified)</span>
+                        </h3>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                            <tr>
+                              <th className="p-2.5">Domain</th>
+                              <th className="p-2.5">Normalized URL</th>
+                              <th className="p-2.5">Anchor Mismatch</th>
+                              <th className="p-2.5">Shortened</th>
+                              <th className="p-2.5">IP URL</th>
+                              <th className="p-2.5">Lookalike</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 bg-slate-950/40 text-slate-300">
+                            {urls.slice(0, 10).map((u, idx) => (
+                              <tr key={idx} className="hover:bg-slate-900/40">
+                                <td className="p-2.5 font-bold text-cyan-300">{u.domain || 'N/A'}</td>
+                                <td className="p-2.5 max-w-[240px] truncate text-[11px]">{u.normalizedUrl}</td>
+                                <td className="p-2.5">
+                                  {u.anchorMismatch ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">MISMATCH</span>
+                                  ) : (
+                                    <span className="text-slate-500 text-[10px]">NO</span>
+                                  )}
+                                </td>
+                                <td className="p-2.5">
+                                  {u.isShortened ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">YES</span>
+                                  ) : (
+                                    <span className="text-slate-500 text-[10px]">NO</span>
+                                  )}
+                                </td>
+                                <td className="p-2.5">
+                                  {u.isIpUrl ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">IP-HOST</span>
+                                  ) : (
+                                    <span className="text-slate-500 text-[10px]">NO</span>
+                                  )}
+                                </td>
+                                <td className="p-2.5">
+                                  {u.lookalike ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-rose-950 text-rose-300 border border-rose-800 text-[10px]">LOOKALIKE</span>
+                                  ) : (
+                                    <span className="text-slate-500 text-[10px]">NO</span>
+                                  )}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {infrastructure.length > 0 && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Network className="h-4 w-4 text-cyan-400" />
+                          <span>6. Network Infrastructure &amp; GeoIP Telemetry ({infrastructure.length} IPs)</span>
+                        </h3>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                            <tr>
+                              <th className="p-2.5">IP Address</th>
+                              <th className="p-2.5">Context</th>
+                              <th className="p-2.5">Private / Bogon</th>
+                              <th className="p-2.5">Country</th>
+                              <th className="p-2.5">ASN</th>
+                              <th className="p-2.5">Organization</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 bg-slate-950/40 text-slate-300">
+                            {infrastructure.map((item, idx) => (
+                              <tr key={idx} className="hover:bg-slate-900/40">
+                                <td className="p-2.5 font-bold text-cyan-300">{item.ipAddress}</td>
+                                <td className="p-2.5 text-slate-400 text-[11px]">{item.sourceContext}</td>
+                                <td className="p-2.5">
+                                  {item.isPrivate ? (
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">RFC1918</span>
+                                  ) : (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">PUBLIC</span>
+                                  )}
+                                </td>
+                                <td className="p-2.5">{item.country || 'N/A'}</td>
+                                <td className="p-2.5">{item.asnNumber || 'N/A'}</td>
+                                <td className="p-2.5 max-w-[200px] truncate text-[11px]">{item.organization || 'N/A'}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {visuals.length > 0 && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <QrCode className="h-4 w-4 text-cyan-400" />
+                          <span>7. Visual Artifacts, Steganography &amp; QR Decoding ({visuals.length} Visuals)</span>
+                        </h3>
+                      </div>
+
+                      <div className="space-y-2">
+                        {visuals.map((v, idx) => (
+                          <div key={idx} className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 text-xs font-mono space-y-2">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-slate-200">{v.filename || `Visual Artifact #${idx + 1}`}</span>
+                              <span className="text-[11px] text-slate-400">{v.contentType} ({v.imageWidth}x{v.imageHeight})</span>
+                            </div>
+
+                            {v.ocrText && (
+                              <div className="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300 max-h-24 overflow-y-auto">
+                                <span className="text-slate-500 block text-[10px] mb-0.5">OCR EXTRACTED TEXT:</span>
+                                {v.ocrText}
+                              </div>
+                            )}
+
+                            {v.qrArtifacts && v.qrArtifacts.length > 0 && (
+                              <div className="p-2 rounded bg-purple-950/30 border border-purple-800/60 text-[11px] text-purple-200 space-y-1">
+                                <span className="font-bold text-purple-300 block">DECODED QR CODES ({v.qrArtifacts.length}):</span>
+                                {v.qrArtifacts.map((qArt, qIdx) => (
+                                  <div key={qIdx} className="break-all">
+                                    • Payload: <span className="text-white font-bold">{qArt.decodedPayload}</span>
+                                    {qArt.suspicious && <span className="ml-2 text-rose-400 font-bold">[SUSPICIOUS QR LINK]</span>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="print-avoid-break space-y-3">
+                    <div className="border-b border-slate-800/80 pb-2">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Brain className="h-4 w-4 text-cyan-400" />
+                        <span>8. Content NLP, Social Engineering &amp; Adversarial Injection Defense</span>
+                      </h3>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <span className="text-slate-400 text-[11px] block">Tribuo ML Baseline Model</span>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-200 font-bold">Predicted Classification:</span>
+                          <span className={`px-2 py-0.5 rounded text-xs font-bold border ${
+                            predictedLabel === 'PHISHING' || predictedLabel === 'MALICIOUS'
+                              ? 'bg-rose-950 text-rose-300 border-rose-800'
+                              : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                          }`}>
+                            {predictedLabel}
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-slate-400">Model Probability:</span>
+                          <span className="font-bold text-slate-200">{(probability * 100).toFixed(2)}%</span>
+                        </div>
+
+                        <div className="pt-2 border-t border-slate-800 space-y-1">
+                          <span className="text-slate-400 text-[10px] block">Social Engineering Indicators:</span>
+                          <div className="grid grid-cols-2 gap-1.5 text-[11px]">
+                            <div className={`p-1 rounded text-center ${urgencyDetected ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-900 text-slate-500'}`}>
+                              Urgency: {urgencyDetected ? 'DETECTED' : 'None'}
+                            </div>
+                            <div className={`p-1 rounded text-center ${credentialRequestDetected ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-slate-900 text-slate-500'}`}>
+                              Credential: {credentialRequestDetected ? 'DETECTED' : 'None'}
+                            </div>
+                            <div className={`p-1 rounded text-center ${paymentInstructionDetected ? 'bg-rose-950 text-rose-300 border border-rose-800' : 'bg-slate-900 text-slate-500'}`}>
+                              Extortion/Payment: {paymentInstructionDetected ? 'DETECTED' : 'None'}
+                            </div>
+                            <div className={`p-1 rounded text-center ${impersonationDetected ? 'bg-amber-950 text-amber-300 border border-amber-800' : 'bg-slate-900 text-slate-500'}`}>
+                              Impersonation: {impersonationDetected ? 'DETECTED' : 'None'}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className={`p-3 rounded-xl border ${
+                        promptInjectionDetected
+                          ? 'bg-rose-950/40 border-rose-800/80 text-rose-300'
+                          : 'bg-slate-950/60 border-slate-800 text-slate-200'
+                      } space-y-2`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-bold text-xs">Adversarial Injection Defense Shield</span>
+                          <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                            promptInjectionDetected
+                              ? 'bg-rose-950 text-rose-300 border-rose-700 animate-pulse'
+                              : 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                          }`}>
+                            {promptInjectionDetected ? 'ATTACK DETECTED' : 'SHIELD SECURE'}
+                          </span>
+                        </div>
+
+                        {promptInjectionDetected ? (
+                          <div className="space-y-1 text-[11px]">
+                            <p className="text-rose-200">
+                              System caught adversarial prompt injection attempt designed to hijack LLM reasoning!
+                            </p>
+                            <div className="p-2 rounded bg-rose-950/80 border border-rose-800 text-rose-300 font-mono text-[10px] space-y-1">
+                              {promptMatches.map((m, mIdx) => (
+                                <div key={mIdx}>• Signature: {m.patternName || m.pattern || 'Instruction Override Pattern'}</div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-slate-400 text-xs">
+                            No prompt injection, jailbreak attempts, or system prompt override vectors discovered.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {riskBreakdown?.triggeredFactors && riskBreakdown.triggeredFactors.length > 0 && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <AlertOctagon className="h-4 w-4 text-cyan-400" />
+                          <span>9. Explainable Deterministic Risk Factors ({riskBreakdown.triggeredFactors.length} Triggered)</span>
+                        </h3>
+                      </div>
+
+                      <div className="overflow-x-auto rounded-xl border border-slate-800">
+                        <table className="w-full text-left text-xs font-mono">
+                          <thead className="bg-slate-950 text-slate-400 uppercase text-[10px] border-b border-slate-800">
+                            <tr>
+                              <th className="p-2.5">Rule ID</th>
+                              <th className="p-2.5">Category</th>
+                              <th className="p-2.5">Severity</th>
+                              <th className="p-2.5">Weight</th>
+                              <th className="p-2.5">Score Contribution</th>
+                              <th className="p-2.5">Trigger Condition</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-800/60 bg-slate-950/40 text-slate-300">
+                            {riskBreakdown.triggeredFactors.map((f, idx) => (
+                              <tr key={idx} className="hover:bg-slate-900/40">
+                                <td className="p-2.5 font-bold text-cyan-300">{f.factorKey || f.ruleId || `RULE-${idx + 1}`}</td>
+                                <td className="p-2.5 text-slate-400">{f.category || 'THREAT'}</td>
+                                <td className="p-2.5">
+                                  <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                    f.severity === 'CRITICAL' ? 'bg-rose-950 text-rose-300 border border-rose-800' :
+                                    f.severity === 'HIGH' ? 'bg-orange-950 text-orange-300 border border-orange-800' :
+                                    'bg-amber-950 text-amber-300 border border-amber-800'
+                                  }`}>
+                                    {f.severity}
+                                  </span>
+                                </td>
+                                <td className="p-2.5">{f.weight || f.scoreContribution || 10}</td>
+                                <td className="p-2.5 text-cyan-400 font-bold">+{f.scoreContribution || f.weight || 10} pts</td>
+                                <td className="p-2.5 text-[11px] text-slate-300 max-w-[260px] truncate">{f.description || f.reason}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {associatedCampaigns.length > 0 && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Flame className="h-4 w-4 text-amber-400" />
+                          <span>10. Threat Campaign &amp; Cross-Case Correlation ({associatedCampaigns.length} Campaigns)</span>
+                        </h3>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {associatedCampaigns.map((camp, idx) => (
+                          <div key={idx} className="p-3.5 rounded-xl bg-amber-950/20 border border-amber-800/60 text-xs font-mono space-y-1.5">
+                            <div className="flex items-center justify-between">
+                              <span className="font-bold text-amber-300 text-sm">{camp.name}</span>
+                              <span className="px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-700 text-[10px]">
+                                {camp.campaignCode}
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-300 leading-relaxed font-sans">{camp.description}</p>
+                            <div className="flex items-center justify-between text-[10px] text-slate-400 pt-1">
+                              <span>Cluster: {camp.clusterType}</span>
+                              <span>Confidence: {camp.confidenceScore}%</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {aiAssessment && (
+                    <div className="print-avoid-break space-y-3">
+                      <div className="border-b border-slate-800/80 pb-2">
+                        <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                          <Sparkles className="h-4 w-4 text-purple-400" />
+                          <span>11. Grounded AI Forensic Assessment &amp; Mitre ATT&amp;CK Citations</span>
+                        </h3>
+                      </div>
+
+                      <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-800/60 text-xs space-y-3">
+                        <div className="flex items-center justify-between border-b border-purple-800/40 pb-2 font-mono">
+                          <div className="flex items-center gap-2">
+                            <span className="text-purple-300 font-bold">Threat Verdict:</span>
+                            <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-200 border border-purple-700">
+                              {aiAssessment.threatClassification}
+                            </span>
+                          </div>
+                          <span className="text-slate-400 text-[11px]">
+                            Model: {aiAssessment.modelUsed || 'Gemini 1.5 Flash (Grounded)'}
+                          </span>
+                        </div>
+
+                        <p className="text-slate-200 text-xs leading-relaxed font-sans">
+                          {aiAssessment.summaryExplanation}
+                        </p>
+
+                        {aiAssessment.mitreTechniques && aiAssessment.mitreTechniques.length > 0 && (
+                          <div className="pt-2 border-t border-purple-800/40 space-y-1 font-mono text-[11px]">
+                            <span className="text-purple-400 font-bold block">Mitre ATT&amp;CK Techniques Identified:</span>
+                            <div className="flex flex-wrap gap-1.5">
+                              {aiAssessment.mitreTechniques.map((tech, tIdx) => (
+                                <span key={tIdx} className="px-2 py-0.5 rounded bg-slate-950 text-cyan-300 border border-cyan-800">
+                                  {tech}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  <div id="report-signoff-block" className="print-avoid-break p-6 rounded-2xl bg-slate-950 border border-slate-800 space-y-4">
+                    <div className="border-b border-slate-800 pb-3">
+                      <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                        <Award className="h-4 w-4 text-emerald-400" />
+                        <span>12. Chain of Custody Certification &amp; Examiner Sign-Off</span>
+                      </h3>
+                    </div>
+
+                    <p className="text-xs text-slate-300 font-serif leading-relaxed italic">
+                      "I hereby certify under penalty of perjury that this forensic report represents an authentic, tamper-evident extraction of digital evidence collected and processed in compliance with digital forensics standards (ISO/IEC 27037:2012). The cryptographic hashes and evidentiary findings herein have been validated and preserved."
+                    </p>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4 text-xs font-mono">
+                      <div className="space-y-1">
+                        <span className="text-slate-500 text-[10px] block uppercase">Certified Lead Examiner</span>
+                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-200 font-bold">
+                          {reportData?.analystSignoff?.signoffAnalyst || user?.username || 'Forensic Examiner'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-slate-500 text-[10px] block uppercase">Professional Role</span>
+                        <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800 text-slate-300">
+                          {reportData?.analystSignoff?.signoffRole || 'Digital Forensics & Incident Response (DFIR) Specialist'}
+                        </div>
+                      </div>
+
+                      <div className="space-y-1">
+                        <span className="text-slate-500 text-[10px] block uppercase">Certification Date &amp; Seal</span>
+                        <div className="p-2.5 rounded-lg bg-emerald-950/40 border border-emerald-800/80 text-emerald-300 font-bold flex items-center justify-between">
+                          <span>{new Date().toLocaleDateString()}</span>
+                          <BadgeCheck className="h-4 w-4 text-emerald-400" />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

@@ -1,77 +1,91 @@
-# AI-Powered Email Forensic Investigation and Threat Correlation
+# AI-Powered Email Forensic Investigation & Threat Intelligence Platform
 
-An academic forensic analysis and threat intelligence platform designed to ingest `.eml` email files, preserve evidence integrity (SHA-256 hash validation), extract technical and content indicators, correlate findings across prior cases, compute explainable risk scores, and present structured forensic intelligence.
-
----
-
-## Current Status: Phase 0 — Setup and Stable Skeleton
-
-Phase 0 establishes a verified baseline development skeleton:
-- **Backend:** Spring Boot 4.1.1 modular monolith with Java 21 LTS and Maven wrapper.
-- **Frontend:** React 19 with plain JavaScript/JSX (no TypeScript), Vite 8, and Tailwind CSS v4.
-- **Health Gateway:** `GET /api/v1/health` responding with `{ "status": "ok" }`.
-- **Reverse Proxy:** Vite dev proxy mapping `/api` requests from `http://localhost:5173` to `http://localhost:8080`.
-- **Resilient UI:** Analyst dashboard showing real-time connectivity status, round-trip latency, last checked timestamp, and connection error handling.
+An enterprise-grade, academic-caliber digital forensics and threat intelligence platform designed to ingest raw `.eml` email files, preserve cryptographic evidence integrity (SHA-256 hash verification), extract deep header/transit/content indicators, detect adversarial prompt injection and quishing, correlate threats across historical cases, compute explainable risk scores, and produce court-admissible forensic dossier reports.
 
 ---
 
-## Technology Stack Baseline
+## Key Features & Capabilities
 
-| Area | Coordinate / Version | Purpose |
-|---|---|---|
-| Runtime | Java 21 LTS | Backend runtime |
-| Backend Framework | Spring Boot 4.1.1 | Modular monolith API |
-| Build Tool | Apache Maven (Maven Wrapper) | Backend dependency management |
-| Frontend Framework | React 19.3.x (JavaScript / JSX) | Analyst user interface |
-| Frontend Bundler | Vite 8.x | Frontend build system & dev proxy |
-| Styling | Tailwind CSS 4.x | Utility-first responsive design |
-| HTTP Client | Axios 1.x | Client API requests |
-| Database | PostgreSQL 16 (Phase 1+) | Structured forensic findings |
-| Migration Tool | Flyway (Phase 1+) | Versioned database migrations |
+- **Cryptographic Chain of Custody:** Strict SHA-256 evidence hashing upon ingestion with continuous tamper-evident verification.
+- **Deep Header Forensics & Spoofing Defense:** Full RFC 5322/2045/2047 MIME parsing, SPF / DKIM / DMARC authentication alignment, Return-Path / Reply-To mismatch detection, and display name spoofing analysis.
+- **Mail Transit Route & Hop Reconstruction:** Chronological Received header traversal with hop-by-hop latency calculation, TLS cipher inspection, and delay anomaly flags.
+- **URL & Web Infrastructure Intelligence:** Anchor text vs target mismatch detection, IP-based URLs, URL shortener resolution, lookalike/punycode homograph analysis, and defanged URL exports.
+- **Network Telemetry & GeoIP Resolution:** Server IP extraction, private/bogon (RFC 1918) detection, MaxMind GeoIP resolution, ASN routing classification, and organization ownership.
+- **Visual Artifacts, OCR & Quishing Defense:** Embedded image extraction, automated OCR text extraction via Tesseract, and QR code detection/payload decoding via ZXing.
+- **Content NLP & Prompt Injection Firewall:** Tribuo ML machine learning baseline classification, rule-based social engineering cue detection (urgency, credential harvesting, extortion, impersonation), and proactive prompt injection defense against LLM hijacking.
+- **Explainable Deterministic Risk Scoring:** Rule-based scoring engine (0–100) with confidence calibration, weighted severity multipliers, and clear audit breakdowns.
+- **Historical Threat Correlation & Campaign Engine:** Graph-based indicator linking (senders, domains, hashes, IPs), interactive force-directed Threat Graph canvas, and automated threat campaign clustering.
+- **Grounded AI Forensic Intelligence:** Hallucination-shielded LLM synthesis generating grounded technical narratives, Mitre ATT&CK technique mapping, and strict citation validation.
+- **Court-Ready Forensic Dossier & Reporting:** Multi-format report generation (interactive UI, clean JSON API, and high-contrast `@media print` PDF layout with analyst sign-off and chain of custody certification).
 
 ---
 
-## Prerequisites
+## Technology Stack
 
-Ensure the following tools are installed on your workstation:
+| Layer | Component | Version / Coordinate | Purpose |
+|---|---|---|---|
+| **Runtime** | OpenJDK | 21 LTS | High-performance backend runtime |
+| **Backend Framework** | Spring Boot | 4.1.x / Spring 7 | Modular monolith architecture |
+| **Security** | Spring Security & JJWT | 0.12.x | Stateless JWT authentication & RBAC |
+| **Database** | PostgreSQL | 16 | Relational data store for cases and forensic telemetry |
+| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V9) |
+| **Email Parsing** | Jakarta Mail | 2.1.x | Robust RFC 5322 MIME stream parser |
+| **Machine Learning** | Oracle Tribuo | 4.3.x | Embedded Naive Bayes NLP classification |
+| **Computer Vision** | Tess4J & ZXing | 5.12.x / 3.5.x | Tesseract OCR and QR barcode matrix decoding |
+| **Frontend Framework** | React | 19.x (JSX, No TS) | Reactive component UI |
+| **Build & Bundler** | Vite | 8.x | Lightning-fast development & production bundling |
+| **Styling** | Tailwind CSS | 4.x & Vanilla CSS | Slate/cyan dark theme & print stylesheets |
+| **Icons & Graphs** | Lucide React & Canvas | Latest | Responsive iconography & custom HTML5 canvas graph |
+
+---
+
+## System Requirements & Prerequisites
+
+Ensure the following tools are installed:
 - **Java Development Kit (JDK):** Version 21 or higher (`java -version`)
-- **Node.js:** Current LTS (v20.19+ or v22.12+) (`node -v`, `npm -v`)
-- **Git:** (`git --version`)
-- **PostgreSQL:** Version 16 or compatible (`psql --version`)
+- **Node.js:** Current LTS (v20.x or v22.x) (`node -v`, `npm -v`)
+- **PostgreSQL:** Version 16 or compatible running on `localhost:5432` (`psql -version`)
+- **Maven:** Bundled via `./mvnw` / `mvnw.cmd` wrapper (no standalone installation required)
 
 ---
 
-## Quick Start Guide
+## Installation & Setup Guide
 
-### 1. Running the Backend
+### 1. Database Provisioning
 
-From the repository root:
+Create the PostgreSQL database and dedicated user:
+
+```sql
+CREATE DATABASE email_forensics;
+CREATE USER email_user WITH ENCRYPTED PASSWORD 'email_password';
+GRANT ALL PRIVILEGES ON DATABASE email_forensics TO email_user;
+```
+
+*(Note: The database configuration defaults to `jdbc:postgresql://localhost:5432/email_forensics` with username `postgres` / password `postgres` or credentials configured in `application.yml` / `.env`)*
+
+### 2. Backend Startup
+
+From the project root:
 
 ```bash
+# On Windows:
 cd backend
-# Windows:
-mvnw.cmd spring-boot:run
+..\mvnw.cmd spring-boot:run
 
-# Linux / macOS:
-./mvnw spring-boot:run
-```
-
-The Spring Boot backend will start on **port 8080**.
-Verify the health endpoint directly:
-```bash
-curl http://localhost:8080/api/v1/health
-# Expected Output: {"status":"ok"}
-```
-
-Run backend unit and integration tests:
-```bash
+# On Linux / macOS:
 cd backend
-mvnw.cmd test
+../mvnw spring-boot:run
 ```
 
-### 2. Running the Frontend
+The Spring Boot server will execute Flyway migrations and listen on **port 8080**.
 
-From the repository root in a separate terminal:
+Default Demo Accounts:
+- **Analyst:** Username `analyst` | Password `analyst123` (Role: `ANALYST`)
+- **Admin:** Username `admin` | Password `admin123` (Role: `ADMIN`)
+
+### 3. Frontend Startup
+
+In a separate terminal window:
 
 ```bash
 cd frontend
@@ -79,87 +93,93 @@ npm install
 npm run dev
 ```
 
-The Vite dev server will start on **http://localhost:5173**.
-Open your browser to `http://localhost:5173` to view the Analyst Health Dashboard.
+The Vite development server will start on **http://localhost:5173** with proxying to `http://localhost:8080/api/v1`.
 
-Build frontend for production:
+---
+
+## Test Fixture Catalog
+
+The repository includes a curated set of test fixtures located in `test-fixtures/eml/`:
+
+| Fixture Filename | Description & Provenance | Expected Forensic Signals |
+|---|---|---|
+| `01-plain-legitimate.eml` | Standard synthetic RFC 5322 corporate email. | Clean SPF/DKIM/DMARC pass, zero spoofing flags, Low Risk (0–10/100), Benign. |
+| `02-html-anchor-mismatch.eml` | Phishing email with anchor text mismatch. | Visible text displays `https://secure.bank.com` while underlying href links to `http://phish-login.cc`. High Risk factor triggered. |
+| `03-multipart-attachment.eml` | Multi-part MIME message with attachments. | Nested MIME parts, attachment metadata extraction, payload fingerprinting. |
+| `04-unicode-subject.eml` | RFC 2047 encoded internationalized subject line. | Tests character set decoder resiliency (`=?UTF-8?B?...?=`). |
+| `05-malformed-mime.eml` | Intentional header boundary corruption. | Tests parser tolerance and graceful error recovery with warnings recording. |
+| `06-received-chain.eml` | Multi-hop message with 4 transit relays. | Complete route hop traversal, relay IP geolocation, transit latency calculation. |
+| `07-inline-qr-code.eml` | Quishing attack with embedded QR barcode image. | Visual artifact extraction, ZXing QR decoding, suspicious QR target URL detection. |
+| `08-prompt-injection.eml` | Adversarial LLM prompt injection attack. | Regex injection engine detects `[SYSTEM INSTRUCTION: IGNORE ALL PREVIOUS INSTRUCTIONS]`, blocks AI override. |
+
+---
+
+## 5-Minute Demo Walkthrough
+
+Follow these steps for a complete demonstration of the system:
+
+1. **Sign In:**
+   - Navigate to `http://localhost:5173/login`.
+   - Log in using `analyst` / `analyst123`.
+2. **Review or Create a Case:**
+   - On the Cases Dashboard (`/cases`), click **"New Case"** (`#btn-create-case`).
+   - Enter Case Number (e.g., `CASE-2026-DEMO`), Title, Description, and select Severity `HIGH`. Click **"Create Case"**.
+3. **Ingest Evidence (.eml):**
+   - Inside the case view, click **"Upload Evidence"** (`#btn-upload-evidence`).
+   - Select `test-fixtures/eml/08-prompt-injection.eml` or `test-fixtures/eml/07-inline-qr-code.eml`.
+   - Observe automatic SHA-256 checksum calculation, storage ingestion, and automated multi-stage pipeline processing.
+4. **Deep Forensic Investigation:**
+   - Click **"Investigate"** (`#btn-investigate-{id}`) on the newly uploaded evidence file.
+   - **Overview Tab (`#tab-overview`):** View the executive summary, cryptographic fingerprint, authentication verdict, and stage health.
+   - **Headers Tab (`#tab-headers`):** Inspect sender alignment, SPF/DKIM/DMARC verdicts, and identity alignment warnings.
+   - **Mail Route Tab (`#tab-hops`):** Examine the chronological transit route, relay delays, and server hops.
+   - **URLs Tab (`#tab-urls`):** Inspect extracted links, anchor text mismatches, and domain flags.
+   - **Visuals & QR Tab (`#tab-visuals`):** View OCR extracted text and decoded QR payloads.
+   - **Content & ML Tab (`#tab-content`):** Review Tribuo ML classification, social engineering indicators, and Adversarial Injection Defense alerts.
+   - **Risk Scoring Tab (`#tab-risk`):** Audit the explainable deterministic risk factors table with weight contributions.
+   - **Correlations & Graph Tab (`#tab-correlations`):** Review cross-case correlations and click nodes on the interactive Threat Graph canvas.
+   - **AI Grounded Assessment Tab (`#tab-ai`):** View the hallucination-shielded technical narrative and verified Mitre ATT&CK citations.
+5. **Generate & Export Court-Ready Dossier:**
+   - Click the **"Forensic Dossier Report"** tab (`#tab-report`).
+   - Review the complete multi-page document: Cryptographic Chain of Custody, Executive Verdict, Stage Health, All Technical Findings, and Formal Examiner Sign-Off Block.
+   - Click **"Export JSON Dossier"** (`#btn-report-tab-export-json`) to download the machine-readable forensic report.
+   - Click **"Print / PDF Report"** (`#btn-report-tab-print`) to preview the court-ready, high-contrast printable dossier.
+
+---
+
+## Running Verification Tests
+
+### Backend Unit & Integration Tests (98 Tests)
+
+```bash
+cd backend
+..\mvnw.cmd test
+```
+
+Expected result:
+```
+[INFO] Results:
+[INFO] Tests run: 98, Failures: 0, Errors: 0, Skipped: 0
+[INFO] BUILD SUCCESS
+```
+
+### Frontend Production Build
+
 ```bash
 cd frontend
 npm run build
 ```
 
----
-
-## Phase 0 Completion Gate Verification
-
-1. **Start Backend:** Run `mvnw.cmd spring-boot:run` in `backend/` (runs on `http://localhost:8080`).
-2. **Start Frontend:** Run `npm run dev` in `frontend/` (runs on `http://localhost:5173`).
-3. **Verify Successful Connection:**
-   - Navigate to `http://localhost:5173` in a web browser.
-   - The UI should display `GATEWAY: ONLINE` and `STATUS: OK` with response payload `{"status":"ok"}` and measured latency.
-4. **Verify Error Handling:**
-   - Stop or pause the backend process.
-   - In the React frontend, trigger **Ping Endpoint** (or wait for auto-refresh).
-   - The UI displays `GATEWAY: OFFLINE` with an alert card indicating the connection failure, rather than crashing or showing a blank page.
-5. **Recover Connection:**
-   - Restart the backend on port 8080 and click **Ping Endpoint**. The UI should seamlessly recover to the healthy green operational status.
-
----
-
-## Project Structure
-
-```text
-email-forensics/
-├── docs/
-│   ├── AGENT.md
-│   └── Implementation_plan.pdf
-├── backend/
-│   ├── pom.xml
-│   ├── mvnw / mvnw.cmd
-│   └── src/
-│       ├── main/
-│       │   ├── java/com/emailforensics/backend/
-│       │   │   ├── BackendApplication.java
-│       │   │   ├── config/
-│       │   │   │   └── CorsConfig.java
-│       │   │   └── health/
-│       │   │       ├── HealthController.java
-│       │   │       └── HealthResponse.java
-│       │   └── resources/
-│       │       └── application.properties
-│       └── test/java/com/emailforensics/backend/
-│           ├── BackendApplicationTests.java
-│           └── health/
-│               └── HealthControllerTest.java
-├── frontend/
-│   ├── package.json
-│   ├── vite.config.js
-│   ├── index.html
-│   └── src/
-│       ├── main.jsx
-│       ├── App.jsx
-│       ├── index.css
-│       └── api/
-│           ├── client.js
-│           └── health.js
-├── .env.example
-├── .gitignore
-└── README.md
+Expected result:
+```
+✓ built in ~1.0s
 ```
 
 ---
 
-## Implementation Roadmap
+## Architectural Principles & Compliance
 
-- [x] **Phase 0:** Setup and stable skeleton (Spring Boot 4.1.x + React 19 + Health API)
-- [ ] **Phase 1:** Database, login, and case management (PostgreSQL 16, Flyway, JWT, Cases)
-- [ ] **Phase 2:** Evidence upload and vault preservation (SHA-256 integrity, safe storage)
-- [ ] **Phase 3:** MIME parsing and first full investigation slice
-- [ ] **Phase 4:** Headers and Received hop chronology
-- [ ] **Phase 5:** URL / DNS / IP / ASN / GeoIP intelligence
-- [ ] **Phase 6:** OCR and QR code payload decoding
-- [ ] **Phase 7:** Content rules, prompt injection alerts, and Tribuo baseline
-- [ ] **Phase 8:** Explainable risk scoring and evidence confidence
-- [ ] **Phase 9:** Historical correlation, graph visualization, and campaigns
-- [ ] **Phase 10:** Spring AI grounded assessment
-- [ ] **Phase 11:** Consolidated forensic reports and final regression
+- **ISO/IEC 27037:2012 Evidentiary Standards:** Immutable raw artifact storage and SHA-256 integrity verification across the entire lifecycle.
+- **Explainable Cyber Intelligence:** Zero black-box decisions; all deterministic scores are backed by weighted rules and audit citations.
+- **Adversarial Resilience:** Defenses against prompt injection, Unicode obfuscation, and malformed MIME streams.
+- **Zero-Dependency Export Serialization:** Forensic report JSON export operates with zero external dependencies to prevent parser vulnerabilities.

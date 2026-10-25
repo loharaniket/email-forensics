@@ -21,7 +21,7 @@ export default function Navbar() {
                   Email Forensics
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono">
-                  Phase 10
+                  Phase 11 (Final)
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
