@@ -93,5 +93,15 @@ export const getEvidenceRiskBreakdown = async (emailId) => {
   return response.data;
 };
 
+export const getEvidenceCorrelations = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/correlations`);
+  return response.data;
+};
+
+export const getEvidenceGraph = async (emailId) => {
+  const response = await client.get(`/graph/evidence/${emailId}`);
+  return response.data;
+};
+
 
 

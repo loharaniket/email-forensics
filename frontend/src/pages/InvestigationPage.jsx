@@ -10,8 +10,12 @@ import {
   getEvidenceVisuals,
   getEvidenceContentAnalysis,
   getEvidenceRiskBreakdown,
+  getEvidenceCorrelations,
+  getEvidenceGraph,
   downloadOriginalEvidence
 } from '../api/evidence'
+import { getCampaignsForEvidence } from '../api/campaigns'
+import ThreatGraphCanvas from '../components/ThreatGraphCanvas'
 import {
   ArrowLeft,
   Mail,
@@ -43,7 +47,9 @@ import {
   Brain,
   AlertOctagon,
   Cpu,
-  Sparkles
+  Sparkles,
+  Flame,
+  Share2
 } from 'lucide-react'
 
 export default function InvestigationPage() {
@@ -58,6 +64,12 @@ export default function InvestigationPage() {
   const [visuals, setVisuals] = useState([])
   const [contentAnalysis, setContentAnalysis] = useState(null)
   const [riskBreakdown, setRiskBreakdown] = useState(null)
+  const [correlations, setCorrelations] = useState([])
+  const [evidenceGraph, setEvidenceGraph] = useState({ nodes: [], links: [] })
+  const [associatedCampaigns, setAssociatedCampaigns] = useState([])
+  const [correlationSearch, setCorrelationSearch] = useState('')
+  const [correlationStrengthFilter, setCorrelationStrengthFilter] = useState('ALL')
+  const [correlationTypeFilter, setCorrelationTypeFilter] = useState('ALL')
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('headers')
@@ -80,7 +92,19 @@ export default function InvestigationPage() {
     setIsLoading(true)
     setError(null)
     try {
-      const [detailData, headersData, hopsData, urlsData, infraData, visualsData, contentData, riskData] = await Promise.all([
+      const [
+        detailData,
+        headersData,
+        hopsData,
+        urlsData,
+        infraData,
+        visualsData,
+        contentData,
+        riskData,
+        correlationsData,
+        graphData,
+        campaignsData
+      ] = await Promise.all([
         getInvestigationDetail(emailId),
         getEvidenceHeaders(emailId).catch(() => null),
         getEvidenceHops(emailId).catch(() => []),
@@ -88,7 +112,10 @@ export default function InvestigationPage() {
         getEvidenceInfrastructure(emailId).catch(() => []),
         getEvidenceVisuals(emailId).catch(() => []),
         getEvidenceContentAnalysis(emailId).catch(() => null),
-        getEvidenceRiskBreakdown(emailId).catch(() => null)
+        getEvidenceRiskBreakdown(emailId).catch(() => null),
+        getEvidenceCorrelations(emailId).catch(() => []),
+        getEvidenceGraph(emailId).catch(() => ({ nodes: [], links: [] })),
+        getCampaignsForEvidence(emailId).catch(() => [])
       ])
       setDetail(detailData)
       setHeaderAnalysis(headersData)
@@ -98,6 +125,9 @@ export default function InvestigationPage() {
       setVisuals(visualsData || [])
       setContentAnalysis(contentData)
       setRiskBreakdown(riskData)
+      setCorrelations(correlationsData || [])
+      setEvidenceGraph(graphData || { nodes: [], links: [] })
+      setAssociatedCampaigns(campaignsData || [])
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load email investigation details.')
     } finally {
@@ -325,6 +355,27 @@ export default function InvestigationPage() {
       (v.ocrText && v.ocrText.toLowerCase().includes(q)) ||
       (v.qrArtifacts && v.qrArtifacts.some((qArt) => qArt.decodedPayload && qArt.decodedPayload.toLowerCase().includes(q)))
     )
+  })
+
+  const filteredCorrelations = correlations.filter((c) => {
+    const q = correlationSearch.toLowerCase()
+    const matchesSearch =
+      !correlationSearch.trim() ||
+      (c.matchedEmailSubject && c.matchedEmailSubject.toLowerCase().includes(q)) ||
+      (c.matchedEmailFilename && c.matchedEmailFilename.toLowerCase().includes(q)) ||
+      (c.matchedCaseNumber && c.matchedCaseNumber.toLowerCase().includes(q)) ||
+      (c.normalizedIndicatorValue && c.normalizedIndicatorValue.toLowerCase().includes(q)) ||
+      (c.matchExplanation && c.matchExplanation.toLowerCase().includes(q))
+
+    const matchesStrength =
+      correlationStrengthFilter === 'ALL' ||
+      (c.matchStrength && c.matchStrength.toUpperCase() === correlationStrengthFilter.toUpperCase())
+
+    const matchesType =
+      correlationTypeFilter === 'ALL' ||
+      (c.indicatorType && c.indicatorType.toUpperCase() === correlationTypeFilter.toUpperCase())
+
+    return matchesSearch && matchesStrength && matchesType
   })
 
   return (
@@ -593,6 +644,24 @@ export default function InvestigationPage() {
                     }`}
                   >
                     {riskBreakdown.deterministicRiskScore}/100
+                  </span>
+                )}
+              </button>
+
+              <button
+                id="tab-correlations"
+                onClick={() => setActiveTab('correlations')}
+                className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-medium transition-colors cursor-pointer ${
+                  activeTab === 'correlations'
+                    ? 'bg-amber-950 text-amber-300 border border-amber-800 shadow-lg shadow-amber-950/50'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+              >
+                <Flame className="h-3.5 w-3.5 text-amber-400" />
+                <span>Correlations &amp; Graph</span>
+                {correlations.length > 0 && (
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-900/80 text-amber-300 border border-amber-700">
+                    {correlations.length}
                   </span>
                 )}
               </button>
@@ -2725,6 +2794,206 @@ export default function InvestigationPage() {
                       </div>
                     ))
                   )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'correlations' && (
+              <div className="space-y-6">
+                {associatedCampaigns.length > 0 && (
+                  <div className="p-5 rounded-2xl bg-amber-950/40 border border-amber-800/80 space-y-3">
+                    <div className="flex items-center gap-2.5">
+                      <div className="h-7 w-7 rounded-lg bg-amber-500/20 border border-amber-500/40 flex items-center justify-center text-amber-400">
+                        <Flame className="h-4 w-4" />
+                      </div>
+                      <span className="text-xs font-mono font-bold uppercase tracking-wider text-amber-300">
+                        Threat Campaign Association Detected
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                      {associatedCampaigns.map((camp) => (
+                        <div
+                          key={camp.id}
+                          className="p-4 rounded-xl bg-slate-950/70 border border-amber-900/60 flex items-start justify-between gap-3"
+                        >
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span className="font-mono text-xs font-bold text-amber-400">
+                                {camp.campaignCode}
+                              </span>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800">
+                                {camp.confidenceScore}% Confidence
+                              </span>
+                            </div>
+                            <h4 className="text-sm font-semibold text-white">
+                              {camp.name}
+                            </h4>
+                            <p className="text-xs text-slate-400 line-clamp-2">
+                              {camp.summary}
+                            </p>
+                          </div>
+
+                          <button
+                            id={`view-campaign-${camp.id}`}
+                            onClick={() => navigate(`/campaigns/${camp.id}`)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium bg-amber-950 hover:bg-amber-900 text-amber-300 border border-amber-800 transition-colors whitespace-nowrap cursor-pointer"
+                          >
+                            <span>Dossier</span>
+                            <ChevronRight className="h-3 w-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/70 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Share2 className="h-4 w-4 text-cyan-400" />
+                      <h3 className="text-sm font-semibold text-white">
+                        Evidence Threat &amp; Infrastructure Graph
+                      </h3>
+                    </div>
+                    <span className="text-xs font-mono text-slate-400">
+                      {evidenceGraph?.nodes?.length || 0} nodes · {evidenceGraph?.links?.length || 0} links
+                    </span>
+                  </div>
+
+                  <ThreatGraphCanvas graphData={evidenceGraph} height="500px" />
+                </div>
+
+                <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/70 pb-3">
+                    <div className="flex items-center gap-2">
+                      <Flame className="h-4 w-4 text-amber-400" />
+                      <h3 className="text-sm font-semibold text-white">
+                        Historical Prior Evidence Matches ({correlations.length})
+                      </h3>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="relative">
+                        <Search className="h-3.5 w-3.5 text-slate-500 absolute left-3 top-2.5" />
+                        <input
+                          id="correlation-search-input"
+                          type="text"
+                          placeholder="Search matches..."
+                          value={correlationSearch}
+                          onChange={(e) => setCorrelationSearch(e.target.value)}
+                          className="bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 w-44 sm:w-56"
+                        />
+                      </div>
+
+                      <select
+                        id="correlation-strength-filter"
+                        value={correlationStrengthFilter}
+                        onChange={(e) => setCorrelationStrengthFilter(e.target.value)}
+                        className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                      >
+                        <option value="ALL">All Strengths</option>
+                        <option value="EXACT">Exact (100%)</option>
+                        <option value="HIGH">High (&gt;=80%)</option>
+                        <option value="MEDIUM">Medium (&gt;=50%)</option>
+                      </select>
+
+                      <select
+                        id="correlation-type-filter"
+                        value={correlationTypeFilter}
+                        onChange={(e) => setCorrelationTypeFilter(e.target.value)}
+                        className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
+                      >
+                        <option value="ALL">All Indicator Types</option>
+                        <option value="ATTACHMENT_HASH">Attachment Hash</option>
+                        <option value="URL">URL</option>
+                        <option value="DOMAIN">Domain</option>
+                        <option value="IP">IP Address</option>
+                        <option value="ASN">ASN</option>
+                        <option value="QR_PAYLOAD">QR Code Payload</option>
+                        <option value="SENDER_DOMAIN">Sender Domain</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="overflow-x-auto rounded-xl border border-slate-800 bg-slate-950/60">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-900/80 text-[11px] font-mono text-slate-400 uppercase tracking-wider border-b border-slate-800">
+                        <tr>
+                          <th className="py-3 px-4">Indicator</th>
+                          <th className="py-3 px-4">Normalized Value</th>
+                          <th className="py-3 px-4">Matched Evidence &amp; Case</th>
+                          <th className="py-3 px-4">Match Strength</th>
+                          <th className="py-3 px-4">Forensic Explanation</th>
+                          <th className="py-3 px-4 text-right">Action</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-800/60 font-sans">
+                        {filteredCorrelations.length === 0 ? (
+                          <tr>
+                            <td colSpan="6" className="py-8 text-center text-slate-500">
+                              No historical correlations detected for this email evidence. Indicators appear unique across existing case records.
+                            </td>
+                          </tr>
+                        ) : (
+                          filteredCorrelations.map((match) => (
+                            <tr key={match.id} className="hover:bg-slate-800/30 transition-colors">
+                              <td className="py-3.5 px-4">
+                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-cyan-300 border border-slate-700">
+                                  {match.indicatorType}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 font-mono text-[11px] text-slate-300 max-w-xs break-all">
+                                {match.normalizedIndicatorValue}
+                              </td>
+
+                              <td className="py-3.5 px-4 space-y-0.5">
+                                <span className="font-medium text-white block max-w-xs truncate" title={match.matchedEmailSubject}>
+                                  {match.matchedEmailSubject || 'Untitled Email'}
+                                </span>
+                                <Link
+                                  to={`/cases/${match.matchedCaseId}`}
+                                  className="text-[11px] font-mono text-cyan-400 hover:text-cyan-300 block truncate"
+                                >
+                                  {match.matchedCaseNumber}
+                                </Link>
+                              </td>
+
+                              <td className="py-3.5 px-4">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                                    match.matchStrength === 'EXACT'
+                                      ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                      : match.matchStrength === 'HIGH'
+                                      ? 'bg-amber-950 text-amber-300 border-amber-800'
+                                      : 'bg-slate-800 text-slate-300 border-slate-700'
+                                  }`}
+                                >
+                                  {match.matchStrength}
+                                </span>
+                              </td>
+
+                              <td className="py-3.5 px-4 text-[11px] text-slate-300 max-w-xs">
+                                {match.matchExplanation}
+                              </td>
+
+                              <td className="py-3.5 px-4 text-right">
+                                <button
+                                  id={`inspect-match-${match.id}`}
+                                  onClick={() => navigate(`/cases/${match.matchedCaseId}/evidence/${match.matchedEmailId}`)}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+                                >
+                                  <span>Inspect</span>
+                                  <ChevronRight className="h-3 w-3" />
+                                </button>
+                              </td>
+                            </tr>
+                          ))
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
                 </div>
               </div>
             )}

@@ -9,4 +9,6 @@ import java.util.UUID;
 @Repository
 public interface QrArtifactRepository extends JpaRepository<QrArtifact, UUID> {
     List<QrArtifact> findByVisualArtifactIdOrderByCreatedAtAsc(UUID visualArtifactId);
+
+    List<QrArtifact> findByDecodedPayload(String decodedPayload);
 }

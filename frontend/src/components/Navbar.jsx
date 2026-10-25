@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { ShieldCheck, FolderKanban, Activity, LogOut, User } from 'lucide-react'
+import { ShieldCheck, FolderKanban, Activity, LogOut, User, Flame, Share2 } from 'lucide-react'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -21,7 +21,7 @@ export default function Navbar() {
                   Email Forensics
                 </span>
                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono">
-                  Phase 1
+                  Phase 9
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">
@@ -42,6 +42,32 @@ export default function Navbar() {
             >
               <FolderKanban className="h-3.5 w-3.5" />
               Cases
+            </Link>
+
+            <Link
+              to="/campaigns"
+              id="nav-campaigns-link"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                location.pathname.startsWith('/campaigns')
+                  ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Flame className="h-3.5 w-3.5 text-amber-400" />
+              Campaigns
+            </Link>
+
+            <Link
+              to="/graph"
+              id="nav-graph-link"
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+                location.pathname === '/graph'
+                  ? 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+              }`}
+            >
+              <Share2 className="h-3.5 w-3.5 text-cyan-400" />
+              Threat Graph
             </Link>
 
             <Link

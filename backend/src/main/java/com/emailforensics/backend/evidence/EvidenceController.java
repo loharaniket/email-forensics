@@ -13,6 +13,8 @@ import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.dto.infrastructure.IpArtifactDto;
+import com.emailforensics.backend.correlation.CorrelationService;
+import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.risk.RiskBreakdownDto;
 import com.emailforensics.backend.dto.urlintel.ExtractedUrlDto;
 import com.emailforensics.backend.dto.visual.VisualArtifactDto;
@@ -52,6 +54,7 @@ public class EvidenceController {
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
     private final RiskScoringService riskScoringService;
+    private final CorrelationService correlationService;
 
     public EvidenceController(EvidenceService evidenceService,
                               HeaderForensicService headerForensicService,
@@ -59,7 +62,8 @@ public class EvidenceController {
                               InfrastructureService infrastructureService,
                               VisualAnalysisService visualAnalysisService,
                               ContentAnalysisService contentAnalysisService,
-                              RiskScoringService riskScoringService) {
+                              RiskScoringService riskScoringService,
+                              CorrelationService correlationService) {
         this.evidenceService = evidenceService;
         this.headerForensicService = headerForensicService;
         this.urlIntelService = urlIntelService;
@@ -67,6 +71,7 @@ public class EvidenceController {
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
         this.riskScoringService = riskScoringService;
+        this.correlationService = correlationService;
     }
 
     @PostMapping(value = "/cases/{caseId}/evidence/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
@@ -174,6 +179,12 @@ public class EvidenceController {
     @GetMapping("/evidence/{emailId}/risk-breakdown")
     public ResponseEntity<RiskBreakdownDto> getRiskBreakdown(@PathVariable UUID emailId) {
         RiskBreakdownDto response = riskScoringService.getRiskBreakdown(emailId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/correlations")
+    public ResponseEntity<List<CorrelationMatchDto>> getCorrelations(@PathVariable UUID emailId) {
+        List<CorrelationMatchDto> response = correlationService.getCorrelations(emailId);
         return ResponseEntity.ok(response);
     }
 }

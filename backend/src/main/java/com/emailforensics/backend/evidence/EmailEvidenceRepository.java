@@ -18,5 +18,7 @@ public interface EmailEvidenceRepository extends JpaRepository<EmailEvidence, UU
 
     Optional<EmailEvidence> findBySha256Hash(String sha256Hash);
 
+    List<EmailEvidence> findAllBySha256Hash(String sha256Hash);
+
     Optional<EmailEvidence> findByStorageKey(String storageKey);
 }
