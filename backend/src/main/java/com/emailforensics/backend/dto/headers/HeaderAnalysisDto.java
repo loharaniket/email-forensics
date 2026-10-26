@@ -23,6 +23,16 @@ public class HeaderAnalysisDto {
     private Map<String, List<String>> rawHeaders = new LinkedHashMap<>();
     private Integer totalHopsCount = 0;
 
+    private String activeSpfResult;
+    private String activeSpfRecord;
+    private String activeSpfRelayIp;
+    private String activeDkimStatus;
+    private String activeDkimRecord;
+    private String activeDkimSelector;
+    private String activeDmarcStatus;
+    private String activeDmarcPolicy;
+    private String activeVerificationSummary;
+
     public HeaderAnalysisDto() {
     }
 
@@ -158,5 +168,77 @@ public class HeaderAnalysisDto {
 
     public void setTotalHopsCount(Integer totalHopsCount) {
         this.totalHopsCount = totalHopsCount;
+    }
+
+    public String getActiveSpfResult() {
+        return activeSpfResult;
+    }
+
+    public void setActiveSpfResult(String activeSpfResult) {
+        this.activeSpfResult = activeSpfResult;
+    }
+
+    public String getActiveSpfRecord() {
+        return activeSpfRecord;
+    }
+
+    public void setActiveSpfRecord(String activeSpfRecord) {
+        this.activeSpfRecord = activeSpfRecord;
+    }
+
+    public String getActiveSpfRelayIp() {
+        return activeSpfRelayIp;
+    }
+
+    public void setActiveSpfRelayIp(String activeSpfRelayIp) {
+        this.activeSpfRelayIp = activeSpfRelayIp;
+    }
+
+    public String getActiveDkimStatus() {
+        return activeDkimStatus;
+    }
+
+    public void setActiveDkimStatus(String activeDkimStatus) {
+        this.activeDkimStatus = activeDkimStatus;
+    }
+
+    public String getActiveDkimRecord() {
+        return activeDkimRecord;
+    }
+
+    public void setActiveDkimRecord(String activeDkimRecord) {
+        this.activeDkimRecord = activeDkimRecord;
+    }
+
+    public String getActiveDkimSelector() {
+        return activeDkimSelector;
+    }
+
+    public void setActiveDkimSelector(String activeDkimSelector) {
+        this.activeDkimSelector = activeDkimSelector;
+    }
+
+    public String getActiveDmarcStatus() {
+        return activeDmarcStatus;
+    }
+
+    public void setActiveDmarcStatus(String activeDmarcStatus) {
+        this.activeDmarcStatus = activeDmarcStatus;
+    }
+
+    public String getActiveDmarcPolicy() {
+        return activeDmarcPolicy;
+    }
+
+    public void setActiveDmarcPolicy(String activeDmarcPolicy) {
+        this.activeDmarcPolicy = activeDmarcPolicy;
+    }
+
+    public String getActiveVerificationSummary() {
+        return activeVerificationSummary;
+    }
+
+    public void setActiveVerificationSummary(String activeVerificationSummary) {
+        this.activeVerificationSummary = activeVerificationSummary;
     }
 }

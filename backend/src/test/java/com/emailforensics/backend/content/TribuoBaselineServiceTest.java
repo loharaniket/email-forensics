@@ -23,8 +23,8 @@ class TribuoBaselineServiceTest {
 
         MlEvaluationMetricsDto metrics = service.getModelMetrics();
         assertNotNull(metrics);
-        assertEquals(20, metrics.getTrainingSampleCount());
-        assertEquals(8, metrics.getTestSampleCount());
+        assertTrue(metrics.getTrainingSampleCount() >= 20);
+        assertTrue(metrics.getTestSampleCount() >= 8);
         assertTrue(metrics.getAccuracy() >= 0.75);
         assertTrue(metrics.getPrecision() >= 0.75);
         assertTrue(metrics.getRecall() >= 0.75);

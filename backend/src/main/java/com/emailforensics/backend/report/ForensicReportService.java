@@ -347,6 +347,12 @@ public class ForensicReportService {
             headers.setDmarcResult(h.getReportedDmarc());
             headers.setArcResult(h.getReportedArc());
             headers.setIdentityMismatchFlags(parseStringList(h.getIdentityMismatchFlags()));
+            if (h.getCurrentDnsObservation() != null && !h.getCurrentDnsObservation().isBlank()) {
+                headers.setActiveSpfResult(extractSimpleJson(h.getCurrentDnsObservation(), "activeSpf", "status"));
+                headers.setActiveDkimResult(extractSimpleJson(h.getCurrentDnsObservation(), "activeDkim", "status"));
+                headers.setActiveDmarcResult(extractSimpleJson(h.getCurrentDnsObservation(), "activeDmarc", "status"));
+            }
+            headers.setActiveVerificationSummary(h.getIndependentVerification());
         }
 
         List<ReceivedHop> hopsList = hopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
@@ -579,5 +585,20 @@ public class ForensicReportService {
             list.add(m.group(1).replace("\\\"", "\""));
         }
         return list;
+    }
+
+    private String extractSimpleJson(String json, String parentKey, String childKey) {
+        if (json == null || parentKey == null || childKey == null) {
+            return null;
+        }
+        Pattern pattern = Pattern.compile("\"" + Pattern.quote(parentKey) + "\"\\s*:\\s*\\{[^}]*?\"" + Pattern.quote(childKey) + "\"\\s*:\\s*(?:\"([^\"]*)\"|(null))");
+        Matcher m = pattern.matcher(json);
+        if (m.find()) {
+            if ("null".equals(m.group(2))) {
+                return null;
+            }
+            return m.group(1);
+        }
+        return null;
     }
 }

@@ -41,6 +41,7 @@ public class HeaderForensicService {
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
+    private final ActiveEmailAuthService activeEmailAuthService;
 
     private static final Pattern IP_PATTERN = Pattern.compile("(?:\\[|\\()([0-9]{1,3}(?:\\.[0-9]{1,3}){3}|[a-fA-F0-9:]+)(?:\\]|\\))");
     private static final Pattern FROM_HOST_PATTERN = Pattern.compile("(?i)\\bfrom\\s+([^\\s;]+)");
@@ -53,16 +54,27 @@ public class HeaderForensicService {
     private static final Pattern AUTH_ARC_PATTERN = Pattern.compile("(?i)\\barc=([a-zA-Z]+)");
     private static final Pattern EMAIL_IN_TEXT_PATTERN = Pattern.compile("([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})");
 
+    @org.springframework.beans.factory.annotation.Autowired
     public HeaderForensicService(HeaderAnalysisRepository headerAnalysisRepository,
                                  ReceivedHopRepository receivedHopRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
-                                 EvidenceStorageService storageService) {
+                                 EvidenceStorageService storageService,
+                                 ActiveEmailAuthService activeEmailAuthService) {
         this.headerAnalysisRepository = headerAnalysisRepository;
         this.receivedHopRepository = receivedHopRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
+        this.activeEmailAuthService = activeEmailAuthService;
+    }
+
+    public HeaderForensicService(HeaderAnalysisRepository headerAnalysisRepository,
+                                 ReceivedHopRepository receivedHopRepository,
+                                 EmailEvidenceRepository evidenceRepository,
+                                 AnalysisRunRepository analysisRunRepository,
+                                 EvidenceStorageService storageService) {
+        this(headerAnalysisRepository, receivedHopRepository, evidenceRepository, analysisRunRepository, storageService, null);
     }
 
     @Transactional
@@ -101,6 +113,7 @@ public class HeaderForensicService {
             }
         }
 
+        List<ReceivedHopDto> hopDtos = new ArrayList<>();
         List<ReceivedHop> existingHops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
         if (existingHops.isEmpty()) {
             List<ReceivedHopDto> hops = extractHopsFromStream(evidence.getStorageKey());
@@ -128,8 +141,54 @@ public class HeaderForensicService {
             } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
             }
             dto.setTotalHopsCount(hops.size());
+            hopDtos = hops;
         } else {
             dto.setTotalHopsCount(existingHops.size());
+            for (ReceivedHop h : existingHops) {
+                hopDtos.add(new ReceivedHopDto(
+                        h.getId(),
+                        h.getHopOrder(),
+                        h.getFromHost(),
+                        h.getByHost(),
+                        h.getProtocol(),
+                        h.getHopIp(),
+                        h.getHopTimestamp(),
+                        h.getDelaySeconds(),
+                        h.getRawHopLine(),
+                        h.getParsingWarning()
+                ));
+            }
+        }
+
+        if (activeEmailAuthService != null) {
+            String dkimHeader = null;
+            if (dto.getRawHeaders() != null && dto.getRawHeaders().containsKey("DKIM-Signature")) {
+                List<String> dkimVals = dto.getRawHeaders().get("DKIM-Signature");
+                if (dkimVals != null && !dkimVals.isEmpty()) {
+                    dkimHeader = dkimVals.get(0);
+                }
+            }
+            String returnPathDomain = extractDomain(dto.getReturnPath());
+            ActiveEmailAuthService.ActiveAuthResult activeResult = activeEmailAuthService.performActiveAuthentication(
+                    dto.getFromDomain(), returnPathDomain, dkimHeader, hopDtos
+            );
+            dto.setActiveSpfResult(activeResult.getActiveSpfResult());
+            dto.setActiveSpfRecord(activeResult.getActiveSpfRecord());
+            dto.setActiveSpfRelayIp(activeResult.getActiveSpfRelayIp());
+            dto.setActiveDkimStatus(activeResult.getActiveDkimStatus());
+            dto.setActiveDkimRecord(activeResult.getActiveDkimRecord());
+            dto.setActiveDkimSelector(activeResult.getActiveDkimSelector());
+            dto.setActiveDmarcStatus(activeResult.getActiveDmarcStatus());
+            dto.setActiveDmarcPolicy(activeResult.getActiveDmarcPolicy());
+            dto.setActiveVerificationSummary(activeResult.getSummary());
+
+            entity.setIndependentVerification(activeResult.getSummary());
+            entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
+            try {
+                headerAnalysisRepository.save(entity);
+                headerAnalysisRepository.flush();
+            } catch (Exception ignored) {
+            }
         }
 
         run.setCurrentStage("HEADERS_ANALYZED");
@@ -167,7 +226,7 @@ public class HeaderForensicService {
 
         String verificationNote = "Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported by receiving server headers in the original message. They are not independently verified in offline state.";
 
-        return new HeaderAnalysisDto(
+        HeaderAnalysisDto dto = new HeaderAnalysisDto(
                 run.getId(),
                 entity.getFromAddress(),
                 entity.getFromDomain(),
@@ -183,6 +242,56 @@ public class HeaderForensicService {
                 rawMap,
                 hops.size()
         );
+
+        if (entity.getCurrentDnsObservation() != null && !entity.getCurrentDnsObservation().isBlank()) {
+            populateActiveAuthFromObservation(dto, entity.getCurrentDnsObservation(), entity.getIndependentVerification());
+        } else if (activeEmailAuthService != null) {
+            List<ReceivedHopDto> hopDtos = new ArrayList<>();
+            for (ReceivedHop h : hops) {
+                hopDtos.add(new ReceivedHopDto(
+                        h.getId(),
+                        h.getHopOrder(),
+                        h.getFromHost(),
+                        h.getByHost(),
+                        h.getProtocol(),
+                        h.getHopIp(),
+                        h.getHopTimestamp(),
+                        h.getDelaySeconds(),
+                        h.getRawHopLine(),
+                        h.getParsingWarning()
+                ));
+            }
+            String dkimHeader = null;
+            if (rawMap != null && rawMap.containsKey("DKIM-Signature")) {
+                List<String> dkimVals = rawMap.get("DKIM-Signature");
+                if (dkimVals != null && !dkimVals.isEmpty()) {
+                    dkimHeader = dkimVals.get(0);
+                }
+            }
+            String returnPathDomain = extractDomain(entity.getReturnPath());
+            ActiveEmailAuthService.ActiveAuthResult activeResult = activeEmailAuthService.performActiveAuthentication(
+                    entity.getFromDomain(), returnPathDomain, dkimHeader, hopDtos
+            );
+            dto.setActiveSpfResult(activeResult.getActiveSpfResult());
+            dto.setActiveSpfRecord(activeResult.getActiveSpfRecord());
+            dto.setActiveSpfRelayIp(activeResult.getActiveSpfRelayIp());
+            dto.setActiveDkimStatus(activeResult.getActiveDkimStatus());
+            dto.setActiveDkimRecord(activeResult.getActiveDkimRecord());
+            dto.setActiveDkimSelector(activeResult.getActiveDkimSelector());
+            dto.setActiveDmarcStatus(activeResult.getActiveDmarcStatus());
+            dto.setActiveDmarcPolicy(activeResult.getActiveDmarcPolicy());
+            dto.setActiveVerificationSummary(activeResult.getSummary());
+
+            entity.setIndependentVerification(activeResult.getSummary());
+            entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
+            try {
+                headerAnalysisRepository.save(entity);
+                headerAnalysisRepository.flush();
+            } catch (Exception ignored) {
+            }
+        }
+
+        return dto;
     }
 
     @Transactional
@@ -315,7 +424,7 @@ public class HeaderForensicService {
 
             String verificationNote = "Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported by receiving server headers in the original message. They are not independently verified in offline state.";
 
-            return new HeaderAnalysisDto(
+            HeaderAnalysisDto dto = new HeaderAnalysisDto(
                     null,
                     fromAddress,
                     fromDomain,
@@ -331,6 +440,24 @@ public class HeaderForensicService {
                     rawHeaders,
                     0
             );
+
+            if (activeEmailAuthService != null) {
+                String returnPathDomain = extractDomain(returnPathAddress);
+                ActiveEmailAuthService.ActiveAuthResult activeRes = activeEmailAuthService.performActiveAuthentication(
+                        fromDomain, returnPathDomain, dkimSigRaw, Collections.emptyList()
+                );
+                dto.setActiveSpfResult(activeRes.getActiveSpfResult());
+                dto.setActiveSpfRecord(activeRes.getActiveSpfRecord());
+                dto.setActiveSpfRelayIp(activeRes.getActiveSpfRelayIp());
+                dto.setActiveDkimStatus(activeRes.getActiveDkimStatus());
+                dto.setActiveDkimRecord(activeRes.getActiveDkimRecord());
+                dto.setActiveDkimSelector(activeRes.getActiveDkimSelector());
+                dto.setActiveDmarcStatus(activeRes.getActiveDmarcStatus());
+                dto.setActiveDmarcPolicy(activeRes.getActiveDmarcPolicy());
+                dto.setActiveVerificationSummary(activeRes.getSummary());
+            }
+
+            return dto;
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse email headers", e);
@@ -565,5 +692,32 @@ public class HeaderForensicService {
                 .replace("\\r", "\r")
                 .replace("\\t", "\t")
                 .replace("\\\\", "\\");
+    }
+
+    private void populateActiveAuthFromObservation(HeaderAnalysisDto dto, String obsJson, String summary) {
+        dto.setActiveSpfResult(extractJsonField(obsJson, "activeSpf", "status"));
+        dto.setActiveSpfRecord(extractJsonField(obsJson, "activeSpf", "record"));
+        dto.setActiveSpfRelayIp(extractJsonField(obsJson, "activeSpf", "evaluatedIp"));
+        dto.setActiveDkimStatus(extractJsonField(obsJson, "activeDkim", "status"));
+        dto.setActiveDkimRecord(extractJsonField(obsJson, "activeDkim", "record"));
+        dto.setActiveDkimSelector(extractJsonField(obsJson, "activeDkim", "selector"));
+        dto.setActiveDmarcStatus(extractJsonField(obsJson, "activeDmarc", "status"));
+        dto.setActiveDmarcPolicy(extractJsonField(obsJson, "activeDmarc", "record"));
+        dto.setActiveVerificationSummary(summary != null ? summary : "Active DNS authentication observations persistent.");
+    }
+
+    private String extractJsonField(String json, String parentKey, String childKey) {
+        if (json == null || parentKey == null || childKey == null) {
+            return null;
+        }
+        Pattern pattern = Pattern.compile("\"" + Pattern.quote(parentKey) + "\"\\s*:\\s*\\{[^}]*?\"" + Pattern.quote(childKey) + "\"\\s*:\\s*(?:\"([^\"]*)\"|(null))");
+        Matcher m = pattern.matcher(json);
+        if (m.find()) {
+            if ("null".equals(m.group(2))) {
+                return null;
+            }
+            return m.group(1);
+        }
+        return null;
     }
 }

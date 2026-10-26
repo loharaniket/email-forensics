@@ -14,6 +14,10 @@ import org.tribuo.classification.sgd.linear.LogisticRegressionTrainer;
 import org.tribuo.impl.ArrayExample;
 import org.tribuo.provenance.SimpleDataSourceProvenance;
 
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -93,8 +97,9 @@ public class TribuoBaselineService {
     }
 
     private void trainAndEvaluate() {
-        List<Sample> trainingData = getTrainingCorpus();
-        List<Sample> holdoutTestData = getHoldoutTestCorpus();
+        List<Sample> trainingData = new ArrayList<>();
+        List<Sample> holdoutTestData = new ArrayList<>();
+        loadDataset(trainingData, holdoutTestData);
 
         fitIdfOnTrainingData(trainingData);
 
@@ -260,6 +265,107 @@ public class TribuoBaselineService {
 
     public String getModelVersion() {
         return MODEL_VERSION;
+    }
+
+    private void loadDataset(List<Sample> trainingData, List<Sample> holdoutTestData) {
+        try (InputStream in = getClass().getResourceAsStream("/data/phishing_corpus.csv")) {
+            if (in == null) {
+                trainingData.addAll(getTrainingCorpus());
+                holdoutTestData.addAll(getHoldoutTestCorpus());
+                return;
+            }
+            List<String[]> rows = parseCsvLines(in);
+            if (rows.isEmpty()) {
+                trainingData.addAll(getTrainingCorpus());
+                holdoutTestData.addAll(getHoldoutTestCorpus());
+                return;
+            }
+            int textCol = 0;
+            int labelCol = 1;
+            int splitCol = 2;
+            int startIndex = 0;
+            String[] firstRow = rows.get(0);
+            if (firstRow.length >= 2 && ("text".equalsIgnoreCase(firstRow[0]) || "label".equalsIgnoreCase(firstRow[0]))) {
+                startIndex = 1;
+                for (int c = 0; c < firstRow.length; c++) {
+                    String h = firstRow[c].trim().toLowerCase(Locale.ROOT);
+                    if ("text".equals(h)) {
+                        textCol = c;
+                    } else if ("label".equals(h)) {
+                        labelCol = c;
+                    } else if ("split".equals(h)) {
+                        splitCol = c;
+                    }
+                }
+            }
+            for (int i = startIndex; i < rows.size(); i++) {
+                String[] r = rows.get(i);
+                if (r.length > Math.max(textCol, labelCol)) {
+                    String text = r[textCol];
+                    String label = r[labelCol].toUpperCase(Locale.ROOT);
+                    String split = r.length > splitCol ? r[splitCol].toUpperCase(Locale.ROOT) : "TRAIN";
+                    if (!text.isBlank() && (LABEL_PHISHING.equals(label) || LABEL_BENIGN.equals(label))) {
+                        Sample sample = new Sample(text, label);
+                        if ("TEST".equals(split) || "HOLDOUT".equals(split)) {
+                            holdoutTestData.add(sample);
+                        } else {
+                            trainingData.add(sample);
+                        }
+                    }
+                }
+            }
+            if (trainingData.isEmpty()) {
+                trainingData.addAll(getTrainingCorpus());
+            }
+            if (holdoutTestData.isEmpty()) {
+                holdoutTestData.addAll(getHoldoutTestCorpus());
+            }
+        } catch (Exception e) {
+            trainingData.clear();
+            holdoutTestData.clear();
+            trainingData.addAll(getTrainingCorpus());
+            holdoutTestData.addAll(getHoldoutTestCorpus());
+        }
+    }
+
+    private List<String[]> parseCsvLines(InputStream in) throws Exception {
+        List<String[]> rows = new ArrayList<>();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8))) {
+            String line;
+            boolean inQuote = false;
+            StringBuilder sb = new StringBuilder();
+            List<String> currentFields = new ArrayList<>();
+
+            while ((line = reader.readLine()) != null) {
+                for (int i = 0; i < line.length(); i++) {
+                    char c = line.charAt(i);
+                    if (c == '"') {
+                        if (inQuote && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                            sb.append('"');
+                            i++;
+                        } else {
+                            inQuote = !inQuote;
+                        }
+                    } else if (c == ',' && !inQuote) {
+                        currentFields.add(sb.toString().trim());
+                        sb.setLength(0);
+                    } else {
+                        sb.append(c);
+                    }
+                }
+                if (!inQuote) {
+                    currentFields.add(sb.toString().trim());
+                    sb.setLength(0);
+                    if (!currentFields.isEmpty()) {
+                        rows.add(currentFields.toArray(new String[0]));
+                        currentFields = new ArrayList<>();
+                    }
+                } else {
+                    sb.append(" ");
+                }
+            }
+        }
+        return rows;
     }
 
     private List<Sample> getTrainingCorpus() {

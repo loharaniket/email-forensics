@@ -243,32 +243,50 @@ export default function InvestigationPage() {
         icon: HelpCircle
       }
     }
-    const norm = val.toLowerCase()
-    if (norm === 'pass') {
+    const norm = String(val).toLowerCase()
+    if (norm === 'pass' || norm === 'selector_found') {
       return {
         bg: 'bg-emerald-950/80',
         text: 'text-emerald-300',
         border: 'border-emerald-700/80',
-        label: 'PASS',
+        label: norm === 'selector_found' ? 'KEY FOUND' : 'PASS',
         icon: CheckCircle2
       }
     }
-    if (norm === 'fail' || norm === 'hardfail') {
+    if (norm === 'fail' || norm === 'hardfail' || norm === 'policy_reject' || norm === 'selector_not_found') {
       return {
         bg: 'bg-rose-950/80',
         text: 'text-rose-300',
         border: 'border-rose-700/80',
-        label: 'FAIL',
+        label: norm === 'policy_reject' ? 'POLICY REJECT' : norm === 'selector_not_found' ? 'KEY NOT FOUND' : 'FAIL',
         icon: XCircle
       }
     }
-    if (norm === 'softfail' || norm === 'neutral') {
+    if (norm === 'policy_quarantine' || norm === 'softfail' || norm === 'neutral') {
       return {
         bg: 'bg-amber-950/80',
         text: 'text-amber-300',
         border: 'border-amber-700/80',
-        label: norm.toUpperCase(),
+        label: norm === 'policy_quarantine' ? 'POLICY QUARANTINE' : norm.toUpperCase(),
         icon: AlertTriangle
+      }
+    }
+    if (norm === 'policy_none') {
+      return {
+        bg: 'bg-cyan-950/80',
+        text: 'text-cyan-300',
+        border: 'border-cyan-700/80',
+        label: 'MONITORING ONLY (NONE)',
+        icon: Info
+      }
+    }
+    if (norm === 'signature_absent' || norm === 'record_absent' || norm === 'skipped_no_relay_ip') {
+      return {
+        bg: 'bg-slate-900',
+        text: 'text-slate-400',
+        border: 'border-slate-800',
+        label: norm === 'signature_absent' ? 'SIGNATURE ABSENT' : norm === 'record_absent' ? 'RECORD ABSENT' : 'NO RELAY IP',
+        icon: HelpCircle
       }
     }
     return {
@@ -1093,50 +1111,146 @@ export default function InvestigationPage() {
                   )}
                 </div>
 
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-2">
-                      <ShieldAlert className="h-3.5 w-3.5 text-cyan-400" />
-                      Reported Authentication Results (Authentication-Results Header)
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
-                    {['SPF', 'DKIM', 'DMARC', 'ARC'].map((mechanism) => {
-                      const val =
-                        mechanism === 'SPF'
-                          ? headerAnalysis?.reportedSpf
-                          : mechanism === 'DKIM'
-                          ? headerAnalysis?.reportedDkim
-                          : mechanism === 'DMARC'
-                          ? headerAnalysis?.reportedDmarc
-                          : headerAnalysis?.reportedArc
-                      const badge = getAuthBadge(val)
-                      const IconComp = badge.icon
-
-                      return (
-                        <div
-                          key={mechanism}
-                          className={`p-3.5 rounded-xl border ${badge.border} ${badge.bg} space-y-1.5`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-slate-400 font-bold">{mechanism}</span>
-                            <IconComp className={`h-3.5 w-3.5 ${badge.text}`} />
-                          </div>
-                          <span className={`text-sm font-bold block ${badge.text}`}>
-                            {badge.label}
-                          </span>
-                        </div>
-                      )
-                    })}
-                  </div>
-
-                  {headerAnalysis?.verificationNote && (
-                    <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-400 flex items-start gap-2">
-                      <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
-                      <span>{headerAnalysis.verificationNote}</span>
+                <div className="space-y-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-2">
+                        <ShieldAlert className="h-3.5 w-3.5 text-cyan-400" />
+                        MTA-Reported Authentication Results (Authentication-Results Header)
+                      </span>
                     </div>
-                  )}
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 font-mono text-xs">
+                      {['SPF', 'DKIM', 'DMARC', 'ARC'].map((mechanism) => {
+                        const val =
+                          mechanism === 'SPF'
+                            ? headerAnalysis?.reportedSpf
+                            : mechanism === 'DKIM'
+                            ? headerAnalysis?.reportedDkim
+                            : mechanism === 'DMARC'
+                            ? headerAnalysis?.reportedDmarc
+                            : headerAnalysis?.reportedArc
+                        const badge = getAuthBadge(val)
+                        const IconComp = badge.icon
+
+                        return (
+                          <div
+                            key={mechanism}
+                            className={`p-3.5 rounded-xl border ${badge.border} ${badge.bg} space-y-1.5`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] text-slate-400 font-bold">{mechanism}</span>
+                              <IconComp className={`h-3.5 w-3.5 ${badge.text}`} />
+                            </div>
+                            <span className={`text-sm font-bold block ${badge.text}`}>
+                              {badge.label}
+                            </span>
+                          </div>
+                        )
+                      })}
+                    </div>
+
+                    {headerAnalysis?.verificationNote && (
+                      <div className="p-3 rounded-lg bg-slate-950 border border-slate-800 text-[11px] font-mono text-slate-400 flex items-start gap-2">
+                        <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                        <span>{headerAnalysis.verificationNote}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="space-y-3 pt-4 border-t border-slate-900/80">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono flex items-center gap-2">
+                        <Globe className="h-3.5 w-3.5 text-emerald-400" />
+                        Active DNS Email Authentication (Live Verification)
+                      </span>
+                      <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-mono font-medium bg-emerald-950/60 text-emerald-300 border border-emerald-800/60">
+                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                        LIVE VERIFICATION
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 font-mono text-xs">
+                      {(() => {
+                        const spfBadge = getAuthBadge(headerAnalysis?.activeSpfResult)
+                        const SpfIcon = spfBadge.icon
+                        return (
+                          <div className={`p-3.5 rounded-xl border ${spfBadge.border} ${spfBadge.bg} space-y-2`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] text-slate-400 font-bold">Active SPF</span>
+                              <SpfIcon className={`h-3.5 w-3.5 ${spfBadge.text}`} />
+                            </div>
+                            <span className={`text-sm font-bold block ${spfBadge.text}`}>
+                              {spfBadge.label}
+                            </span>
+                            <div className="pt-1 text-[11px] text-slate-400 space-y-0.5">
+                              <div>Relay IP: <span className="text-slate-200">{headerAnalysis?.activeSpfRelayIp || '(Hop IP Not Found)'}</span></div>
+                              {headerAnalysis?.activeSpfRecord && (
+                                <div className="truncate text-slate-400 font-mono text-[10px]" title={headerAnalysis.activeSpfRecord}>
+                                  Record: <span className="text-slate-300">{headerAnalysis.activeSpfRecord}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {(() => {
+                        const dkimBadge = getAuthBadge(headerAnalysis?.activeDkimStatus)
+                        const DkimIcon = dkimBadge.icon
+                        return (
+                          <div className={`p-3.5 rounded-xl border ${dkimBadge.border} ${dkimBadge.bg} space-y-2`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] text-slate-400 font-bold">Active DKIM Key</span>
+                              <DkimIcon className={`h-3.5 w-3.5 ${dkimBadge.text}`} />
+                            </div>
+                            <span className={`text-sm font-bold block ${dkimBadge.text}`}>
+                              {dkimBadge.label}
+                            </span>
+                            <div className="pt-1 text-[11px] text-slate-400 space-y-0.5">
+                              <div>Selector: <span className="text-slate-200">{headerAnalysis?.activeDkimSelector || 'N/A'}</span></div>
+                              {headerAnalysis?.activeDkimRecord && (
+                                <div className="truncate text-slate-400 font-mono text-[10px]" title={headerAnalysis.activeDkimRecord}>
+                                  Key Record: <span className="text-slate-300">{headerAnalysis.activeDkimRecord}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
+
+                      {(() => {
+                        const dmarcBadge = getAuthBadge(headerAnalysis?.activeDmarcStatus)
+                        const DmarcIcon = dmarcBadge.icon
+                        return (
+                          <div className={`p-3.5 rounded-xl border ${dmarcBadge.border} ${dmarcBadge.bg} space-y-2`}>
+                            <div className="flex items-center justify-between">
+                              <span className="text-[11px] text-slate-400 font-bold">Active DMARC Policy</span>
+                              <DmarcIcon className={`h-3.5 w-3.5 ${dmarcBadge.text}`} />
+                            </div>
+                            <span className={`text-sm font-bold block ${dmarcBadge.text}`}>
+                              {dmarcBadge.label}
+                            </span>
+                            <div className="pt-1 text-[11px] text-slate-400 space-y-0.5">
+                              <div>Host: <span className="text-slate-200">{headerAnalysis?.fromDomain ? `_dmarc.${headerAnalysis.fromDomain}` : 'N/A'}</span></div>
+                              {headerAnalysis?.activeDmarcPolicy && (
+                                <div className="truncate text-slate-400 font-mono text-[10px]" title={headerAnalysis.activeDmarcPolicy}>
+                                  Policy: <span className="text-slate-300">{headerAnalysis.activeDmarcPolicy}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )
+                      })()}
+                    </div>
+
+                    {headerAnalysis?.activeVerificationSummary && (
+                      <div className="p-3 rounded-lg bg-emerald-950/20 border border-emerald-900/40 text-[11px] font-mono text-emerald-300 flex items-start gap-2">
+                        <Activity className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                        <span>{headerAnalysis.activeVerificationSummary}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
 
                 <div className="bg-slate-950/80 rounded-xl p-5 border border-slate-800/80 space-y-3 font-mono text-xs">
@@ -3832,29 +3946,69 @@ export default function InvestigationPage() {
                         </div>
                       </div>
 
-                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
-                        <span className="text-slate-400 text-[11px] block">Cryptographic Authentication Verdicts</span>
-                        <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                          <div className={`p-2 rounded border ${
-                            headerAnalysis?.spfResult?.toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
-                          }`}>
-                            <span className="text-[10px] block text-slate-400">SPF</span>
-                            <span className="font-bold">{headerAnalysis?.spfResult || 'NONE'}</span>
-                          </div>
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-3">
+                        <div className="space-y-1.5">
+                          <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">MTA-Reported Authentication (Headers)</span>
+                          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div className={`p-2 rounded border ${
+                              (headerAnalysis?.reportedSpf || headerAnalysis?.spfResult || '').toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                            }`}>
+                              <span className="text-[10px] block text-slate-400">SPF</span>
+                              <span className="font-bold">{headerAnalysis?.reportedSpf || headerAnalysis?.spfResult || 'NONE'}</span>
+                            </div>
 
-                          <div className={`p-2 rounded border ${
-                            headerAnalysis?.dkimResult?.toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
-                          }`}>
-                            <span className="text-[10px] block text-slate-400">DKIM</span>
-                            <span className="font-bold">{headerAnalysis?.dkimResult || 'NONE'}</span>
-                          </div>
+                            <div className={`p-2 rounded border ${
+                              (headerAnalysis?.reportedDkim || headerAnalysis?.dkimResult || '').toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                            }`}>
+                              <span className="text-[10px] block text-slate-400">DKIM</span>
+                              <span className="font-bold">{headerAnalysis?.reportedDkim || headerAnalysis?.dkimResult || 'NONE'}</span>
+                            </div>
 
-                          <div className={`p-2 rounded border ${
-                            headerAnalysis?.dmarcResult?.toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
-                          }`}>
-                            <span className="text-[10px] block text-slate-400">DMARC</span>
-                            <span className="font-bold">{headerAnalysis?.dmarcResult || 'NONE'}</span>
+                            <div className={`p-2 rounded border ${
+                              (headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult || '').toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' : 'bg-rose-950/60 text-rose-300 border-rose-800'
+                            }`}>
+                              <span className="text-[10px] block text-slate-400">DMARC</span>
+                              <span className="font-bold">{headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult || 'NONE'}</span>
+                            </div>
                           </div>
+                        </div>
+
+                        <div className="space-y-1.5 pt-2 border-t border-slate-900">
+                          <div className="flex items-center justify-between">
+                            <span className="text-slate-400 text-[10px] uppercase font-bold tracking-wider block">Live Authoritative DNS Verification</span>
+                            <span className="text-[9px] text-emerald-400 font-bold px-1.5 py-0.5 rounded bg-emerald-950 border border-emerald-800">ACTIVE DNS</span>
+                          </div>
+                          <div className="grid grid-cols-3 gap-2 text-center text-xs">
+                            <div className={`p-2 rounded border ${
+                              (headerAnalysis?.activeSpfResult || '').toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' :
+                              (headerAnalysis?.activeSpfResult || '').toLowerCase().includes('fail') ? 'bg-rose-950/60 text-rose-300 border-rose-800' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            }`}>
+                              <span className="text-[10px] block text-slate-400">Active SPF</span>
+                              <span className="font-bold">{headerAnalysis?.activeSpfResult || 'N/A'}</span>
+                            </div>
+
+                            <div className={`p-2 rounded border ${
+                              (headerAnalysis?.activeDkimStatus || '').toLowerCase() === 'pass' || (headerAnalysis?.activeDkimStatus || '').toLowerCase() === 'selector_found' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' :
+                              (headerAnalysis?.activeDkimStatus || '').toLowerCase().includes('not_found') ? 'bg-rose-950/60 text-rose-300 border-rose-800' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            }`}>
+                              <span className="text-[10px] block text-slate-400">Active DKIM</span>
+                              <span className="font-bold">{headerAnalysis?.activeDkimStatus || 'N/A'}</span>
+                            </div>
+
+                            <div className={`p-2 rounded border ${
+                              (headerAnalysis?.activeDmarcStatus || '').toLowerCase() === 'pass' ? 'bg-emerald-950/60 text-emerald-300 border-emerald-800' :
+                              (headerAnalysis?.activeDmarcStatus || '').toLowerCase().includes('reject') ? 'bg-rose-950/60 text-rose-300 border-rose-800' :
+                              (headerAnalysis?.activeDmarcStatus || '').toLowerCase().includes('quarantine') ? 'bg-amber-950/60 text-amber-300 border-amber-800' : 'bg-slate-900 text-slate-400 border-slate-800'
+                            }`}>
+                              <span className="text-[10px] block text-slate-400">Active DMARC</span>
+                              <span className="font-bold">{headerAnalysis?.activeDmarcStatus || 'N/A'}</span>
+                            </div>
+                          </div>
+                          {headerAnalysis?.activeVerificationSummary && (
+                            <p className="text-[10px] text-slate-400 font-mono truncate" title={headerAnalysis.activeVerificationSummary}>
+                              {headerAnalysis.activeVerificationSummary}
+                            </p>
+                          )}
                         </div>
 
                         {flags.length > 0 ? (

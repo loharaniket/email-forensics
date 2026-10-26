@@ -513,6 +513,10 @@ public class ForensicReportDto {
         private String dkimResult;
         private String dmarcResult;
         private String arcResult;
+        private String activeSpfResult;
+        private String activeDkimResult;
+        private String activeDmarcResult;
+        private String activeVerificationSummary;
         private List<String> identityMismatchFlags = new ArrayList<>();
         private int hopsCount;
         private String firstOriginatingIp;
@@ -624,6 +628,38 @@ public class ForensicReportDto {
 
         public void setHopsSummary(List<HopSummaryDto> hopsSummary) {
             this.hopsSummary = hopsSummary;
+        }
+
+        public String getActiveSpfResult() {
+            return activeSpfResult;
+        }
+
+        public void setActiveSpfResult(String activeSpfResult) {
+            this.activeSpfResult = activeSpfResult;
+        }
+
+        public String getActiveDkimResult() {
+            return activeDkimResult;
+        }
+
+        public void setActiveDkimResult(String activeDkimResult) {
+            this.activeDkimResult = activeDkimResult;
+        }
+
+        public String getActiveDmarcResult() {
+            return activeDmarcResult;
+        }
+
+        public void setActiveDmarcResult(String activeDmarcResult) {
+            this.activeDmarcResult = activeDmarcResult;
+        }
+
+        public String getActiveVerificationSummary() {
+            return activeVerificationSummary;
+        }
+
+        public void setActiveVerificationSummary(String activeVerificationSummary) {
+            this.activeVerificationSummary = activeVerificationSummary;
         }
     }
 
