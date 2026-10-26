@@ -9,9 +9,14 @@ import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -22,32 +27,60 @@ public class AiClientService {
     private static final Pattern FIELD_STRING_PATTERN = Pattern.compile("\"([a-zA-Z0-9_]+)\"\\s*:\\s*\"((?:\\\\\"|[^\"])*)\"");
     private static final Pattern ARRAY_BLOCK_PATTERN = Pattern.compile("\"([a-zA-Z0-9_]+)\"\\s*:\\s*\\[([^\\]]*)\\]");
 
-    @Value("${spring.ai.provider:${SPRING_AI_PROVIDER:openai}}")
+    @Value("${spring.ai.provider:groq}")
     private String provider;
 
-    @Value("${spring.ai.openai.api-key:${SPRING_AI_API_KEY:}}")
+    @Value("${spring.ai.openai.api-key:}")
     private String apiKey;
 
-    @Value("${spring.ai.openai.base-url:${SPRING_AI_BASE_URL:https://api.openai.com/v1}}")
+    @Value("${spring.ai.openai.base-url:https://api.groq.com/openai/v1}")
     private String baseUrl;
 
-    @Value("${spring.ai.openai.chat.options.model:${SPRING_AI_MODEL:gpt-4o-mini}}")
+    @Value("${spring.ai.openai.chat.options.model:openai/gpt-oss-20b}")
     private String modelName;
 
-    @Value("${spring.ai.timeout-seconds:${SPRING_AI_TIMEOUT_SECONDS:15}}")
+    @Value("${spring.ai.timeout-seconds:25}")
     private int timeoutSeconds;
 
     private final HttpClient httpClient = HttpClient.newBuilder()
             .connectTimeout(Duration.ofSeconds(10))
             .build();
 
+    private final Map<String, CacheEntry> assessmentCache = new ConcurrentHashMap<>();
+    private final Map<String, CompletableFuture<GenerationResult>> inFlightRequests = new ConcurrentHashMap<>();
+
     public GenerationResult generateAssessment(EvidenceContextSummaryDto contextSummary, String modelOverride) {
-        String activeModel = (modelOverride != null && !modelOverride.isBlank()) ? modelOverride : this.modelName;
         long startTime = System.currentTimeMillis();
 
-        boolean hasValidApiKey = apiKey != null && !apiKey.isBlank() && !apiKey.equalsIgnoreCase("your_api_key_here") && !apiKey.startsWith("replace-with");
+        String effectiveKey = this.apiKey;
+        if (effectiveKey == null || effectiveKey.isBlank()) {
+            effectiveKey = System.getProperty("GROQ_API_KEY");
+            if (effectiveKey == null || effectiveKey.isBlank()) {
+                effectiveKey = System.getenv("GROQ_API_KEY");
+            }
+        }
 
-        if ("mock".equalsIgnoreCase(provider) || !hasValidApiKey) {
+        boolean hasValidApiKey = effectiveKey != null &&
+                !effectiveKey.isBlank() &&
+                !effectiveKey.equalsIgnoreCase("your_api_key_here") &&
+                !effectiveKey.startsWith("replace-with") &&
+                effectiveKey.trim().length() > 10;
+
+        String activeProvider = this.provider != null ? this.provider : "groq";
+        String activeBaseUrl = this.baseUrl != null ? this.baseUrl : "https://api.groq.com/openai/v1";
+        String activeModel = (modelOverride != null && !modelOverride.isBlank()) ? modelOverride : this.modelName;
+
+        if (hasValidApiKey && effectiveKey.trim().startsWith("gsk_")) {
+            activeProvider = "groq";
+            if (activeBaseUrl.contains("openai.com")) {
+                activeBaseUrl = "https://api.groq.com/openai/v1";
+            }
+            if (activeModel == null || activeModel.isBlank() || activeModel.equalsIgnoreCase("gpt-4o-mini")) {
+                activeModel = "openai/gpt-oss-20b";
+            }
+        }
+
+        if ("mock".equalsIgnoreCase(activeProvider) || !hasValidApiKey) {
             AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
             long elapsed = System.currentTimeMillis() - startTime;
             return new GenerationResult(
@@ -61,6 +94,53 @@ public class AiClientService {
             );
         }
 
+        String cacheKey = computeCacheKey(activeModel, contextSummary.getSanitizedPromptContext());
+        CacheEntry cached = assessmentCache.get(cacheKey);
+        if (cached != null && !cached.isExpired()) {
+            return cached.result;
+        }
+
+        final String finalModel = activeModel;
+        final String finalProvider = activeProvider;
+        final String finalBaseUrl = activeBaseUrl;
+        final String finalApiKey = effectiveKey.trim();
+
+        try {
+            CompletableFuture<GenerationResult> future = inFlightRequests.computeIfAbsent(cacheKey, k ->
+                    CompletableFuture.supplyAsync(() -> executeRemoteGeneration(
+                            contextSummary, finalModel, finalProvider, finalBaseUrl, finalApiKey, startTime
+                    ))
+            );
+
+            GenerationResult result = future.join();
+            inFlightRequests.remove(cacheKey);
+
+            if ("SUCCESS".equalsIgnoreCase(result.getStatus())) {
+                assessmentCache.put(cacheKey, new CacheEntry(result, System.currentTimeMillis() + 900_000L));
+            }
+            return result;
+        } catch (Exception ex) {
+            inFlightRequests.remove(cacheKey);
+            long elapsed = System.currentTimeMillis() - startTime;
+            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+            return new GenerationResult(
+                    fallbackOutput,
+                    finalProvider,
+                    finalModel,
+                    "FALLBACK",
+                    "AI generation failed: " + (ex.getMessage() != null ? ex.getMessage() : "Execution error"),
+                    0,
+                    elapsed
+            );
+        }
+    }
+
+    private GenerationResult executeRemoteGeneration(EvidenceContextSummaryDto contextSummary,
+                                                    String activeModel,
+                                                    String activeProvider,
+                                                    String activeBaseUrl,
+                                                    String effectiveApiKey,
+                                                    long startTime) {
         try {
             String systemPrompt = buildSystemPrompt(contextSummary.getWhitelistedReferences());
             String userPrompt = "Forensic evidence package to analyze:\n\n" + contextSummary.getSanitizedPromptContext();
@@ -68,22 +148,48 @@ public class AiClientService {
             String requestBody = buildChatCompletionPayload(activeModel, systemPrompt, userPrompt);
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(baseUrl.replaceAll("/+$", "") + "/chat/completions"))
+                    .uri(URI.create(activeBaseUrl.replaceAll("/+$", "") + "/chat/completions"))
                     .timeout(Duration.ofSeconds(timeoutSeconds))
                     .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + apiKey.trim())
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .header("Authorization", "Bearer " + effectiveApiKey)
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody, StandardCharsets.UTF_8))
                     .build();
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             long elapsed = System.currentTimeMillis() - startTime;
+
+            if (response.statusCode() == 429) {
+                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+                return new GenerationResult(
+                        fallbackOutput,
+                        activeProvider,
+                        activeModel,
+                        "FALLBACK",
+                        "Groq rate limit reached (HTTP 429). Executed grounded offline forensic evaluation.",
+                        0,
+                        elapsed
+                );
+            }
+
+            if (response.statusCode() == 401) {
+                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+                return new GenerationResult(
+                        fallbackOutput,
+                        activeProvider,
+                        activeModel,
+                        "FALLBACK",
+                        "Groq API authentication failed (HTTP 401 - Invalid API key). Executed grounded offline forensic evaluation.",
+                        0,
+                        elapsed
+                );
+            }
 
             if (response.statusCode() != 200) {
                 String errorSnippet = extractErrorSnippet(response.body(), response.statusCode());
                 AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
                 return new GenerationResult(
                         fallbackOutput,
-                        provider,
+                        activeProvider,
                         activeModel,
                         "FALLBACK",
                         "Provider returned status " + response.statusCode() + ": " + errorSnippet,
@@ -97,7 +203,7 @@ public class AiClientService {
 
             return new GenerationResult(
                     structuredOutput,
-                    provider,
+                    activeProvider,
                     activeModel,
                     "SUCCESS",
                     null,
@@ -110,7 +216,7 @@ public class AiClientService {
             AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
             return new GenerationResult(
                     fallbackOutput,
-                    provider,
+                    activeProvider,
                     activeModel,
                     "FALLBACK",
                     "AI generation failed (" + e.getClass().getSimpleName() + "): " + (e.getMessage() != null ? e.getMessage() : "Timeout/Network error"),
@@ -150,6 +256,8 @@ public class AiClientService {
         sb.append("{");
         sb.append("\"model\":\"").append(escapeJson(model)).append("\",");
         sb.append("\"temperature\":0.1,");
+        sb.append("\"max_tokens\":800,");
+        sb.append("\"response_format\":{\"type\":\"json_object\"},");
         sb.append("\"messages\":[");
         sb.append("{\"role\":\"system\",\"content\":\"").append(escapeJson(systemPrompt)).append("\"},");
         sb.append("{\"role\":\"user\",\"content\":\"").append(escapeJson(userPrompt)).append("\"}");
@@ -353,6 +461,34 @@ public class AiClientService {
                 .replace("\\n", "\n")
                 .replace("\\r", "\r")
                 .replace("\\t", "\t");
+    }
+
+    private String computeCacheKey(String model, String content) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] hash = md.digest((model + "::" + (content != null ? content : "")).getBytes(StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            for (byte b : hash) {
+                sb.append(String.format("%02x", b));
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return (model + "::" + (content != null ? content.hashCode() : "0"));
+        }
+    }
+
+    private static class CacheEntry {
+        final GenerationResult result;
+        final long expiresAt;
+
+        CacheEntry(GenerationResult result, long expiresAt) {
+            this.result = result;
+            this.expiresAt = expiresAt;
+        }
+
+        boolean isExpired() {
+            return System.currentTimeMillis() > expiresAt;
+        }
     }
 
     private static class ParsedChatResponse {

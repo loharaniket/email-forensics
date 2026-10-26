@@ -119,6 +119,11 @@ public class EvidenceContextAssembler {
                 sb.append(" - Identity Mismatches: ").append(String.join(", ", h.getIdentityMismatchFlags())).append("\n");
                 whitelist.add("HEADER:MISMATCH");
             }
+
+            if (h.getIndependentVerification() != null && !h.getIndependentVerification().isBlank()) {
+                sb.append(" - Live DNS Authentication: ").append(h.getIndependentVerification()).append("\n");
+                whitelist.add("DNS:ACTIVE_VERIFICATION");
+            }
             sb.append("\n");
         }
 

@@ -77,4 +77,19 @@ class AiClientServiceTest {
         assertTrue(output.getEvidenceReferences().contains("HEADER:From"));
         assertTrue(output.getEvidenceReferences().contains("RISK:SCORE"));
     }
+
+    @Test
+    void testOfflineGroundedWithActiveDnsVerification() {
+        EvidenceContextSummaryDto context = new EvidenceContextSummaryDto(
+                List.of("HEADER:From", "DNS:ACTIVE_VERIFICATION", "RISK:SCORE"),
+                "1. HEADER FINDINGS: From: admin@paypal.com\n - Live DNS Authentication: SPF PASS (ip=198.51.100.1). DKIM PASS. DMARC PASS.\n7. RISK: (LOW)\n",
+                false
+        );
+
+        AiStructuredOutput output = clientService.generateOfflineGroundedAssessment(context);
+
+        assertNotNull(output);
+        assertEquals("BENIGN_LEGITIMATE", output.getThreatClassification());
+        assertTrue(output.getEvidenceReferences().contains("HEADER:From"));
+    }
 }

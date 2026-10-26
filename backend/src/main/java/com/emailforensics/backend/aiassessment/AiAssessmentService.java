@@ -50,7 +50,13 @@ public class AiAssessmentService {
         if (opt.isPresent()) {
             return mapToDto(opt.get());
         }
-        return generateAssessment(emailId, false, null);
+        synchronized (emailId.toString().intern()) {
+            Optional<AiGroundedAssessment> doubleCheck = assessmentRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId);
+            if (doubleCheck.isPresent()) {
+                return mapToDto(doubleCheck.get());
+            }
+            return generateAssessment(emailId, false, null);
+        }
     }
 
     @Transactional(readOnly = true)
@@ -78,6 +84,37 @@ public class AiAssessmentService {
             Optional<AiGroundedAssessment> existing = assessmentRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId);
             if (existing.isPresent()) {
                 return mapToDto(existing.get());
+            }
+
+            if (evidence.getSha256Hash() != null && !evidence.getSha256Hash().isBlank()) {
+                Optional<AiGroundedAssessment> match = assessmentRepository
+                        .findTopByEmailEvidenceSha256HashAndStatusOrderByCreatedAtDesc(evidence.getSha256Hash(), "SUCCESS");
+                if (match.isPresent()) {
+                    AiGroundedAssessment existingMatch = match.get();
+                    AiGroundedAssessment cloned = new AiGroundedAssessment(
+                            UUID.randomUUID(),
+                            evidence,
+                            run,
+                            existingMatch.getProvider(),
+                            existingMatch.getModelName(),
+                            PROMPT_VERSION,
+                            existingMatch.getStatus(),
+                            existingMatch.getThreatClassification(),
+                            existingMatch.getConfidenceAssessment(),
+                            existingMatch.getSummaryExplanation(),
+                            existingMatch.getKeyIndicatorsJson(),
+                            existingMatch.getEvidenceReferencesJson(),
+                            existingMatch.getUnsupportedReferencesJson(),
+                            existingMatch.getLimitationsAndCaveats(),
+                            existingMatch.isUntrustedInjectionsDetected(),
+                            existingMatch.getSanitizedContextSummary(),
+                            null,
+                            0,
+                            5L
+                    );
+                    cloned = assessmentRepository.save(cloned);
+                    return mapToDto(cloned);
+                }
             }
         }
 

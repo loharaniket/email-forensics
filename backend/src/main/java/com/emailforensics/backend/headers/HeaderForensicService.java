@@ -88,28 +88,30 @@ public class HeaderForensicService {
         HeaderAnalysisDto dto = analyzeStream(evidence.getStorageKey());
         dto.setAnalysisRunId(run.getId());
 
-        HeaderAnalysis entity = headerAnalysisRepository.findByAnalysisRunId(run.getId())
-                .orElse(new HeaderAnalysis());
-
-        entity.setAnalysisRun(run);
-        entity.setFromAddress(dto.getFromAddress());
-        entity.setFromDomain(dto.getFromDomain());
-        entity.setReplyTo(dto.getReplyTo());
-        entity.setReturnPath(dto.getReturnPath());
-        entity.setDkimDomain(dto.getDkimDomain());
-        entity.setReportedSpf(dto.getReportedSpf());
-        entity.setReportedDkim(dto.getReportedDkim());
-        entity.setReportedDmarc(dto.getReportedDmarc());
-        entity.setReportedArc(dto.getReportedArc());
-        entity.setIdentityMismatchFlags(formatFlagsJson(dto.getIdentityMismatchFlags()));
-        entity.setRawHeadersJson(formatRawHeadersJson(dto.getRawHeaders()));
-        try {
-            headerAnalysisRepository.save(entity);
-            headerAnalysisRepository.flush();
-        } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-            HeaderAnalysis existing = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
-            if (existing == null) {
-                throw ex;
+        UUID runId = run.getId();
+        HeaderAnalysis entity;
+        synchronized (runId.toString().intern()) {
+            entity = headerAnalysisRepository.findByAnalysisRunId(runId).orElse(null);
+            if (entity == null) {
+                entity = new HeaderAnalysis();
+                entity.setId(UUID.randomUUID());
+            }
+            entity.setAnalysisRun(run);
+            entity.setFromAddress(dto.getFromAddress());
+            entity.setFromDomain(dto.getFromDomain());
+            entity.setReplyTo(dto.getReplyTo());
+            entity.setReturnPath(dto.getReturnPath());
+            entity.setDkimDomain(dto.getDkimDomain());
+            entity.setReportedSpf(dto.getReportedSpf());
+            entity.setReportedDkim(dto.getReportedDkim());
+            entity.setReportedDmarc(dto.getReportedDmarc());
+            entity.setReportedArc(dto.getReportedArc());
+            entity.setIdentityMismatchFlags(formatFlagsJson(dto.getIdentityMismatchFlags()));
+            entity.setRawHeadersJson(formatRawHeadersJson(dto.getRawHeaders()));
+            try {
+                entity = headerAnalysisRepository.saveAndFlush(entity);
+            } catch (Exception ex) {
+                entity = headerAnalysisRepository.findByAnalysisRunId(runId).orElse(entity);
             }
         }
 
@@ -210,12 +212,11 @@ public class HeaderForensicService {
 
         HeaderAnalysis entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
         if (entity == null) {
-            try {
-                return analyzeAndSaveHeaders(emailId);
-            } catch (org.springframework.dao.DataIntegrityViolationException ex) {
-                entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
+            UUID runId = run.getId();
+            synchronized (runId.toString().intern()) {
+                entity = headerAnalysisRepository.findByAnalysisRunId(runId).orElse(null);
                 if (entity == null) {
-                    throw ex;
+                    return analyzeAndSaveHeaders(emailId);
                 }
             }
         }

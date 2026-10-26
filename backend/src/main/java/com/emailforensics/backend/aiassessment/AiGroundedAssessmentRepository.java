@@ -15,4 +15,6 @@ public interface AiGroundedAssessmentRepository extends JpaRepository<AiGrounded
     List<AiGroundedAssessment> findAllByEmailEvidenceIdOrderByCreatedAtDesc(UUID emailEvidenceId);
 
     Optional<AiGroundedAssessment> findTopByAnalysisRunIdOrderByCreatedAtDesc(UUID analysisRunId);
+
+    Optional<AiGroundedAssessment> findTopByEmailEvidenceSha256HashAndStatusOrderByCreatedAtDesc(String sha256Hash, String status);
 }

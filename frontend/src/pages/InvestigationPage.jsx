@@ -87,6 +87,7 @@ export default function InvestigationPage() {
   const [aiAssessment, setAiAssessment] = useState(null)
   const [aiHistory, setAiHistory] = useState([])
   const [isAiGenerating, setIsAiGenerating] = useState(false)
+  const [selectedAiModel, setSelectedAiModel] = useState('openai/gpt-oss-20b')
   const [aiError, setAiError] = useState(null)
   const [showAiHistoryDrawer, setShowAiHistoryDrawer] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
@@ -176,11 +177,12 @@ export default function InvestigationPage() {
     }
   }
 
-  const handleGenerateAiAssessment = async (force = true) => {
+  const handleGenerateAiAssessment = async (force = true, modelOverride = null) => {
     setIsAiGenerating(true)
     setAiError(null)
+    const targetModel = modelOverride || selectedAiModel
     try {
-      const result = await generateEvidenceAiAssessment(emailId, force)
+      const result = await generateEvidenceAiAssessment(emailId, force, targetModel)
       setAiAssessment(result)
       const history = await getEvidenceAiHistory(emailId).catch(() => [])
       setAiHistory(history || [])
@@ -3470,6 +3472,20 @@ export default function InvestigationPage() {
                         </span>
                         {aiAssessment && (
                           <span
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded border flex items-center gap-1 ${
+                              aiAssessment.provider === 'groq' || (aiAssessment.provider && aiAssessment.provider.toLowerCase().includes('groq'))
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : 'bg-slate-800 text-slate-300 border-slate-700'
+                            }`}
+                          >
+                            {(aiAssessment.provider === 'groq' || (aiAssessment.provider && aiAssessment.provider.toLowerCase().includes('groq'))) && (
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                            )}
+                            {aiAssessment.provider === 'groq' ? 'GROQ CLOUD AI' : aiAssessment.provider.toUpperCase()}
+                          </span>
+                        )}
+                        {aiAssessment && (
+                          <span
                             className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
                               aiAssessment.status === 'SUCCESS'
                                 ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
@@ -3506,14 +3522,37 @@ export default function InvestigationPage() {
                       <p className="text-xs text-slate-400">
                         Synthesized objective forensic narrative grounded strictly in extracted technical evidence and deterministic factors.
                       </p>
+
+                      {(!aiAssessment || aiAssessment.provider === 'grounded-offline' || aiAssessment.status === 'FALLBACK') && (
+                        <div className="mt-2 p-2.5 rounded-lg bg-purple-950/30 border border-purple-800/40 text-xs text-purple-200 flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-purple-400 shrink-0" />
+                            <span>Real AI Threat Assessment enabled with Groq Cloud. Paste your API key into <code>.env</code> as <code>GROQ_API_KEY=gsk_...</code> to enable live Llama 3.3 70B analysis.</span>
+                          </div>
+                          <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded bg-purple-800 hover:bg-purple-700 text-white font-medium text-[11px] shrink-0 transition-colors">
+                            Get Groq Key
+                          </a>
+                        </div>
+                      )}
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+                      <select
+                        id="ai-model-select"
+                        value={selectedAiModel}
+                        onChange={(e) => setSelectedAiModel(e.target.value)}
+                        className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 focus:outline-none font-mono"
+                      >
+                        <option value="openai/gpt-oss-20b">Groq: GPT-OSS 20B (Recommended)</option>
+                        <option value="qwen/qwen3.8-27b">Groq: Qwen 3.8 27B (Ultra-Fast 495ms)</option>
+                        <option value="openai/gpt-oss-120b">Groq: GPT-OSS 120B (Deep Reasoning)</option>
+                      </select>
+
                       <button
                         id="regenerate-ai-btn"
-                        onClick={() => handleGenerateAiAssessment(true)}
+                        onClick={() => handleGenerateAiAssessment(true, selectedAiModel)}
                         disabled={isAiGenerating}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 transition-colors cursor-pointer"
+                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
                         <span>{isAiGenerating ? 'Generating...' : 'Regenerate Assessment'}</span>
