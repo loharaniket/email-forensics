@@ -912,21 +912,30 @@ export default function InvestigationPage() {
 
                   <div className="p-4 rounded-xl border bg-slate-900/60 border-slate-800 text-slate-200">
                     <span className="text-xs font-mono text-slate-400 block mb-1">Email Authentication</span>
-                    <div className="flex items-center gap-1.5 font-mono text-xs font-bold pt-1">
-                      <span className={`px-2 py-0.5 rounded border ${
-                        headerAnalysis?.spfResult?.toLowerCase() === 'pass' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-rose-950 text-rose-300 border-rose-800'
-                      }`}>
-                        SPF: {headerAnalysis?.spfResult || 'NONE'}
-                      </span>
-                      <span className={`px-2 py-0.5 rounded border ${
-                        headerAnalysis?.dkimResult?.toLowerCase() === 'pass' ? 'bg-emerald-950 text-emerald-300 border-emerald-800' : 'bg-rose-950 text-rose-300 border-rose-800'
-                      }`}>
-                        DKIM: {headerAnalysis?.dkimResult || 'NONE'}
-                      </span>
-                    </div>
-                    <span className="text-[11px] text-slate-400 block mt-1">
-                      DMARC: {headerAnalysis?.dmarcResult || 'NONE'}
-                    </span>
+                    {(() => {
+                      const spfVal = headerAnalysis?.spfResult || headerAnalysis?.activeSpfResult || headerAnalysis?.reportedSpf || 'NONE'
+                      const dkimVal = headerAnalysis?.dkimResult || headerAnalysis?.activeDkimStatus || headerAnalysis?.reportedDkim || 'NONE'
+                      const dmarcVal = headerAnalysis?.dmarcResult || headerAnalysis?.activeDmarcStatus || headerAnalysis?.reportedDmarc || 'NONE'
+                      const spfBadge = getAuthBadge(spfVal)
+                      const dkimBadge = getAuthBadge(dkimVal)
+                      const dmarcBadge = getAuthBadge(dmarcVal)
+
+                      return (
+                        <>
+                          <div className="flex items-center gap-1.5 font-mono text-xs font-bold pt-1">
+                            <span className={`px-2 py-0.5 rounded border ${spfBadge.bg} ${spfBadge.text} ${spfBadge.border}`}>
+                              SPF: {spfBadge.label}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded border ${dkimBadge.bg} ${dkimBadge.text} ${dkimBadge.border}`}>
+                              DKIM: {dkimBadge.label}
+                            </span>
+                          </div>
+                          <span className="text-[11px] text-slate-400 block mt-1 font-mono">
+                            DMARC: <span className={`font-bold ${dmarcBadge.text}`}>{dmarcBadge.label}</span>
+                          </span>
+                        </>
+                      )
+                    })()}
                   </div>
                 </div>
 

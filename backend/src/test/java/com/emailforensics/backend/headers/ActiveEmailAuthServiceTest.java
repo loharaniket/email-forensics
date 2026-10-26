@@ -6,8 +6,15 @@ import com.emailforensics.backend.infrastructure.IpClassifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.nio.charset.StandardCharsets;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.MessageDigest;
+import java.security.Signature;
 import java.time.Instant;
+import java.util.Base64;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -58,12 +65,14 @@ class ActiveEmailAuthServiceTest {
     }
 
     @Test
-    void shouldVerifyDkimPassWhenSelectorExists() {
+    void shouldVerifyDkimReportSelectorFoundWithoutCryptographicClaim() {
         String dkimHeader = "v=1; a=rsa-sha256; c=relaxed/relaxed; d=phish-sender.test; s=default; bh=abc1234=; b=xyz5678=";
         ActiveEmailAuthService.DkimEvaluationResult result = service.verifyDkim(dkimHeader, "phish-sender.test");
 
         assertNotNull(result);
-        assertEquals("PASS", result.getStatus());
+        assertEquals("SELECTOR_FOUND", result.getStatus());
+        assertFalse(result.isCryptographicVerified());
+        assertNotNull(result.getVerificationNote());
         assertEquals("default", result.getSelector());
         assertEquals("phish-sender.test", result.getSigningDomain());
         assertNotNull(result.getDkimRecord());
@@ -82,12 +91,46 @@ class ActiveEmailAuthServiceTest {
     }
 
     @Test
+    void shouldPrioritizeEnvelopeSenderOverVisibleFromDomainForSpf() {
+        ReceivedHopDto hop1 = new ReceivedHopDto(
+                UUID.randomUUID(), 1, "mail-relay.test", "mx.corp.test", "ESMTP",
+                "203.0.113.45", Instant.now(), null, "Received line 1", null
+        );
+
+        ActiveEmailAuthService.ActiveAuthResult result = service.performActiveAuthentication(
+                "secure-bank.test", "phish-sender.test", null, List.of(hop1)
+        );
+
+        assertNotNull(result);
+        assertEquals("PASS", result.getActiveSpfResult());
+        assertEquals("MAIL_FROM", result.getSpfResult().getEvaluatedIdentity());
+        assertEquals("phish-sender.test", result.getSpfResult().getDomain());
+    }
+
+    @Test
+    void shouldFallbackToHeloWhenReturnPathIsEmpty() {
+        ReceivedHopDto hop1 = new ReceivedHopDto(
+                UUID.randomUUID(), 1, "phish-sender.test", "mx.corp.test", "ESMTP",
+                "203.0.113.45", Instant.now(), null, "Received line 1", null
+        );
+
+        ActiveEmailAuthService.ActiveAuthResult result = service.performActiveAuthentication(
+                "secure-bank.test", "", null, List.of(hop1)
+        );
+
+        assertNotNull(result);
+        assertEquals("PASS", result.getActiveSpfResult());
+        assertEquals("HELO", result.getSpfResult().getEvaluatedIdentity());
+        assertEquals("phish-sender.test", result.getSpfResult().getDomain());
+    }
+
+    @Test
     void shouldEvaluateDmarcPassWhenSpfAlignedAndPassing() {
         ActiveEmailAuthService.SpfEvaluationResult spf = new ActiveEmailAuthService.SpfEvaluationResult(
                 "PASS", "v=spf1 ip4:203.0.113.45 ~all", "ip4:203.0.113.45", "203.0.113.45", "phish-sender.test"
         );
         ActiveEmailAuthService.DkimEvaluationResult dkim = new ActiveEmailAuthService.DkimEvaluationResult(
-                "SIGNATURE_ABSENT", null, null, null, null
+                "SELECTOR_FOUND", "v=DKIM1; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQD", "default", "phish-sender.test", "rsa-sha256", false, "Unverified"
         );
 
         ActiveEmailAuthService.DmarcEvaluationResult dmarc = service.evaluateDmarc(
@@ -98,7 +141,7 @@ class ActiveEmailAuthServiceTest {
         assertEquals("PASS", dmarc.getStatus());
         assertEquals("reject", dmarc.getPolicy());
         assertTrue(dmarc.isSpfAligned());
-        assertFalse(dmarc.isDkimAligned());
+        assertTrue(dmarc.isDkimAligned());
     }
 
     @Test
@@ -120,6 +163,24 @@ class ActiveEmailAuthServiceTest {
     }
 
     @Test
+    void shouldNotPassDmarcBasedOnlyOnUnverifiedDkimKeyPublication() {
+        ActiveEmailAuthService.SpfEvaluationResult spf = new ActiveEmailAuthService.SpfEvaluationResult(
+                "FAIL", "v=spf1 -all", "-all", "192.0.2.99", "secure-bank.test"
+        );
+        ActiveEmailAuthService.DkimEvaluationResult unverifiedDkim = new ActiveEmailAuthService.DkimEvaluationResult(
+                "SELECTOR_FOUND", "v=DKIM1; p=MIGf...", "default", "secure-bank.test", "rsa-sha256", false, "Unverified"
+        );
+
+        ActiveEmailAuthService.DmarcEvaluationResult dmarc = service.evaluateDmarc(
+                "secure-bank.test", "secure-bank.test", spf, unverifiedDkim
+        );
+
+        assertNotNull(dmarc);
+        assertEquals("POLICY_REJECT", dmarc.getStatus());
+        assertFalse(dmarc.isSpfAligned() && "PASS".equals(spf.getStatus()));
+    }
+
+    @Test
     void shouldPerformCompleteActiveAuthenticationWorkflow() {
         ReceivedHopDto hop1 = new ReceivedHopDto(
                 UUID.randomUUID(), 1, "mail-client.local", "relay1.corp.test", "ESMTP",
@@ -133,7 +194,7 @@ class ActiveEmailAuthServiceTest {
 
         assertNotNull(result);
         assertEquals("PASS", result.getActiveSpfResult());
-        assertEquals("PASS", result.getActiveDkimStatus());
+        assertEquals("SELECTOR_FOUND", result.getActiveDkimStatus());
         assertEquals("PASS", result.getActiveDmarcStatus());
         assertNotNull(result.getSummary());
         assertTrue(result.getSummary().contains("Active DNS Email Authentication Verification"));

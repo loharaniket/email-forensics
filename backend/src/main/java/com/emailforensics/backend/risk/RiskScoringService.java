@@ -95,37 +95,37 @@ public class RiskScoringService {
         HeaderAnalysisDto headerAnalysis = null;
         try {
             headerAnalysis = headerForensicService.getHeaderAnalysis(emailId);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
 
         List<ReceivedHopDto> hops = Collections.emptyList();
         try {
             hops = headerForensicService.getReceivedHops(emailId);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
 
         List<ExtractedUrlDto> urls = Collections.emptyList();
         try {
             urls = urlIntelService.getExtractedUrls(emailId);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
 
         List<IpArtifactDto> ips = Collections.emptyList();
         try {
             ips = infrastructureService.getInfrastructure(emailId);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
 
         List<VisualArtifactDto> visuals = Collections.emptyList();
         try {
             visuals = visualAnalysisService.getVisualArtifacts(emailId);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
 
         Optional<ContentAnalysisDto> contentOpt = Optional.empty();
         try {
             contentOpt = contentAnalysisService.getContentAnalysis(emailId);
-        } catch (Exception ignored) {
+        } catch (Throwable ignored) {
         }
 
         List<RiskFactor> rawFactors = new ArrayList<>();
