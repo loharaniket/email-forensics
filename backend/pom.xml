@@ -120,6 +120,11 @@
 			<artifactId>tribuo-classification-sgd</artifactId>
 			<version>4.3.2</version>
 		</dependency>
+		<dependency>
+			<groupId>com.maxmind.geoip2</groupId>
+			<artifactId>geoip2</artifactId>
+			<version>4.2.1</version>
+		</dependency>
 
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

@@ -81,4 +81,20 @@ class InfrastructureServiceTest {
         assertNotNull(nxRes);
         assertEquals("NXDOMAIN", nxRes.getStatus());
     }
+
+    @Test
+    void shouldEnrichPublicIpUsingBundledMaxMindDatabase() {
+        GeoIpService realGeoIpService = new GeoIpService(ipClassifier, "GeoLite2-City.mmdb");
+        IpArtifact artifact = realGeoIpService.enrichIp("140.82.121.3", "HOP_IP");
+        assertNotNull(artifact);
+        assertEquals("140.82.121.3", artifact.getIpAddress());
+        assertFalse(artifact.getIsPrivate());
+        assertEquals("ENRICHED", artifact.getLookupStatus());
+        assertEquals("Germany", artifact.getCountry());
+        assertEquals("Frankfurt am Main", artifact.getCity());
+        assertNotNull(artifact.getLatitude());
+        assertNotNull(artifact.getLongitude());
+        assertEquals("AS36459", artifact.getAsnNumber());
+        assertTrue(artifact.getOrganization().contains("GitHub"));
+    }
 }
