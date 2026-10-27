@@ -88,7 +88,11 @@ public class AiAssessmentService {
 
             if (evidence.getSha256Hash() != null && !evidence.getSha256Hash().isBlank()) {
                 Optional<AiGroundedAssessment> match = assessmentRepository
-                        .findTopByEmailEvidenceSha256HashAndStatusOrderByCreatedAtDesc(evidence.getSha256Hash(), "SUCCESS");
+                        .findTopByEmailEvidenceSha256HashAndStatusOrderByCreatedAtDesc(evidence.getSha256Hash(), "LIVE_AI");
+                if (match.isEmpty()) {
+                    match = assessmentRepository
+                            .findTopByEmailEvidenceSha256HashAndStatusOrderByCreatedAtDesc(evidence.getSha256Hash(), "SUCCESS");
+                }
                 if (match.isPresent()) {
                     AiGroundedAssessment existingMatch = match.get();
                     AiGroundedAssessment cloned = new AiGroundedAssessment(

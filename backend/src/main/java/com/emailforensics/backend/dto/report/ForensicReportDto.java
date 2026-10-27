@@ -1337,6 +1337,7 @@ public class ForensicReportDto {
 
     public static class AiAssessmentSummaryDto {
         private boolean assessmentPresent;
+        private String status;
         private String threatClassification;
         private String confidenceAssessment;
         private String summaryExplanation;
@@ -1359,6 +1360,14 @@ public class ForensicReportDto {
 
         public void setAssessmentPresent(boolean assessmentPresent) {
             this.assessmentPresent = assessmentPresent;
+        }
+
+        public String getStatus() {
+            return status;
+        }
+
+        public void setStatus(String status) {
+            this.status = status;
         }
 
         public String getThreatClassification() {

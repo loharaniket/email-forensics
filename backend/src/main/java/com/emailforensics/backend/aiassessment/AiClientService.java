@@ -81,14 +81,14 @@ public class AiClientService {
         }
 
         if ("mock".equalsIgnoreCase(activeProvider) || !hasValidApiKey) {
-            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary, "OFFLINE_RULES", null);
             long elapsed = System.currentTimeMillis() - startTime;
             return new GenerationResult(
                     fallbackOutput,
-                    "grounded-offline",
-                    "grounded-heuristic-v1",
-                    "FALLBACK",
-                    hasValidApiKey ? null : "No external API key configured. Executed grounded offline forensic evaluation.",
+                    "offline-rules",
+                    "heuristic-rule-engine-v1",
+                    "OFFLINE_RULES",
+                    "No external AI API key configured. Executed deterministic offline heuristic evaluation.",
                     0,
                     Math.max(1, elapsed)
             );
@@ -115,20 +115,21 @@ public class AiClientService {
             GenerationResult result = future.join();
             inFlightRequests.remove(cacheKey);
 
-            if ("SUCCESS".equalsIgnoreCase(result.getStatus())) {
+            if ("LIVE_AI".equalsIgnoreCase(result.getStatus())) {
                 assessmentCache.put(cacheKey, new CacheEntry(result, System.currentTimeMillis() + 900_000L));
             }
             return result;
         } catch (Exception ex) {
             inFlightRequests.remove(cacheKey);
             long elapsed = System.currentTimeMillis() - startTime;
-            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+            String errorMsg = ex.getMessage() != null ? ex.getMessage() : "Execution exception";
+            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary, "ASSESSMENT_FAILED", errorMsg);
             return new GenerationResult(
                     fallbackOutput,
                     finalProvider,
-                    finalModel,
-                    "FALLBACK",
-                    "AI generation failed: " + (ex.getMessage() != null ? ex.getMessage() : "Execution error"),
+                    finalModel + " (FAILED)",
+                    "ASSESSMENT_FAILED",
+                    "Live AI assessment failed: " + errorMsg + ". Emergency rule fallback engaged.",
                     0,
                     elapsed
             );
@@ -159,26 +160,28 @@ public class AiClientService {
             long elapsed = System.currentTimeMillis() - startTime;
 
             if (response.statusCode() == 429) {
-                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+                String error = "Groq rate limit reached (HTTP 429)";
+                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary, "ASSESSMENT_FAILED", error);
                 return new GenerationResult(
                         fallbackOutput,
                         activeProvider,
-                        activeModel,
-                        "FALLBACK",
-                        "Groq rate limit reached (HTTP 429). Executed grounded offline forensic evaluation.",
+                        activeModel + " (FAILED)",
+                        "ASSESSMENT_FAILED",
+                        error + ". Emergency rule fallback engaged.",
                         0,
                         elapsed
                 );
             }
 
             if (response.statusCode() == 401) {
-                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+                String error = "Groq API authentication failed (HTTP 401 - Invalid API key)";
+                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary, "ASSESSMENT_FAILED", error);
                 return new GenerationResult(
                         fallbackOutput,
                         activeProvider,
-                        activeModel,
-                        "FALLBACK",
-                        "Groq API authentication failed (HTTP 401 - Invalid API key). Executed grounded offline forensic evaluation.",
+                        activeModel + " (FAILED)",
+                        "ASSESSMENT_FAILED",
+                        error + ". Emergency rule fallback engaged.",
                         0,
                         elapsed
                 );
@@ -186,13 +189,14 @@ public class AiClientService {
 
             if (response.statusCode() != 200) {
                 String errorSnippet = extractErrorSnippet(response.body(), response.statusCode());
-                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+                String error = "Provider returned status " + response.statusCode() + ": " + errorSnippet;
+                AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary, "ASSESSMENT_FAILED", error);
                 return new GenerationResult(
                         fallbackOutput,
                         activeProvider,
-                        activeModel,
-                        "FALLBACK",
-                        "Provider returned status " + response.statusCode() + ": " + errorSnippet,
+                        activeModel + " (FAILED)",
+                        "ASSESSMENT_FAILED",
+                        error + ". Emergency rule fallback engaged.",
                         0,
                         elapsed
                 );
@@ -205,7 +209,7 @@ public class AiClientService {
                     structuredOutput,
                     activeProvider,
                     activeModel,
-                    "SUCCESS",
+                    "LIVE_AI",
                     null,
                     parsed.tokensUsed,
                     elapsed
@@ -213,13 +217,14 @@ public class AiClientService {
 
         } catch (Exception e) {
             long elapsed = System.currentTimeMillis() - startTime;
-            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary);
+            String error = "AI generation failed (" + e.getClass().getSimpleName() + "): " + (e.getMessage() != null ? e.getMessage() : "Timeout/Network error");
+            AiStructuredOutput fallbackOutput = generateOfflineGroundedAssessment(contextSummary, "ASSESSMENT_FAILED", error);
             return new GenerationResult(
                     fallbackOutput,
                     activeProvider,
-                    activeModel,
-                    "FALLBACK",
-                    "AI generation failed (" + e.getClass().getSimpleName() + "): " + (e.getMessage() != null ? e.getMessage() : "Timeout/Network error"),
+                    activeModel + " (FAILED)",
+                    "ASSESSMENT_FAILED",
+                    error + ". Emergency rule fallback engaged.",
                     0,
                     elapsed
             );
@@ -323,13 +328,17 @@ public class AiClientService {
         }
 
         if (output.getThreatClassification() == null || output.getSummaryExplanation() == null) {
-            return generateOfflineGroundedAssessment(context);
+            throw new IllegalStateException("Model output failed schema validation: missing classification or narrative");
         }
 
         return output;
     }
 
     public AiStructuredOutput generateOfflineGroundedAssessment(EvidenceContextSummaryDto contextSummary) {
+        return generateOfflineGroundedAssessment(contextSummary, "OFFLINE_RULES", null);
+    }
+
+    public AiStructuredOutput generateOfflineGroundedAssessment(EvidenceContextSummaryDto contextSummary, String mode, String failureReason) {
         String context = contextSummary.getSanitizedPromptContext();
         boolean promptInjection = contextSummary.isUntrustedInjectionsDetected() ||
                 context.contains("Prompt injection pattern detected") ||
@@ -348,6 +357,16 @@ public class AiClientService {
         StringBuilder summary = new StringBuilder();
         List<String> indicators = new ArrayList<>();
         List<String> references = new ArrayList<>();
+
+        if ("ASSESSMENT_FAILED".equalsIgnoreCase(mode)) {
+            summary.append("[LIVE AI CALL FAILED");
+            if (failureReason != null && !failureReason.isBlank()) {
+                summary.append(": ").append(failureReason.trim());
+            }
+            summary.append(" — EMERGENCY RULE-BASED FALLBACK] ");
+        } else {
+            summary.append("[RULE-BASED OFFLINE EVALUATION — NO LLM INVOKED] ");
+        }
 
         if (promptInjection) {
             classification = "MALICIOUS_PHISHING";
@@ -409,8 +428,14 @@ public class AiClientService {
             }
         }
 
-        String limitations = "Assessment generated via offline evidence-grounded inference rule set. " +
-                "Direct cryptographic verification of historical headers depends on initial receiving mail transfer agent preservation.";
+        String limitations;
+        if ("ASSESSMENT_FAILED".equalsIgnoreCase(mode)) {
+            limitations = "Live LLM generation failed" + (failureReason != null ? " (" + failureReason + ")" : "") +
+                    ". Displaying emergency fallback narrative synthesized by offline heuristic rules. This assessment was NOT completed by an AI model.";
+        } else {
+            limitations = "Assessment generated via offline evidence-grounded inference rule set because no live AI provider key was supplied. " +
+                    "This evaluation is rule-based and was NOT synthesized by an LLM model.";
+        }
 
         return new AiStructuredOutput(
                 classification,

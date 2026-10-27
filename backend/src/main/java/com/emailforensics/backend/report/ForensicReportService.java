@@ -222,8 +222,13 @@ public class ForensicReportService {
             ForensicReportDto.AiAssessmentSummaryDto a = report.getAiAssessment();
             sb.append("  \"aiAssessment\": {\n");
             sb.append("    \"assessmentPresent\": ").append(a.isAssessmentPresent()).append(",\n");
+            sb.append("    \"status\": \"").append(escapeJson(a.getStatus())).append("\",\n");
+            sb.append("    \"provider\": \"").append(escapeJson(a.getProvider())).append("\",\n");
+            sb.append("    \"modelName\": \"").append(escapeJson(a.getModelName())).append("\",\n");
             sb.append("    \"threatClassification\": \"").append(escapeJson(a.getThreatClassification())).append("\",\n");
             sb.append("    \"confidenceAssessment\": \"").append(escapeJson(a.getConfidenceAssessment())).append("\",\n");
+            sb.append("    \"tokensUsed\": ").append(a.getTokensUsed() != null ? a.getTokensUsed() : 0).append(",\n");
+            sb.append("    \"generationTimeMs\": ").append(a.getGenerationTimeMs() != null ? a.getGenerationTimeMs() : 0).append(",\n");
             sb.append("    \"summaryExplanation\": \"").append(escapeJson(a.getSummaryExplanation())).append("\",\n");
             sb.append("    \"promptInjectionDetected\": ").append(a.isPromptInjectionDetected()).append("\n");
             sb.append("  },\n");
@@ -539,6 +544,7 @@ public class ForensicReportService {
         if (aiOpt.isPresent()) {
             AiGroundedAssessment a = aiOpt.get();
             ai.setAssessmentPresent(true);
+            ai.setStatus(a.getStatus());
             ai.setThreatClassification(a.getThreatClassification());
             ai.setConfidenceAssessment(a.getConfidenceAssessment());
             ai.setSummaryExplanation(a.getSummaryExplanation());

@@ -623,9 +623,30 @@ export default function InvestigationPage() {
             <div
               id="header-ai-pill"
               onClick={() => setActiveTab('ai')}
-              className="p-3.5 rounded-xl border bg-purple-950/40 border-purple-800/80 text-purple-300 cursor-pointer transition-all hover:scale-[1.02]"
+              className={`p-3.5 rounded-xl border cursor-pointer transition-all hover:scale-[1.02] ${
+                aiAssessment?.status === 'LIVE_AI'
+                  ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
+                  : aiAssessment?.status === 'ASSESSMENT_FAILED'
+                  ? 'bg-rose-950/40 border-rose-800/80 text-rose-300'
+                  : aiAssessment?.status === 'OFFLINE_RULES'
+                  ? 'bg-cyan-950/40 border-cyan-800/80 text-cyan-300'
+                  : 'bg-purple-950/40 border-purple-800/80 text-purple-300'
+              }`}
             >
-              <span className="text-[11px] font-mono text-purple-400 block mb-1">AI Assessment</span>
+              <div className="flex items-center gap-1.5 mb-1">
+                {aiAssessment?.status === 'LIVE_AI' && (
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                )}
+                <span className={`text-[11px] font-mono block ${
+                  aiAssessment?.status === 'LIVE_AI' ? 'text-emerald-400' :
+                  aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'text-rose-400' :
+                  aiAssessment?.status === 'OFFLINE_RULES' ? 'text-cyan-400' : 'text-purple-400'
+                }`}>
+                  {aiAssessment?.status === 'LIVE_AI' ? 'Live AI Assessment' :
+                   aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'AI Failed (Fallback)' :
+                   aiAssessment?.status === 'OFFLINE_RULES' ? 'Rule-Based (No LLM)' : 'AI Assessment'}
+                </span>
+              </div>
               <span className="text-xs font-mono font-bold block truncate">
                 {aiAssessment ? aiAssessment.threatClassification : 'Ready'}
               </span>
@@ -800,21 +821,36 @@ export default function InvestigationPage() {
                 <Sparkles className="h-3.5 w-3.5 text-purple-400" />
                 <span>AI Grounded Assessment</span>
                 {aiAssessment && (
-                  <span
-                    className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
-                      aiAssessment.threatClassification?.includes('MALICIOUS')
-                        ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                  <div className="flex items-center gap-1">
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        aiAssessment.status === 'LIVE_AI'
+                          ? 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                          : aiAssessment.status === 'ASSESSMENT_FAILED'
+                          ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                          : 'bg-cyan-950 text-cyan-300 border border-cyan-800'
+                      }`}
+                    >
+                      {aiAssessment.status === 'LIVE_AI' ? 'LIVE AI' :
+                       aiAssessment.status === 'ASSESSMENT_FAILED' ? 'AI FAILED' :
+                       'OFFLINE RULES'}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                        aiAssessment.threatClassification?.includes('MALICIOUS')
+                          ? 'bg-rose-950 text-rose-300 border border-rose-800'
+                          : aiAssessment.threatClassification?.includes('SUSPICIOUS')
+                          ? 'bg-amber-950 text-amber-300 border border-amber-800'
+                          : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
+                      }`}
+                    >
+                      {aiAssessment.threatClassification?.includes('MALICIOUS')
+                        ? 'MALICIOUS'
                         : aiAssessment.threatClassification?.includes('SUSPICIOUS')
-                        ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                        : 'bg-emerald-950 text-emerald-300 border border-emerald-800'
-                    }`}
-                  >
-                    {aiAssessment.threatClassification?.includes('MALICIOUS')
-                      ? 'MALICIOUS'
-                      : aiAssessment.threatClassification?.includes('SUSPICIOUS')
-                      ? 'SUSPICIOUS'
-                      : 'BENIGN'}
-                  </span>
+                        ? 'SUSPICIOUS'
+                        : 'BENIGN'}
+                    </span>
+                  </div>
                 )}
               </button>
 
@@ -890,13 +926,44 @@ export default function InvestigationPage() {
                     <span className="text-xs font-semibold uppercase">{riskBreakdown?.riskLevel || 'PENDING'}</span>
                   </div>
 
-                  <div className="p-4 rounded-xl border bg-purple-950/40 border-purple-800/80 text-purple-300">
-                    <span className="text-xs font-mono text-purple-400 block mb-1">AI Classification</span>
+                  <div className={`p-4 rounded-xl border ${
+                    aiAssessment?.status === 'LIVE_AI'
+                      ? 'bg-emerald-950/30 border-emerald-800/80 text-emerald-300'
+                      : aiAssessment?.status === 'ASSESSMENT_FAILED'
+                      ? 'bg-rose-950/30 border-rose-800/80 text-rose-300'
+                      : aiAssessment?.status === 'OFFLINE_RULES'
+                      ? 'bg-slate-900/60 border-slate-700 text-slate-200'
+                      : 'bg-purple-950/40 border-purple-800/80 text-purple-300'
+                  }`}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className={`text-xs font-mono block ${
+                        aiAssessment?.status === 'LIVE_AI' ? 'text-emerald-400' :
+                        aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'text-rose-400' :
+                        aiAssessment?.status === 'OFFLINE_RULES' ? 'text-slate-400' : 'text-purple-400'
+                      }`}>
+                        {aiAssessment?.status === 'LIVE_AI' ? 'Live AI Classification (LLM)' :
+                         aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'Emergency Fallback (AI Failed)' :
+                         aiAssessment?.status === 'OFFLINE_RULES' ? 'Deterministic Rule-Based (No LLM)' :
+                         'AI Classification'}
+                      </span>
+                      {aiAssessment?.status === 'LIVE_AI' && (
+                        <span className="flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded bg-emerald-900/60 text-emerald-300 border border-emerald-700">
+                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                          LIVE
+                        </span>
+                      )}
+                    </div>
                     <div className="text-xl font-bold truncate">
                       {aiAssessment ? aiAssessment.threatClassification : 'Pending Generation'}
                     </div>
-                    <span className="text-xs text-purple-300/80">
-                      {aiAssessment?.confidenceScore ? `${aiAssessment.confidenceScore}% Confidence` : 'Grounded LLM Shield'}
+                    <span className="text-xs opacity-80 block truncate">
+                      {aiAssessment?.status === 'LIVE_AI'
+                        ? `${aiAssessment.confidenceAssessment || 'HIGH'} Confidence • Real Model (${aiAssessment.modelName})`
+                        : aiAssessment?.status === 'ASSESSMENT_FAILED'
+                        ? 'Model call failed • Evaluated by offline rules'
+                        : aiAssessment?.status === 'OFFLINE_RULES'
+                        ? 'Deterministic heuristic rules • No model invoked'
+                        : (aiAssessment?.confidenceScore ? `${aiAssessment.confidenceScore}% Confidence` : 'Grounded Shield')}
                     </span>
                   </div>
 
@@ -3482,26 +3549,37 @@ export default function InvestigationPage() {
                         {aiAssessment && (
                           <span
                             className={`text-[10px] font-mono px-2 py-0.5 rounded border flex items-center gap-1 ${
-                              aiAssessment.provider === 'groq' || (aiAssessment.provider && aiAssessment.provider.toLowerCase().includes('groq'))
+                              aiAssessment.status === 'LIVE_AI'
                                 ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : aiAssessment.status === 'ASSESSMENT_FAILED'
+                                ? 'bg-rose-950 text-rose-300 border-rose-800'
                                 : 'bg-slate-800 text-slate-300 border-slate-700'
                             }`}
                           >
-                            {(aiAssessment.provider === 'groq' || (aiAssessment.provider && aiAssessment.provider.toLowerCase().includes('groq'))) && (
+                            {aiAssessment.status === 'LIVE_AI' && (
                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
                             )}
-                            {aiAssessment.provider === 'groq' ? 'GROQ CLOUD AI' : aiAssessment.provider.toUpperCase()}
+                            {aiAssessment.status === 'LIVE_AI'
+                              ? `PROVIDER: ${aiAssessment.provider.toUpperCase()} (${aiAssessment.modelName})`
+                              : aiAssessment.status === 'ASSESSMENT_FAILED'
+                              ? `PROVIDER: ${aiAssessment.provider.toUpperCase()} (CALL FAILED)`
+                              : `ENGINE: HEURISTIC RULE ENGINE (NO LLM)`}
                           </span>
                         )}
                         {aiAssessment && (
                           <span
-                            className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
-                              aiAssessment.status === 'SUCCESS'
+                            className={`text-[10px] font-mono px-2 py-0.5 rounded border font-semibold flex items-center gap-1 ${
+                              aiAssessment.status === 'LIVE_AI'
                                 ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                : 'bg-amber-950 text-amber-300 border-amber-800'
+                                : aiAssessment.status === 'ASSESSMENT_FAILED'
+                                ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                : 'bg-cyan-950 text-cyan-300 border-cyan-800'
                             }`}
                           >
-                            {aiAssessment.status}
+                            {aiAssessment.status === 'LIVE_AI' ? 'LIVE_AI (REAL LLM)' :
+                             aiAssessment.status === 'ASSESSMENT_FAILED' ? 'ASSESSMENT_FAILED (FALLBACK)' :
+                             aiAssessment.status === 'OFFLINE_RULES' ? 'OFFLINE_RULES (DETERMINISTIC)' :
+                             aiAssessment.status}
                           </span>
                         )}
                         {aiAssessment && (
@@ -3532,13 +3610,42 @@ export default function InvestigationPage() {
                         Synthesized objective forensic narrative grounded strictly in extracted technical evidence and deterministic factors.
                       </p>
 
-                      {(!aiAssessment || aiAssessment.provider === 'grounded-offline' || aiAssessment.status === 'FALLBACK') && (
-                        <div className="mt-2 p-2.5 rounded-lg bg-purple-950/30 border border-purple-800/40 text-xs text-purple-200 flex items-center justify-between gap-3">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-purple-400 shrink-0" />
-                            <span>Real AI Threat Assessment enabled with Groq Cloud. Paste your API key into <code>.env</code> as <code>GROQ_API_KEY=gsk_...</code> to enable live Llama 3.3 70B analysis.</span>
+                      {aiAssessment?.status === 'LIVE_AI' && (
+                        <div className="mt-2 p-3 rounded-lg bg-emerald-950/30 border border-emerald-800/60 text-xs text-emerald-200 flex items-start gap-2.5">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <div>
+                            <span className="font-semibold text-emerald-300 font-mono block">Real Generative AI Inference Verified</span>
+                            <span className="text-emerald-200/90 text-[11px] block mt-0.5 leading-relaxed">
+                              This assessment was generated live via Groq Cloud LLM (<code>{aiAssessment.modelName}</code>) consuming {aiAssessment.tokensUsed} tokens in {aiAssessment.generationTimeMs}ms. All findings were strictly cross-validated against extracted forensic evidence.
+                            </span>
                           </div>
-                          <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="px-2 py-0.5 rounded bg-purple-800 hover:bg-purple-700 text-white font-medium text-[11px] shrink-0 transition-colors">
+                        </div>
+                      )}
+
+                      {aiAssessment?.status === 'ASSESSMENT_FAILED' && (
+                        <div className="mt-2 p-3 rounded-lg bg-rose-950/40 border border-rose-800/80 text-xs text-rose-200 space-y-1.5">
+                          <div className="flex items-center gap-2 font-semibold text-rose-300 font-mono">
+                            <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                            <span>Live Model Call Failed — Emergency Rule-Based Fallback Engaged</span>
+                          </div>
+                          <p className="text-rose-200/90 text-[11px] leading-relaxed">
+                            The remote AI API call encountered an error: <code className="bg-rose-900/60 px-1 py-0.5 rounded text-rose-100">{aiAssessment.errorMessage || 'Network or Provider Error'}</code>. An emergency fallback using deterministic rules was executed. <strong className="text-white">This narrative was NOT produced by an AI model.</strong>
+                          </p>
+                        </div>
+                      )}
+
+                      {(!aiAssessment || aiAssessment.status === 'OFFLINE_RULES' || aiAssessment.provider === 'offline-rules' || aiAssessment.provider === 'grounded-offline') && (
+                        <div className="mt-2 p-3 rounded-lg bg-cyan-950/30 border border-cyan-800/50 text-xs text-cyan-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start gap-2">
+                            <Info className="h-4 w-4 text-cyan-400 shrink-0 mt-0.5" />
+                            <div className="space-y-0.5">
+                              <span className="font-semibold text-cyan-300 font-mono block">Deterministic Rule-Based Assessment (No External LLM Invoked)</span>
+                              <span className="text-cyan-200/90 text-[11px] block leading-relaxed">
+                                No external AI API key was detected in <code>.env</code>. The narrative below was synthesized by local deterministic heuristics, <strong className="text-white">NOT by an LLM model</strong>.
+                              </span>
+                            </div>
+                          </div>
+                          <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="px-2.5 py-1 rounded bg-purple-800 hover:bg-purple-700 text-white font-medium text-[11px] shrink-0 self-start sm:self-auto transition-colors">
                             Get Groq Key
                           </a>
                         </div>
@@ -3593,7 +3700,11 @@ export default function InvestigationPage() {
                         Tokens Used
                       </span>
                       <span className="font-mono font-semibold text-slate-200 mt-0.5 block">
-                        {aiAssessment && aiAssessment.tokensUsed != null ? `${aiAssessment.tokensUsed} tokens` : 'Offline Heuristic'}
+                        {aiAssessment && aiAssessment.status === 'LIVE_AI' && aiAssessment.tokensUsed != null
+                          ? `${aiAssessment.tokensUsed} tokens`
+                          : aiAssessment?.status === 'ASSESSMENT_FAILED'
+                          ? '0 tokens (Call Failed)'
+                          : '0 tokens (Heuristic Engine)'}
                       </span>
                     </div>
 
@@ -3667,6 +3778,15 @@ export default function InvestigationPage() {
                           <div className="space-y-0.5">
                             <div className="flex items-center gap-2">
                               <span className="font-bold text-white">Run #{aiHistory.length - idx}</span>
+                              <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${
+                                item.status === 'LIVE_AI'
+                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                  : item.status === 'ASSESSMENT_FAILED'
+                                  ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                  : 'bg-cyan-950 text-cyan-300 border-cyan-800'
+                              }`}>
+                                {item.status || 'OFFLINE'}
+                              </span>
                               <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-800">
                                 {item.threatClassification}
                               </span>
@@ -3688,9 +3808,30 @@ export default function InvestigationPage() {
                 )}
 
                 <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-3">
-                  <div className="flex items-center gap-2 border-b border-slate-800/70 pb-3">
-                    <FileText className="h-4 w-4 text-cyan-400" />
-                    <h3 className="text-sm font-semibold text-white">Grounded Technical Narrative</h3>
+                  <div className="flex items-center justify-between border-b border-slate-800/70 pb-3">
+                    <div className="flex items-center gap-2">
+                      <FileText className="h-4 w-4 text-cyan-400" />
+                      <h3 className="text-sm font-semibold text-white">
+                        {aiAssessment?.status === 'LIVE_AI'
+                          ? `Grounded Technical Narrative (${aiAssessment.modelName})`
+                          : aiAssessment?.status === 'ASSESSMENT_FAILED'
+                          ? 'Fallback Narrative (Deterministic Rules — AI Inactive)'
+                          : 'Deterministic Rule-Based Narrative (No LLM Model)'}
+                      </h3>
+                    </div>
+                    {aiAssessment && (
+                      <span className={`text-[10px] font-mono px-2 py-0.5 rounded border ${
+                        aiAssessment.status === 'LIVE_AI'
+                          ? 'bg-emerald-950/80 text-emerald-300 border-emerald-800'
+                          : aiAssessment.status === 'ASSESSMENT_FAILED'
+                          ? 'bg-rose-950/80 text-rose-300 border-rose-800'
+                          : 'bg-cyan-950/80 text-cyan-300 border-cyan-800'
+                      }`}>
+                        {aiAssessment.status === 'LIVE_AI' ? 'LLM INFERENCE' :
+                         aiAssessment.status === 'ASSESSMENT_FAILED' ? 'EMERGENCY FALLBACK' :
+                         'OFFLINE HEURISTICS'}
+                      </span>
+                    )}
                   </div>
                   <p className="text-sm text-slate-200 leading-relaxed font-sans">
                     {aiAssessment?.summaryExplanation || 'Generating forensic assessment...'}
@@ -3930,10 +4071,32 @@ export default function InvestigationPage() {
                         <span className="text-[11px] font-semibold uppercase">{riskBreakdown?.riskLevel || 'UNKNOWN'}</span>
                       </div>
 
-                      <div className="p-3.5 rounded-xl border bg-purple-950/40 border-purple-800/80 text-purple-300">
-                        <span className="text-purple-400 text-[10px] block">AI GROUNDED VERDICT</span>
+                      <div className={`p-3.5 rounded-xl border ${
+                        aiAssessment?.status === 'LIVE_AI'
+                          ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
+                          : aiAssessment?.status === 'ASSESSMENT_FAILED'
+                          ? 'bg-rose-950/30 border-rose-800/80 text-rose-300'
+                          : aiAssessment?.status === 'OFFLINE_RULES'
+                          ? 'bg-slate-900/60 border-slate-700 text-slate-300'
+                          : 'bg-purple-950/40 border-purple-800/80 text-purple-300'
+                      }`}>
+                        <span className={`text-[10px] block opacity-80 font-mono ${
+                          aiAssessment?.status === 'LIVE_AI' ? 'text-emerald-400' :
+                          aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'text-rose-400' :
+                          aiAssessment?.status === 'OFFLINE_RULES' ? 'text-slate-400' : 'text-purple-400'
+                        }`}>
+                          {aiAssessment?.status === 'LIVE_AI' ? 'LIVE AI VERDICT (LLM)' :
+                           aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'FALLBACK VERDICT (AI FAILED)' :
+                           aiAssessment?.status === 'OFFLINE_RULES' ? 'RULE-BASED VERDICT (NO LLM)' :
+                           'AI GROUNDED VERDICT'}
+                        </span>
                         <span className="text-lg font-bold block truncate">{aiAssessment?.threatClassification || 'PENDING'}</span>
-                        <span className="text-[11px] text-purple-300/80">Mitre ATT&amp;CK Mapped</span>
+                        <span className="text-[11px] opacity-80 block truncate">
+                          {aiAssessment?.status === 'LIVE_AI' ? `Grounded LLM (${aiAssessment.modelName})` :
+                           aiAssessment?.status === 'ASSESSMENT_FAILED' ? 'Emergency Offline Heuristics' :
+                           aiAssessment?.status === 'OFFLINE_RULES' ? 'Deterministic Rules Engine' :
+                           'Mitre ATT&CK Mapped'}
+                        </span>
                       </div>
 
                       <div className="p-3.5 rounded-xl border bg-slate-950/60 border-slate-800 text-slate-200">
@@ -4422,22 +4585,53 @@ export default function InvestigationPage() {
                       <div className="border-b border-slate-800/80 pb-2">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <Sparkles className="h-4 w-4 text-purple-400" />
-                          <span>11. Grounded AI Forensic Assessment &amp; Mitre ATT&amp;CK Citations</span>
+                          <span>
+                            {aiAssessment.status === 'LIVE_AI'
+                              ? '11. Grounded AI Forensic Assessment & Mitre ATT&CK Citations (Live LLM Model)'
+                              : aiAssessment.status === 'ASSESSMENT_FAILED'
+                              ? '11. Forensic Threat Assessment (Emergency Rule Fallback — Model Inactive)'
+                              : '11. Rule-Based Forensic Threat Assessment (Offline Heuristics — No LLM Invoked)'}
+                          </span>
                         </h3>
                       </div>
 
-                      <div className="p-4 rounded-xl bg-purple-950/20 border border-purple-800/60 text-xs space-y-3">
-                        <div className="flex items-center justify-between border-b border-purple-800/40 pb-2 font-mono">
-                          <div className="flex items-center gap-2">
+                      <div className={`p-4 rounded-xl text-xs space-y-3 border ${
+                        aiAssessment.status === 'LIVE_AI'
+                          ? 'bg-purple-950/20 border-purple-800/60'
+                          : aiAssessment.status === 'ASSESSMENT_FAILED'
+                          ? 'bg-rose-950/20 border-rose-800/60'
+                          : 'bg-slate-900/40 border-slate-800'
+                      }`}>
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/60 pb-2 font-mono">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="text-purple-300 font-bold">Threat Verdict:</span>
-                            <span className="px-2 py-0.5 rounded bg-purple-950 text-purple-200 border border-purple-700">
+                            <span className="px-2 py-0.5 rounded bg-slate-950 text-purple-200 border border-slate-700">
                               {aiAssessment.threatClassification}
+                            </span>
+                            <span className={`px-2 py-0.5 rounded text-[10px] border ${
+                              aiAssessment.status === 'LIVE_AI'
+                                ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
+                                : aiAssessment.status === 'ASSESSMENT_FAILED'
+                                ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                : 'bg-cyan-950 text-cyan-300 border-cyan-800'
+                            }`}>
+                              {aiAssessment.status || 'OFFLINE_RULES'}
                             </span>
                           </div>
                           <span className="text-slate-400 text-[11px]">
-                            Model: {aiAssessment.modelUsed || 'Gemini 1.5 Flash (Grounded)'}
+                            {aiAssessment.status === 'LIVE_AI'
+                              ? `Model: ${aiAssessment.modelName || 'Groq Cloud LLM'} (${aiAssessment.provider})`
+                              : aiAssessment.status === 'ASSESSMENT_FAILED'
+                              ? `Status: Emergency Fallback (${aiAssessment.errorMessage || 'AI Call Failed'})`
+                              : 'Methodology: Offline Heuristic Rule Engine (No LLM)'}
                           </span>
                         </div>
+
+                        {aiAssessment.status !== 'LIVE_AI' && (
+                          <div className="p-2.5 rounded bg-amber-950/30 border border-amber-800/50 text-[11px] text-amber-200/90 font-mono">
+                            FORENSIC AUDIT NOTICE: This threat assessment narrative was generated via predefined deterministic rules and indicator heuristics, NOT by an AI large language model.
+                          </div>
+                        )}
 
                         <p className="text-slate-200 text-xs leading-relaxed font-sans">
                           {aiAssessment.summaryExplanation}

@@ -209,7 +209,7 @@ class ForensicReportServiceTest {
         when(campaignMemberRepository.findByEmailEvidenceId(emailId)).thenReturn(Collections.singletonList(member));
 
         AiGroundedAssessment ai = new AiGroundedAssessment(
-                UUID.randomUUID(), evidence, run, "openai", "gpt-4o", "v1.0.0", "SUCCESS",
+                UUID.randomUUID(), evidence, run, "openai", "gpt-4o", "v1.0.0", "LIVE_AI",
                 "MALICIOUS_PHISHING", "HIGH", "Adversarial email", "[\"SPF Failure\"]", "[\"HEADER:From\"]", "[]", "None", false, "summary", null, 120, 450L
         );
         when(aiRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(ai));
@@ -231,6 +231,7 @@ class ForensicReportServiceTest {
         assertTrue(report.getCorrelationsAndCampaigns().isCampaignMember());
         assertEquals("CAMP-001", report.getCorrelationsAndCampaigns().getCampaignCode());
         assertTrue(report.getAiAssessment().isAssessmentPresent());
+        assertEquals("LIVE_AI", report.getAiAssessment().getStatus());
         assertEquals("MALICIOUS_PHISHING", report.getAiAssessment().getThreatClassification());
         assertNotNull(report.getAnalystSignoff());
     }

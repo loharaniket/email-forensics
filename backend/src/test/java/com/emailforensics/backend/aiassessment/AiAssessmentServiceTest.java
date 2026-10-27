@@ -98,7 +98,7 @@ class AiAssessmentServiceTest {
                 rawOutput,
                 "openai",
                 "gpt-4o-mini",
-                "SUCCESS",
+                "LIVE_AI",
                 null,
                 150,
                 350L
@@ -124,6 +124,7 @@ class AiAssessmentServiceTest {
         AiAssessmentDto dto = service.generateAssessment(emailId, true, null);
 
         assertNotNull(dto);
+        assertEquals("LIVE_AI", dto.getStatus());
         assertEquals("MALICIOUS_PHISHING", dto.getThreatClassification());
         assertEquals("HIGH", dto.getConfidenceAssessment());
         assertEquals(1, dto.getEvidenceReferences().size());
@@ -141,12 +142,12 @@ class AiAssessmentServiceTest {
 
         AiGroundedAssessment a1 = new AiGroundedAssessment(
                 UUID.randomUUID(), evidence, run, "openai", "gpt-4o-mini", "v1.0.0",
-                "SUCCESS", "MALICIOUS_PHISHING", "HIGH", "Summary 1", "[]", "[]", "[]",
+                "LIVE_AI", "MALICIOUS_PHISHING", "HIGH", "Summary 1", "[]", "[]", "[]",
                 "Limitations", false, "Context", null, 100, 200L
         );
         AiGroundedAssessment a2 = new AiGroundedAssessment(
-                UUID.randomUUID(), evidence, run, "grounded-offline", "grounded-heuristic-v1", "v1.0.0",
-                "FALLBACK", "MALICIOUS_PHISHING", "MEDIUM", "Summary 2", "[]", "[]", "[]",
+                UUID.randomUUID(), evidence, run, "offline-rules", "heuristic-rule-engine-v1", "v1.0.0",
+                "OFFLINE_RULES", "MALICIOUS_PHISHING", "MEDIUM", "Summary 2", "[]", "[]", "[]",
                 "Limitations", false, "Context", null, 0, 50L
         );
 

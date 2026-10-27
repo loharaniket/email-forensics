@@ -32,11 +32,13 @@ class AiClientServiceTest {
         AiClientService.GenerationResult result = clientService.generateAssessment(context, null);
 
         assertNotNull(result);
-        assertEquals("FALLBACK", result.getStatus());
-        assertEquals("grounded-offline", result.getProvider());
+        assertEquals("OFFLINE_RULES", result.getStatus());
+        assertEquals("offline-rules", result.getProvider());
         assertNotNull(result.getOutput());
         assertNotNull(result.getOutput().getThreatClassification());
         assertNotNull(result.getOutput().getSummaryExplanation());
+        assertTrue(result.getOutput().getSummaryExplanation().contains("[RULE-BASED OFFLINE EVALUATION — NO LLM INVOKED]"));
+        assertTrue(result.getOutput().getLimitations().contains("NOT synthesized by an LLM model"));
     }
 
     @Test
@@ -91,5 +93,24 @@ class AiClientServiceTest {
         assertNotNull(output);
         assertEquals("BENIGN_LEGITIMATE", output.getThreatClassification());
         assertTrue(output.getEvidenceReferences().contains("HEADER:From"));
+    }
+
+    @Test
+    void testAssessmentFailedGeneratesExplicitFailureFallback() {
+        EvidenceContextSummaryDto context = new EvidenceContextSummaryDto(
+                List.of("HEADER:From", "RISK:SCORE"),
+                "1. HEADER FINDINGS: From: attack@evil.com\n7. RISK: (CRITICAL)\n",
+                false
+        );
+
+        AiStructuredOutput output = clientService.generateOfflineGroundedAssessment(
+                context, "ASSESSMENT_FAILED", "Groq rate limit reached (HTTP 429)"
+        );
+
+        assertNotNull(output);
+        assertEquals("MALICIOUS_PHISHING", output.getThreatClassification());
+        assertTrue(output.getSummaryExplanation().startsWith("[LIVE AI CALL FAILED: Groq rate limit reached (HTTP 429) — EMERGENCY RULE-BASED FALLBACK]"));
+        assertTrue(output.getLimitations().contains("Live LLM generation failed"));
+        assertTrue(output.getLimitations().contains("NOT completed by an AI model"));
     }
 }
