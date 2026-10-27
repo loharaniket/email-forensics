@@ -113,4 +113,41 @@ class AiClientServiceTest {
         assertTrue(output.getLimitations().contains("Live LLM generation failed"));
         assertTrue(output.getLimitations().contains("NOT completed by an AI model"));
     }
+
+    @Test
+    void testStructuredOutputParsingWithJacksonAndMarkdown() throws Exception {
+        java.lang.reflect.Method method = AiClientService.class.getDeclaredMethod("parseStructuredOutput", String.class, EvidenceContextSummaryDto.class);
+        method.setAccessible(true);
+
+        String jsonPayload = "```json\n{\n" +
+                "  \"threatClassification\": \"MALICIOUS_PHISHING\",\n" +
+                "  \"confidenceAssessment\": \"HIGH\",\n" +
+                "  \"summaryExplanation\": \"Deceptive phishing lure with malicious links.\",\n" +
+                "  \"keyIndicators\": [\"Spoofed sender\", \"Suspicious hyperlink\"],\n" +
+                "  \"evidenceReferences\": [\"HEADER:From\", \"URL:evil.com\"],\n" +
+                "  \"limitations\": \"External reputation lookup unavailable.\"\n" +
+                "}\n```";
+
+        AiStructuredOutput output = (AiStructuredOutput) method.invoke(clientService, jsonPayload, null);
+
+        assertNotNull(output);
+        assertEquals("MALICIOUS_PHISHING", output.getThreatClassification());
+        assertEquals("HIGH", output.getConfidenceAssessment());
+        assertEquals("Deceptive phishing lure with malicious links.", output.getSummaryExplanation());
+        assertEquals(2, output.getKeyIndicators().size());
+        assertEquals(2, output.getEvidenceReferences().size());
+    }
+
+    @Test
+    void testChatCompletionPayloadIncludesReasoningAndHigherMaxTokens() throws Exception {
+        java.lang.reflect.Method method = AiClientService.class.getDeclaredMethod("buildChatCompletionPayload", String.class, String.class, String.class, boolean.class);
+        method.setAccessible(true);
+
+        String payload = (String) method.invoke(clientService, "openai/gpt-oss-20b", "System Prompt", "User Prompt", true);
+
+        assertTrue(payload.contains("\"max_tokens\":4096"));
+        assertTrue(payload.contains("\"reasoning_format\":\"parsed\""));
+        assertTrue(payload.contains("\"reasoning_effort\":\"low\""));
+        assertTrue(payload.contains("\"response_format\":{\"type\":\"json_object\"}"));
+    }
 }
