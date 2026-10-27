@@ -191,8 +191,11 @@ public class ForensicReportService {
             sb.append("    \"emailId\": \"").append(i.getEmailId() != null ? i.getEmailId().toString() : "").append("\",\n");
             sb.append("    \"originalFilename\": \"").append(escapeJson(i.getOriginalFilename())).append("\",\n");
             sb.append("    \"sha256Hash\": \"").append(escapeJson(i.getSha256Hash())).append("\",\n");
+            sb.append("    \"recalculatedHash\": \"").append(escapeJson(i.getRecalculatedHash())).append("\",\n");
             sb.append("    \"fileSizeBytes\": ").append(i.getFileSizeBytes() != null ? i.getFileSizeBytes() : 0).append(",\n");
-            sb.append("    \"integrityVerified\": ").append(i.isIntegrityVerified()).append("\n");
+            sb.append("    \"integrityVerified\": ").append(i.isIntegrityVerified()).append(",\n");
+            sb.append("    \"integrityStatus\": \"").append(escapeJson(i.getIntegrityStatus())).append("\",\n");
+            sb.append("    \"integrityCheckTimestamp\": \"").append(i.getIntegrityCheckTimestamp() != null ? i.getIntegrityCheckTimestamp().toString() : "").append("\"\n");
             sb.append("  },\n");
         }
 
@@ -254,7 +257,7 @@ public class ForensicReportService {
 
         report.setReportId("FR-" + evidence.getId().toString().substring(0, 8).toUpperCase());
         report.setGeneratedAt(Instant.now());
-        report.setReportVersion("v1.0.0-phase11");
+        report.setReportVersion("v1.0.0");
         report.setGeneratedBy(certifyingUser);
         report.setClassificationLevel("CONFIDENTIAL - FORENSIC EVIDENCE DOSSIER");
 
@@ -280,13 +283,26 @@ public class ForensicReportService {
         integrity.setUploadedAt(evidence.getUploadedAt());
         integrity.setUploaderUsername(evidence.getUploadedBy() != null ? evidence.getUploadedBy().getUsername() : "system");
 
+        String recalculatedHash = null;
+        String integrityStatus = "NOT_VERIFIED";
         boolean verified = false;
         try {
-            String hash = storageService.computeFileHash(evidence.getStorageKey());
-            verified = hash != null && hash.equalsIgnoreCase(evidence.getSha256Hash());
+            recalculatedHash = storageService.computeFileHash(evidence.getStorageKey());
+            if (recalculatedHash != null && evidence.getSha256Hash() != null) {
+                if (recalculatedHash.equalsIgnoreCase(evidence.getSha256Hash())) {
+                    verified = true;
+                    integrityStatus = "VERIFIED";
+                } else {
+                    verified = false;
+                    integrityStatus = "MISMATCH";
+                }
+            }
         } catch (Exception ignored) {
+            integrityStatus = "NOT_VERIFIED";
         }
         integrity.setIntegrityVerified(verified);
+        integrity.setRecalculatedHash(recalculatedHash);
+        integrity.setIntegrityStatus(integrityStatus);
         integrity.setIntegrityCheckTimestamp(Instant.now());
         report.setEvidenceIntegrity(integrity);
 

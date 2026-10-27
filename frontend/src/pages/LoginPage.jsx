@@ -136,8 +136,8 @@ export default function LoginPage() {
         </div>
       </div>
 
-      <footer className="text-center py-2 text-[11px] text-slate-600 font-mono">
-        Phase 1 — Spring Security JWT &amp; Case Management Baseline
+      <footer className="text-center py-2 text-[11px] text-slate-500 font-mono">
+        Digital Email Forensics &amp; Threat Correlation Platform
       </footer>
     </div>
   )

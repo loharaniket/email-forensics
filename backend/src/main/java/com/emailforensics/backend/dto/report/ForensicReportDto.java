@@ -244,6 +244,8 @@ public class ForensicReportDto {
         private String uploaderUsername;
         private boolean integrityVerified;
         private Instant integrityCheckTimestamp;
+        private String recalculatedHash;
+        private String integrityStatus;
 
         public EvidenceIntegrityDto() {
         }
@@ -318,6 +320,22 @@ public class ForensicReportDto {
 
         public void setIntegrityCheckTimestamp(Instant integrityCheckTimestamp) {
             this.integrityCheckTimestamp = integrityCheckTimestamp;
+        }
+
+        public String getRecalculatedHash() {
+            return recalculatedHash;
+        }
+
+        public void setRecalculatedHash(String recalculatedHash) {
+            this.recalculatedHash = recalculatedHash;
+        }
+
+        public String getIntegrityStatus() {
+            return integrityStatus;
+        }
+
+        public void setIntegrityStatus(String integrityStatus) {
+            this.integrityStatus = integrityStatus;
         }
     }
 

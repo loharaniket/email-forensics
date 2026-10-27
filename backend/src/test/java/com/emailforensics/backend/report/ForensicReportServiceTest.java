@@ -221,6 +221,9 @@ class ForensicReportServiceTest {
         assertEquals("CASE-2026-TEST", report.getCaseContext().getCaseNumber());
         assertTrue(report.getEvidenceIntegrity().isIntegrityVerified());
         assertEquals("hash123", report.getEvidenceIntegrity().getSha256Hash());
+        assertEquals("hash123", report.getEvidenceIntegrity().getRecalculatedHash());
+        assertEquals("VERIFIED", report.getEvidenceIntegrity().getIntegrityStatus());
+        assertEquals("v1.0.0", report.getReportVersion());
         assertEquals("Suspicious Wire Transfer", report.getMessageSummary().getSubject());
         assertEquals(1, report.getHeaderForensics().getHopsCount());
         assertEquals(1, report.getNetworkAndUrls().getTotalUrlsCount());
@@ -237,6 +240,23 @@ class ForensicReportServiceTest {
     }
 
     @Test
+    void generateReport_detectsIntegrityMismatch() throws Exception {
+        UUID emailId = evidence.getId();
+        when(evidenceRepository.findById(emailId)).thenReturn(Optional.of(evidence));
+        when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(run));
+        when(storageService.computeFileHash("storage/key.eml")).thenReturn("tamperedHash999");
+        when(storageService.loadAsResource("storage/key.eml")).thenReturn(new ByteArrayResource("Subject: Clean".getBytes()));
+
+        ForensicReportDto report = service.generateReport(emailId, null);
+
+        assertNotNull(report);
+        org.junit.jupiter.api.Assertions.assertFalse(report.getEvidenceIntegrity().isIntegrityVerified());
+        assertEquals("hash123", report.getEvidenceIntegrity().getSha256Hash());
+        assertEquals("tamperedHash999", report.getEvidenceIntegrity().getRecalculatedHash());
+        assertEquals("MISMATCH", report.getEvidenceIntegrity().getIntegrityStatus());
+    }
+
+    @Test
     void exportReportJson_producesValidPrettyJson() throws Exception {
         UUID emailId = evidence.getId();
         when(evidenceRepository.findById(emailId)).thenReturn(Optional.of(evidence));
@@ -250,6 +270,8 @@ class ForensicReportServiceTest {
         assertTrue(json.contains("\"reportId\""));
         assertTrue(json.contains("\"caseContext\""));
         assertTrue(json.contains("\"evidenceIntegrity\""));
+        assertTrue(json.contains("\"recalculatedHash\""));
+        assertTrue(json.contains("\"integrityStatus\""));
         assertTrue(json.contains("\"riskSummary\""));
     }
 

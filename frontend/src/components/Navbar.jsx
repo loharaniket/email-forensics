@@ -20,8 +20,8 @@ export default function Navbar() {
                 <span className="text-sm font-bold tracking-tight text-white">
                   Email Forensics
                 </span>
-                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-cyan-950 text-cyan-400 border border-cyan-800 font-mono">
-                  Phase 11 (Final)
+                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
+                  DFIR Suite
                 </span>
               </div>
               <p className="text-[11px] text-slate-400 hidden sm:block">

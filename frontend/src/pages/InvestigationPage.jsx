@@ -16,7 +16,8 @@ import {
   getEvidenceAiAssessment,
   getEvidenceAiHistory,
   generateEvidenceAiAssessment,
-  downloadOriginalEvidence
+  downloadOriginalEvidence,
+  checkEvidenceIntegrity
 } from '../api/evidence'
 import { getEvidenceReport, downloadEvidenceReportJson } from '../api/report'
 import { getCampaignsForEvidence } from '../api/campaigns'
@@ -109,6 +110,8 @@ export default function InvestigationPage() {
   const [showMetricsDrawer, setShowMetricsDrawer] = useState(false)
   const [reportData, setReportData] = useState(null)
   const [isExportingJson, setIsExportingJson] = useState(false)
+  const [integrityCheckResult, setIntegrityCheckResult] = useState(null)
+  const [isVerifyingIntegrity, setIsVerifyingIntegrity] = useState(false)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
@@ -177,6 +180,18 @@ export default function InvestigationPage() {
     }
   }
 
+  const handleVerifyIntegrity = async () => {
+    setIsVerifyingIntegrity(true)
+    try {
+      const result = await checkEvidenceIntegrity(emailId)
+      setIntegrityCheckResult(result)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setIsVerifyingIntegrity(false)
+    }
+  }
+
   const handleGenerateAiAssessment = async (force = true, modelOverride = null) => {
     setIsAiGenerating(true)
     setAiError(null)
@@ -234,6 +249,14 @@ export default function InvestigationPage() {
   const socialMatches = contentAnalysis?.socialEngineeringMatches || []
   const metrics = contentAnalysis?.modelMetrics || contentAnalysis?.evaluationMetrics || null
   const promptInjectionDetected = !!(contentAnalysis?.promptInjectionDetected || promptMatches.length > 0)
+
+  const currentIntegrityStatus = integrityCheckResult
+    ? (integrityCheckResult.intact ? 'VERIFIED' : 'MISMATCH')
+    : (reportData?.evidenceIntegrity?.integrityStatus || 'NOT_VERIFIED')
+
+  const primaryHash = integrityCheckResult?.savedSha256 || reportData?.evidenceIntegrity?.sha256Hash || detail?.sha256Hash || 'N/A'
+  const calculatedHash = integrityCheckResult?.recalculatedSha256 || reportData?.evidenceIntegrity?.recalculatedHash || (currentIntegrityStatus === 'VERIFIED' ? primaryHash : 'N/A')
+  const integrityTimestamp = integrityCheckResult?.verifiedAt || reportData?.evidenceIntegrity?.integrityCheckTimestamp
 
   const getAuthBadge = (val) => {
     if (!val) {
@@ -455,11 +478,11 @@ export default function InvestigationPage() {
   })
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col print:min-h-0 print:bg-white print:text-slate-900">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6 print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white print:space-y-0">
+        <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <button
             id="back-to-case-btn"
             onClick={() => navigate(`/cases/${caseId}`)}
@@ -503,8 +526,8 @@ export default function InvestigationPage() {
           </div>
         </div>
 
-        <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6 shadow-xl">
-          <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-6 border-b border-slate-800">
+        <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6 shadow-xl print:bg-white print:border-none print:p-0 print:m-0 print:shadow-none print:space-y-0">
+          <div className="no-print flex flex-col md:flex-row md:items-start justify-between gap-4 pb-6 border-b border-slate-800">
             <div className="space-y-2">
               <div className="flex flex-wrap items-center gap-2 font-mono text-xs">
                 <span className="text-cyan-400 font-bold bg-cyan-950/80 px-2.5 py-0.5 rounded border border-cyan-800/80">
@@ -559,7 +582,7 @@ export default function InvestigationPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
+          <div className="no-print grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
             <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800/80">
               <span className="text-[11px] font-mono text-slate-400 block mb-1">Message Date</span>
               <span className="text-xs font-mono text-slate-200 block truncate">
@@ -654,7 +677,7 @@ export default function InvestigationPage() {
           </div>
 
           {warnings.length > 0 && (
-            <div className="p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/60 text-xs text-amber-300 space-y-1">
+            <div className="no-print p-3.5 rounded-xl bg-amber-950/30 border border-amber-800/60 text-xs text-amber-300 space-y-1">
               <div className="flex items-center gap-2 font-semibold">
                 <AlertTriangle className="h-4 w-4 text-amber-400" />
                 <span>Parser Warnings Encountered</span>
@@ -668,7 +691,7 @@ export default function InvestigationPage() {
           )}
 
           <div className="space-y-4 pt-2">
-            <div id="investigation-tabs-nav" className="flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2">
+            <div id="investigation-tabs-nav" className="no-print flex flex-wrap items-center gap-2 border-b border-slate-800 pb-2">
               <button
                 id="tab-overview"
                 onClick={() => setActiveTab('overview')}
@@ -904,9 +927,6 @@ export default function InvestigationPage() {
               >
                 <FileCheck className="h-3.5 w-3.5 text-emerald-400" />
                 <span>Forensic Dossier Report</span>
-                <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-emerald-900/60 text-emerald-300 border border-emerald-700">
-                  Phase 11
-                </span>
               </button>
             </div>
 
@@ -3990,7 +4010,7 @@ export default function InvestigationPage() {
                       <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
                         <span className="text-slate-500 text-[10px] block">GENERATION DATE (UTC)</span>
                         <span className="font-semibold text-slate-200 block text-[11px]">
-                          {reportData?.generatedAt ? new Date(reportData.generatedAt).toUTCString() : new Date().toUTCString()}
+                          {reportData?.generatedAt ? new Date(reportData.generatedAt).toUTCString() : 'PENDING'}
                         </span>
                       </div>
 
@@ -4003,31 +4023,77 @@ export default function InvestigationPage() {
 
                       <div className="p-2.5 rounded-lg bg-slate-950/60 border border-slate-800/80">
                         <span className="text-slate-500 text-[10px] block">PLATFORM VERSION</span>
-                        <span className="font-semibold text-cyan-400 block">v1.11.0 (Phase 11 Final)</span>
+                        <span className="font-semibold text-cyan-400 block">{reportData?.reportVersion || 'v1.0.0'}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="print-avoid-break space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
+                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-800/80 pb-2">
                       <h3 className="text-sm font-bold text-white flex items-center gap-2">
                         <Hash className="h-4 w-4 text-cyan-400" />
                         <span>1. Cryptographic Evidence Integrity &amp; Chain of Custody</span>
                       </h3>
-                      <span className="flex items-center gap-1.5 text-[11px] font-mono px-2 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-semibold">
-                        <BadgeCheck className="h-3.5 w-3.5 text-emerald-400" />
-                        INTEGRITY VERIFIED AUTHENTIC
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={handleVerifyIntegrity}
+                          disabled={isVerifyingIntegrity}
+                          className="no-print flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-mono bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 transition-colors cursor-pointer disabled:opacity-50"
+                          title="Recalculate SHA-256 against stored vault artifact"
+                        >
+                          <RefreshCw className={`h-3 w-3 ${isVerifyingIntegrity ? 'animate-spin text-cyan-400' : 'text-slate-400'}`} />
+                          <span>{isVerifyingIntegrity ? 'Verifying Hash...' : 'Re-verify Vault Hash'}</span>
+                        </button>
+                        {currentIntegrityStatus === 'VERIFIED' && (
+                          <span className="flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 font-bold">
+                            <BadgeCheck className="h-3.5 w-3.5 text-emerald-400" />
+                            VERIFIED
+                          </span>
+                        )}
+                        {currentIntegrityStatus === 'MISMATCH' && (
+                          <span className="flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded bg-rose-950 text-rose-300 border border-rose-800 font-bold">
+                            <AlertTriangle className="h-3.5 w-3.5 text-rose-400" />
+                            MISMATCH
+                          </span>
+                        )}
+                        {currentIntegrityStatus === 'NOT_VERIFIED' && (
+                          <span className="flex items-center gap-1.5 text-[11px] font-mono px-2.5 py-1 rounded bg-amber-950 text-amber-300 border border-amber-800 font-bold">
+                            <AlertOctagon className="h-3.5 w-3.5 text-amber-400" />
+                            NOT VERIFIED
+                          </span>
+                        )}
+                      </div>
                     </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs font-mono">
-                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-1">
-                        <span className="text-slate-400 text-[11px] block">Primary Cryptographic Hash (SHA-256)</span>
-                        <span className="text-cyan-300 font-bold break-all select-all block text-[11px]">{detail.sha256Hash}</span>
-                        <span className="text-[10px] text-emerald-400 flex items-center gap-1 mt-1">
-                          <Check className="h-3 w-3" />
-                          Cryptographic hash matches stored raw immutable artifact byte-for-byte.
-                        </span>
+                      <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
+                        <div>
+                          <span className="text-slate-400 text-[11px] block">Primary Registered Hash (SHA-256)</span>
+                          <span className="text-cyan-300 font-bold break-all select-all block text-[11px]">{primaryHash}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 text-[11px] block">Recalculated Stored Artifact Hash (SHA-256)</span>
+                          <span className="text-slate-200 font-mono break-all select-all block text-[11px]">{calculatedHash}</span>
+                        </div>
+                        {currentIntegrityStatus === 'VERIFIED' && (
+                          <span className="text-[10px] text-emerald-400 flex items-center gap-1 pt-1 border-t border-slate-900">
+                            <Check className="h-3 w-3" />
+                            Cryptographic hash matches stored raw immutable artifact byte-for-byte.
+                          </span>
+                        )}
+                        {currentIntegrityStatus === 'MISMATCH' && (
+                          <span className="text-[10px] text-rose-400 flex items-center gap-1 pt-1 border-t border-slate-900">
+                            <AlertTriangle className="h-3 w-3" />
+                            CRITICAL INTEGRITY FAILURE: Stored artifact hash does not match registered ledger hash!
+                          </span>
+                        )}
+                        {currentIntegrityStatus === 'NOT_VERIFIED' && (
+                          <span className="text-[10px] text-amber-400 flex items-center gap-1 pt-1 border-t border-slate-900">
+                            <AlertOctagon className="h-3 w-3" />
+                            Stored artifact hash has not been verified against raw vault storage.
+                          </span>
+                        )}
                       </div>
 
                       <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800 grid grid-cols-2 gap-2 text-[11px]">
@@ -4044,8 +4110,10 @@ export default function InvestigationPage() {
                           <span className="font-semibold text-slate-200 block">{new Date(detail.uploadedAt).toLocaleString()}</span>
                         </div>
                         <div>
-                          <span className="text-slate-400 block">MIME Content Type</span>
-                          <span className="font-semibold text-slate-200 block">{detail.mimeType || 'message/rfc822'}</span>
+                          <span className="text-slate-400 block">Verification Timestamp</span>
+                          <span className="font-semibold text-slate-200 block">
+                            {integrityTimestamp ? new Date(integrityTimestamp).toUTCString() : 'Pending'}
+                          </span>
                         </div>
                       </div>
                     </div>
