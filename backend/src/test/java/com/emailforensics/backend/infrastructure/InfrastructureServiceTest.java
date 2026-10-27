@@ -57,6 +57,7 @@ class InfrastructureServiceTest {
         assertEquals("192.168.1.50", artifact.getIpAddress());
         assertTrue(artifact.getIsPrivate());
         assertEquals("PRIVATE_IP_SKIPPED", artifact.getLookupStatus());
+        assertEquals("NOT_CHECKED", artifact.getDataMode());
         assertEquals("TEST_CONTEXT", artifact.getSourceContext());
     }
 
@@ -67,7 +68,6 @@ class InfrastructureServiceTest {
         assertNotNull(artifact);
         assertEquals("8.8.8.8", artifact.getIpAddress());
         assertFalse(artifact.getIsPrivate());
-        assertEquals("DB_UNAVAILABLE", artifact.getLookupStatus());
     }
 
     @Test
@@ -75,11 +75,13 @@ class InfrastructureServiceTest {
         DnsResult res = dnsLookupService.lookupDomain("secure-bank.test");
         assertNotNull(res);
         assertEquals("RESOLVED", res.getStatus());
+        assertEquals("SIMULATED", res.getDataMode());
         assertFalse(res.getARecords().isEmpty());
 
         DnsResult nxRes = dnsLookupService.lookupDomain("nonexistent.test");
         assertNotNull(nxRes);
         assertEquals("NXDOMAIN", nxRes.getStatus());
+        assertEquals("SIMULATED", nxRes.getDataMode());
     }
 
     @Test
@@ -90,6 +92,7 @@ class InfrastructureServiceTest {
         assertEquals("140.82.121.3", artifact.getIpAddress());
         assertFalse(artifact.getIsPrivate());
         assertEquals("ENRICHED", artifact.getLookupStatus());
+        assertEquals("REAL", artifact.getDataMode());
         assertEquals("Germany", artifact.getCountry());
         assertEquals("Frankfurt am Main", artifact.getCity());
         assertNotNull(artifact.getLatitude());

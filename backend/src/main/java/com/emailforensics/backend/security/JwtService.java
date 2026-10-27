@@ -19,9 +19,12 @@ public class JwtService {
     private final long expirationMs;
 
     public JwtService(
-            @Value("${app.jwt.secret}") String secret,
+            @Value("${app.jwt.secret:}") String secret,
             @Value("${app.jwt.expiration-ms:86400000}") long expirationMs) {
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        String effectiveSecret = (secret != null && !secret.isBlank())
+                ? secret
+                : "dev-ephemeral-jwt-key-not-for-production-at-least-32-chars!";
+        byte[] keyBytes = effectiveSecret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             byte[] padded = new byte[32];
             System.arraycopy(keyBytes, 0, padded, 0, keyBytes.length);

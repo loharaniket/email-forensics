@@ -26,7 +26,7 @@ class ReportControllerTest {
 
     @BeforeEach
     void setUp() throws Exception {
-        String loginJson = "{\"username\":\"analyst\",\"password\":\"Analyst@123\"}";
+        String loginJson = "{\"username\":\"analyst\",\"password\":\"analyst123\"}";
         MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginJson))

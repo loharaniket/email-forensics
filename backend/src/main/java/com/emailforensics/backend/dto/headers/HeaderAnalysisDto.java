@@ -36,6 +36,7 @@ public class HeaderAnalysisDto {
     private String spfResult;
     private String dkimResult;
     private String dmarcResult;
+    private String dataMode;
 
     public HeaderAnalysisDto() {
     }
@@ -319,5 +320,13 @@ public class HeaderAnalysisDto {
 
     public void setDmarcResult(String dmarcResult) {
         this.dmarcResult = dmarcResult;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 }

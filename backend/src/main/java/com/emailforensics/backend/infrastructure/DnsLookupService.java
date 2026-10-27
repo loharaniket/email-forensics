@@ -1,6 +1,11 @@
 package com.emailforensics.backend.infrastructure;
 
+import com.emailforensics.backend.infrastructure.fixtures.DefaultDnsFixtureProvider;
+import com.emailforensics.backend.infrastructure.fixtures.DnsFixtureProvider;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 
 import javax.naming.directory.Attribute;
@@ -23,11 +28,31 @@ import java.util.concurrent.TimeoutException;
 public class DnsLookupService {
 
     private final long timeoutMs;
+    private final DnsFixtureProvider fixtureProvider;
+    private final Environment environment;
     private final Map<String, DnsResult> cache = new ConcurrentHashMap<>();
     private final Map<String, List<String>> txtCache = new ConcurrentHashMap<>();
 
-    public DnsLookupService(@Value("${emailforensics.dns.timeout-ms:2000}") long timeoutMs) {
+    @Autowired
+    public DnsLookupService(
+            @Value("${emailforensics.dns.timeout-ms:2000}") long timeoutMs,
+            @Autowired(required = false) DnsFixtureProvider fixtureProvider,
+            @Autowired(required = false) Environment environment) {
         this.timeoutMs = timeoutMs;
+        this.fixtureProvider = fixtureProvider;
+        this.environment = environment;
+    }
+
+    public DnsLookupService(long timeoutMs) {
+        this(timeoutMs, new DefaultDnsFixtureProvider(), null);
+    }
+
+    public DnsLookupService(long timeoutMs, DnsFixtureProvider fixtureProvider) {
+        this(timeoutMs, fixtureProvider, null);
+    }
+
+    private boolean isProduction() {
+        return environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"));
     }
 
     public void putCache(String domain, DnsResult result) {
@@ -44,7 +69,7 @@ public class DnsLookupService {
 
     public DnsResult lookupDomain(String domain) {
         if (domain == null || domain.trim().isEmpty()) {
-            return new DnsResult(domain, "SKIPPED", new ArrayList<>(), new ArrayList<>());
+            return new DnsResult(domain, "SKIPPED", new ArrayList<>(), new ArrayList<>(), DataProvenance.NOT_CHECKED.name());
         }
 
         String normalized = domain.trim().toLowerCase();
@@ -52,10 +77,8 @@ public class DnsLookupService {
             return cache.get(normalized);
         }
 
-        if (normalized.endsWith(".test") || normalized.endsWith(".local") ||
-                normalized.endsWith(".internal") || normalized.endsWith(".example") ||
-                normalized.endsWith(".invalid") || normalized.equals("localhost")) {
-            DnsResult simulated = resolveTestDomain(normalized);
+        if (!isProduction() && fixtureProvider != null && fixtureProvider.supports(normalized)) {
+            DnsResult simulated = fixtureProvider.getSimulatedDnsResult(normalized);
             cache.put(normalized, simulated);
             return simulated;
         }
@@ -63,20 +86,21 @@ public class DnsLookupService {
         try {
             CompletableFuture<DnsResult> future = CompletableFuture.supplyAsync(() -> performLiveLookup(normalized));
             DnsResult result = future.get(timeoutMs, TimeUnit.MILLISECONDS);
+            result.setDataMode(DataProvenance.REAL.name());
             cache.put(normalized, result);
             return result;
         } catch (TimeoutException e) {
-            DnsResult timeoutResult = new DnsResult(normalized, "TIMEOUT", new ArrayList<>(), new ArrayList<>());
+            DnsResult timeoutResult = new DnsResult(normalized, "TIMEOUT", new ArrayList<>(), new ArrayList<>(), DataProvenance.UNAVAILABLE.name());
             cache.put(normalized, timeoutResult);
             return timeoutResult;
         } catch (Exception e) {
             Throwable cause = e.getCause();
             if (cause instanceof UnknownHostException) {
-                DnsResult nxResult = new DnsResult(normalized, "NXDOMAIN", new ArrayList<>(), new ArrayList<>());
+                DnsResult nxResult = new DnsResult(normalized, "NXDOMAIN", new ArrayList<>(), new ArrayList<>(), DataProvenance.REAL.name());
                 cache.put(normalized, nxResult);
                 return nxResult;
             }
-            DnsResult failedResult = new DnsResult(normalized, "LOOKUP_FAILED", new ArrayList<>(), new ArrayList<>());
+            DnsResult failedResult = new DnsResult(normalized, "LOOKUP_FAILED", new ArrayList<>(), new ArrayList<>(), DataProvenance.UNAVAILABLE.name());
             cache.put(normalized, failedResult);
             return failedResult;
         }
@@ -92,7 +116,7 @@ public class DnsLookupService {
                 aRecords.add(addr.getHostAddress());
             }
         } catch (UnknownHostException e) {
-            return new DnsResult(domain, "NXDOMAIN", aRecords, mxRecords);
+            return new DnsResult(domain, "NXDOMAIN", aRecords, mxRecords, DataProvenance.REAL.name());
         } catch (Exception ignored) {
         }
 
@@ -115,26 +139,7 @@ public class DnsLookupService {
         }
 
         String status = (!aRecords.isEmpty() || !mxRecords.isEmpty()) ? "RESOLVED" : "NO_RECORDS";
-        return new DnsResult(domain, status, aRecords, mxRecords);
-    }
-
-    private DnsResult resolveTestDomain(String domain) {
-        List<String> a = new ArrayList<>();
-        List<String> mx = new ArrayList<>();
-        if (domain.contains("secure-bank") || domain.contains("internal-corp")) {
-            a.add("198.51.100.44");
-            mx.add("mx." + domain);
-            return new DnsResult(domain, "RESOLVED", a, mx);
-        }
-        if (domain.contains("phish-sender")) {
-            a.add("203.0.113.45");
-            mx.add("mail." + domain);
-            return new DnsResult(domain, "RESOLVED", a, mx);
-        }
-        if (domain.contains("nonexistent") || domain.contains("fake-domain")) {
-            return new DnsResult(domain, "NXDOMAIN", a, mx);
-        }
-        return new DnsResult(domain, "RESOLVED", List.of("192.0.2.1"), List.of("mail." + domain));
+        return new DnsResult(domain, status, aRecords, mxRecords, DataProvenance.REAL.name());
     }
 
     public List<String> lookupTxtRecords(String domain) {
@@ -147,10 +152,8 @@ public class DnsLookupService {
             return txtCache.get(normalized);
         }
 
-        if (normalized.endsWith(".test") || normalized.endsWith(".local") ||
-                normalized.endsWith(".internal") || normalized.endsWith(".example") ||
-                normalized.endsWith(".invalid") || normalized.equals("localhost")) {
-            List<String> simulated = resolveTestTxtRecords(normalized);
+        if (!isProduction() && fixtureProvider != null && fixtureProvider.supportsTxt(normalized)) {
+            List<String> simulated = fixtureProvider.getSimulatedTxtRecords(normalized);
             txtCache.put(normalized, simulated);
             return simulated;
         }
@@ -189,52 +192,5 @@ public class DnsLookupService {
         } catch (Exception ignored) {
         }
         return txtRecords;
-    }
-
-    private List<String> resolveTestTxtRecords(String domain) {
-        List<String> records = new ArrayList<>();
-        if (domain.startsWith("_dmarc.")) {
-            if (domain.contains("phish-sender")) {
-                records.add("v=DMARC1; p=reject; rua=mailto:dmarc@phish-sender.test");
-            } else if (domain.contains("secure-bank")) {
-                records.add("v=DMARC1; p=reject; aspf=s; adkim=s");
-            } else if (domain.contains("internal-corp")) {
-                records.add("v=DMARC1; p=quarantine; pct=100");
-            } else if (domain.contains("none-policy")) {
-                records.add("v=DMARC1; p=none");
-            }
-            return records;
-        }
-        if (domain.contains("._domainkey.")) {
-            if (domain.contains("phish-sender") || domain.contains("secure-bank") || domain.contains("internal-corp")) {
-                records.add("v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3");
-            }
-            return records;
-        }
-        if (domain.contains("phish-sender")) {
-            records.add("v=spf1 ip4:203.0.113.45 ~all");
-            return records;
-        }
-        if (domain.contains("secure-bank")) {
-            records.add("v=spf1 ip4:198.51.100.44 -all");
-            return records;
-        }
-        if (domain.contains("internal-corp")) {
-            records.add("v=spf1 ip4:198.51.100.44 include:_spf.internal-corp.test ~all");
-            return records;
-        }
-        if (domain.contains("softfail")) {
-            records.add("v=spf1 ip4:1.2.3.4 ~all");
-            return records;
-        }
-        if (domain.contains("fail")) {
-            records.add("v=spf1 -all");
-            return records;
-        }
-        if (domain.contains("neutral")) {
-            records.add("v=spf1 ?all");
-            return records;
-        }
-        return records;
     }
 }

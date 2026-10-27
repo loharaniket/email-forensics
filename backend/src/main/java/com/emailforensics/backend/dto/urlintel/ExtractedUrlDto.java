@@ -18,6 +18,7 @@ public class ExtractedUrlDto {
     private Boolean lookalike;
     private String dnsStatus;
     private Integer urlRiskScore;
+    private String dataMode;
 
     public ExtractedUrlDto() {
     }
@@ -27,6 +28,16 @@ public class ExtractedUrlDto {
                            Boolean isIpUrl, Boolean isShortened, Boolean unusualPort,
                            Boolean subdomainExcess, Boolean lookalike, String dnsStatus,
                            Integer urlRiskScore) {
+        this(id, rawUrl, normalizedUrl, domain, sourceType, anchorText, anchorMismatch,
+                isIpUrl, isShortened, unusualPort, subdomainExcess, lookalike, dnsStatus,
+                urlRiskScore, "NOT_CHECKED");
+    }
+
+    public ExtractedUrlDto(UUID id, String rawUrl, String normalizedUrl, String domain,
+                           String sourceType, String anchorText, Boolean anchorMismatch,
+                           Boolean isIpUrl, Boolean isShortened, Boolean unusualPort,
+                           Boolean subdomainExcess, Boolean lookalike, String dnsStatus,
+                           Integer urlRiskScore, String dataMode) {
         this.id = id;
         this.rawUrl = rawUrl;
         this.normalizedUrl = normalizedUrl;
@@ -41,6 +52,7 @@ public class ExtractedUrlDto {
         this.lookalike = lookalike;
         this.dnsStatus = dnsStatus;
         this.urlRiskScore = urlRiskScore;
+        this.dataMode = dataMode;
     }
 
     public UUID getId() {
@@ -153,5 +165,13 @@ public class ExtractedUrlDto {
 
     public void setUrlRiskScore(Integer urlRiskScore) {
         this.urlRiskScore = urlRiskScore;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 }

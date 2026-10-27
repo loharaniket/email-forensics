@@ -1,0 +1,2 @@
+org.springframework.context.ApplicationContextInitializer=com.emailforensics.backend.config.DotenvApplicationContextInitializer
+org.springframework.boot.env.EnvironmentPostProcessor=com.emailforensics.backend.config.DotenvLoader

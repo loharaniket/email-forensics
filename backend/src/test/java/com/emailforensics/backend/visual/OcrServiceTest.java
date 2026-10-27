@@ -46,6 +46,7 @@ class OcrServiceTest {
 
         assertNotNull(result);
         assertEquals("UNAVAILABLE", result.getOcrStatus());
+        assertEquals("UNAVAILABLE", result.getDataMode());
         assertNull(result.getOcrText());
         assertNotNull(result.getProcessingError());
     }
@@ -60,6 +61,7 @@ class OcrServiceTest {
 
         assertNotNull(result);
         assertEquals("EXTRACTED", result.getOcrStatus());
+        assertEquals("SIMULATED", result.getDataMode());
         assertEquals("INVOICE #99482 DUE IMMEDIATELY", result.getOcrText());
         assertNull(result.getProcessingError());
     }
@@ -74,6 +76,7 @@ class OcrServiceTest {
 
         assertNotNull(result);
         assertEquals("NO_TEXT_FOUND", result.getOcrStatus());
+        assertEquals("SIMULATED", result.getDataMode());
         assertNull(result.getOcrText());
     }
 

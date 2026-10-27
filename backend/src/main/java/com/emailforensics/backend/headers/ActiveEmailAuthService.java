@@ -196,14 +196,26 @@ public class ActiveEmailAuthService {
         private final DmarcEvaluationResult dmarcResult;
         private final String summary;
         private final String dnsObservationJson;
+        private final String dataMode;
 
         public ActiveAuthResult(SpfEvaluationResult spfResult, DkimEvaluationResult dkimResult,
                                 DmarcEvaluationResult dmarcResult, String summary, String dnsObservationJson) {
+            this(spfResult, dkimResult, dmarcResult, summary, dnsObservationJson, "REAL");
+        }
+
+        public ActiveAuthResult(SpfEvaluationResult spfResult, DkimEvaluationResult dkimResult,
+                                DmarcEvaluationResult dmarcResult, String summary, String dnsObservationJson,
+                                String dataMode) {
             this.spfResult = spfResult;
             this.dkimResult = dkimResult;
             this.dmarcResult = dmarcResult;
             this.summary = summary;
             this.dnsObservationJson = dnsObservationJson;
+            this.dataMode = dataMode != null ? dataMode : "REAL";
+        }
+
+        public String getDataMode() {
+            return dataMode;
         }
 
         public SpfEvaluationResult getSpfResult() {
@@ -326,9 +338,18 @@ public class ActiveEmailAuthService {
                 dmarcResult.getPolicy() != null ? dmarcResult.getPolicy() : "None"
         );
 
-        String observationsJson = buildObservationsJson(spfResult, dkimResult, dmarcResult);
+        String dataMode = "REAL";
+        if (fromDomain != null && (fromDomain.endsWith(".test") || fromDomain.endsWith(".local") ||
+                fromDomain.endsWith(".internal") || fromDomain.endsWith(".example") ||
+                fromDomain.endsWith(".invalid") || fromDomain.equals("localhost"))) {
+            dataMode = "SIMULATED";
+        } else if (fromDomain == null || fromDomain.isBlank()) {
+            dataMode = "NOT_CHECKED";
+        }
 
-        return new ActiveAuthResult(spfResult, dkimResult, dmarcResult, summary, observationsJson);
+        String observationsJson = buildObservationsJson(spfResult, dkimResult, dmarcResult, dataMode);
+
+        return new ActiveAuthResult(spfResult, dkimResult, dmarcResult, summary, observationsJson, dataMode);
     }
 
     public SpfEvaluationResult evaluateSpf(String domain, String relayIp) {
@@ -1020,6 +1041,10 @@ public class ActiveEmailAuthService {
     }
 
     private String buildObservationsJson(SpfEvaluationResult spf, DkimEvaluationResult dkim, DmarcEvaluationResult dmarc) {
+        return buildObservationsJson(spf, dkim, dmarc, "REAL");
+    }
+
+    private String buildObservationsJson(SpfEvaluationResult spf, DkimEvaluationResult dkim, DmarcEvaluationResult dmarc, String dataMode) {
         StringBuilder sb = new StringBuilder("{");
         sb.append("\"activeSpf\":{");
         sb.append("\"status\":\"").append(spf != null ? spf.getStatus() : "NONE").append("\",");
@@ -1044,7 +1069,8 @@ public class ActiveEmailAuthService {
         sb.append("\"policy\":\"").append(dmarc != null ? dmarc.getPolicy() : "none").append("\",");
         sb.append("\"spfAligned\":").append(dmarc != null && dmarc.isSpfAligned()).append(",");
         sb.append("\"dkimAligned\":").append(dmarc != null && dmarc.isDkimAligned());
-        sb.append("}");
+        sb.append("},");
+        sb.append("\"dataMode\":\"").append(dataMode != null ? dataMode : "REAL").append("\"");
 
         sb.append("}");
         return sb.toString();

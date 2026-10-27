@@ -1,11 +1,15 @@
 package com.emailforensics.backend.infrastructure;
 
+import com.emailforensics.backend.infrastructure.fixtures.DefaultGeoIpFixtureProvider;
+import com.emailforensics.backend.infrastructure.fixtures.GeoIpFixtureProvider;
 import com.maxmind.db.CHMCache;
 import com.maxmind.geoip2.DatabaseReader;
 import com.maxmind.geoip2.model.CityResponse;
 import jakarta.annotation.PreDestroy;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.env.Environment;
+import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
@@ -23,26 +27,46 @@ public class GeoIpService {
     private final IpClassifier ipClassifier;
     private final DnsLookupService dnsLookupService;
     private final String dbPath;
-    private final Map<String, IpArtifact> mockIpStore = new ConcurrentHashMap<>();
+    private final GeoIpFixtureProvider fixtureProvider;
+    private final Environment environment;
     private final Map<String, AsnInfo> asnCache = new ConcurrentHashMap<>();
 
     private DatabaseReader reader;
 
     @Autowired
-    public GeoIpService(IpClassifier ipClassifier,
-                        DnsLookupService dnsLookupService,
-                        @Value("${emailforensics.geoip.db-path:./GeoLite2-City.mmdb}") String dbPath) {
+    public GeoIpService(
+            IpClassifier ipClassifier,
+            DnsLookupService dnsLookupService,
+            @Value("${emailforensics.geoip.db-path:./GeoLite2-City.mmdb}") String dbPath,
+            @Autowired(required = false) GeoIpFixtureProvider fixtureProvider,
+            @Autowired(required = false) Environment environment) {
         this.ipClassifier = ipClassifier;
         this.dnsLookupService = dnsLookupService;
         this.dbPath = dbPath;
+        this.fixtureProvider = fixtureProvider;
+        this.environment = environment;
     }
 
     public GeoIpService(IpClassifier ipClassifier, String dbPath) {
-        this(ipClassifier, new DnsLookupService(2000), dbPath);
+        this(ipClassifier, new DnsLookupService(2000), dbPath, new DefaultGeoIpFixtureProvider(), null);
+    }
+
+    public GeoIpService(IpClassifier ipClassifier, DnsLookupService dnsLookupService, String dbPath) {
+        this(ipClassifier, dnsLookupService, dbPath, new DefaultGeoIpFixtureProvider(), null);
+    }
+
+    private boolean isProduction() {
+        return environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"));
     }
 
     public void registerMockIp(String ip, IpArtifact artifact) {
-        mockIpStore.put(ip, artifact);
+        if (!isProduction() && fixtureProvider != null) {
+            fixtureProvider.registerMockIp(ip, artifact);
+        }
+    }
+
+    public GeoIpFixtureProvider getFixtureProvider() {
+        return fixtureProvider;
     }
 
     @PreDestroy
@@ -110,11 +134,8 @@ public class GeoIpService {
             cleanIp = cleanIp.substring(1, cleanIp.length() - 1);
         }
 
-        if (mockIpStore.containsKey(cleanIp)) {
-            IpArtifact mocked = mockIpStore.get(cleanIp);
-            mocked.setSourceContext(sourceContext);
-            mocked.setObservedAt(Instant.now());
-            return mocked;
+        if (!isProduction() && fixtureProvider != null && fixtureProvider.hasMock(cleanIp)) {
+            return fixtureProvider.getMockIp(cleanIp, sourceContext);
         }
 
         boolean isPrivate = ipClassifier.isPrivateOrReserved(cleanIp);
@@ -133,27 +154,36 @@ public class GeoIpService {
                     null,
                     null,
                     "IANA Reserved",
-                    Instant.now()
+                    Instant.now(),
+                    DataProvenance.NOT_CHECKED.name()
             );
         }
 
         File dbFile = resolveDbFile(this.dbPath);
         if (dbFile == null || !dbFile.exists()) {
+            AsnInfo asnInfo = resolveAsn(cleanIp);
+            String asnNumber = (asnInfo != null) ? asnInfo.getAsnNumber() : null;
+            String organization = (asnInfo != null) ? asnInfo.getOrganization() : null;
+            String country = (asnInfo != null) ? asnInfo.getCountryCode() : null;
+            String status = (asnNumber != null || organization != null || country != null) ? "ENRICHED" : "DB_UNAVAILABLE";
+            String mode = (asnNumber != null || organization != null || country != null) ? DataProvenance.REAL.name() : DataProvenance.UNAVAILABLE.name();
+
             return new IpArtifact(
                     null,
                     null,
                     cleanIp,
                     sourceContext,
                     false,
-                    "DB_UNAVAILABLE",
-                    null,
-                    null,
-                    null,
+                    status,
+                    asnNumber,
+                    organization,
+                    country,
                     null,
                     null,
                     null,
                     "MaxMind GeoLite2 (File not provided)",
-                    Instant.now()
+                    Instant.now(),
+                    mode
             );
         }
 
@@ -221,7 +251,9 @@ public class GeoIpService {
             }
         }
 
-        String lookupStatus = (foundInDb || asnNumber != null || country != null) ? "ENRICHED" : "NOT_FOUND";
+        boolean enriched = (foundInDb || asnNumber != null || country != null);
+        String lookupStatus = enriched ? "ENRICHED" : "NOT_FOUND";
+        String dataMode = enriched ? DataProvenance.REAL.name() : DataProvenance.UNAVAILABLE.name();
 
         return new IpArtifact(
                 null,
@@ -237,7 +269,8 @@ public class GeoIpService {
                 latitude,
                 longitude,
                 "MaxMind GeoLite2",
-                Instant.now()
+                Instant.now(),
+                dataMode
         );
     }
 
@@ -246,10 +279,12 @@ public class GeoIpService {
             return asnCache.get(cleanIp);
         }
 
-        AsnInfo wellKnown = checkWellKnownSubnets(cleanIp);
-        if (wellKnown != null) {
-            asnCache.put(cleanIp, wellKnown);
-            return wellKnown;
+        if (!isProduction() && fixtureProvider != null) {
+            AsnInfo wellKnown = fixtureProvider.checkWellKnownSubnets(cleanIp);
+            if (wellKnown != null) {
+                asnCache.put(cleanIp, wellKnown);
+                return wellKnown;
+            }
         }
 
         if (dnsLookupService != null) {
@@ -305,28 +340,6 @@ public class GeoIpService {
         } catch (Exception ignored) {
         }
 
-        return null;
-    }
-
-    private AsnInfo checkWellKnownSubnets(String ip) {
-        if (ip.startsWith("8.8.") || ip.startsWith("8.34.") || ip.startsWith("8.35.") || ip.startsWith("64.233.") || ip.startsWith("66.102.") || ip.startsWith("66.249.") || ip.startsWith("72.14.") || ip.startsWith("74.125.") || ip.startsWith("209.85.")) {
-            return new AsnInfo("AS15169", "Google LLC", "United States");
-        }
-        if (ip.startsWith("1.1.1.") || ip.startsWith("1.0.0.") || ip.startsWith("104.16.") || ip.startsWith("104.17.") || ip.startsWith("104.18.") || ip.startsWith("104.19.") || ip.startsWith("104.20.") || ip.startsWith("104.21.") || ip.startsWith("172.64.")) {
-            return new AsnInfo("AS13335", "Cloudflare, Inc.", "United States");
-        }
-        if (ip.startsWith("13.64.") || ip.startsWith("13.104.") || ip.startsWith("20.190.") || ip.startsWith("40.76.") || ip.startsWith("40.112.") || ip.startsWith("52.96.") || ip.startsWith("52.112.") || ip.startsWith("52.238.")) {
-            return new AsnInfo("AS8075", "Microsoft Corporation", "United States");
-        }
-        if (ip.startsWith("3.5.") || ip.startsWith("15.230.") || ip.startsWith("18.155.") || ip.startsWith("52.0.") || ip.startsWith("54.240.")) {
-            return new AsnInfo("AS16509", "Amazon.com, Inc.", "United States");
-        }
-        if (ip.startsWith("140.82.")) {
-            return new AsnInfo("AS36459", "GitHub, Inc.", "United States");
-        }
-        if (ip.startsWith("195.201.") || ip.startsWith("78.46.") || ip.startsWith("88.198.") || ip.startsWith("148.251.")) {
-            return new AsnInfo("AS24940", "Hetzner Online GmbH", "Germany");
-        }
         return null;
     }
 

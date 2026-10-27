@@ -101,12 +101,15 @@ public class UrlIntelService {
             int riskScore = urlHeuristicsService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
 
             String dnsStatus;
+            String dataMode;
             if (isIp) {
                 dnsStatus = "SKIPPED_IP";
+                dataMode = "NOT_CHECKED";
                 discoveredIps.add(norm.getDomain());
             } else {
                 DnsResult dnsResult = dnsLookupService.lookupDomain(norm.getDomain());
                 dnsStatus = dnsResult.getStatus();
+                dataMode = dnsResult.getDataMode();
                 discoveredIps.addAll(dnsResult.getARecords());
             }
 
@@ -125,7 +128,8 @@ public class UrlIntelService {
                     subdomainExcess,
                     lookalike,
                     dnsStatus,
-                    riskScore
+                    riskScore,
+                    dataMode
             );
             entitiesToSave.add(entity);
         }
@@ -180,7 +184,16 @@ public class UrlIntelService {
             boolean anchorMismatch = urlHeuristicsService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
             int riskScore = urlHeuristicsService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
 
-            String dnsStatus = isIp ? "SKIPPED_IP" : dnsLookupService.lookupDomain(norm.getDomain()).getStatus();
+            String dnsStatus;
+            String dataMode;
+            if (isIp) {
+                dnsStatus = "SKIPPED_IP";
+                dataMode = "NOT_CHECKED";
+            } else {
+                DnsResult dnsResult = dnsLookupService.lookupDomain(norm.getDomain());
+                dnsStatus = dnsResult.getStatus();
+                dataMode = dnsResult.getDataMode();
+            }
 
             dtos.add(new ExtractedUrlDto(
                     null,
@@ -196,7 +209,8 @@ public class UrlIntelService {
                     subdomainExcess,
                     lookalike,
                     dnsStatus,
-                    riskScore
+                    riskScore,
+                    dataMode
             ));
         }
 
@@ -220,7 +234,8 @@ public class UrlIntelService {
                     e.getSubdomainExcess(),
                     e.getLookalike(),
                     e.getDnsStatus(),
-                    e.getUrlRiskScore()
+                    e.getUrlRiskScore(),
+                    e.getDataMode()
             ));
         }
         return dtos;

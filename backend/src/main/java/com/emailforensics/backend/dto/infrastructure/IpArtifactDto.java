@@ -19,6 +19,7 @@ public class IpArtifactDto {
     private BigDecimal longitude;
     private String dataSource;
     private Instant observedAt;
+    private String dataMode;
 
     public IpArtifactDto() {
     }
@@ -27,6 +28,15 @@ public class IpArtifactDto {
                          String lookupStatus, String asnNumber, String organization,
                          String country, String city, BigDecimal latitude,
                          BigDecimal longitude, String dataSource, Instant observedAt) {
+        this(id, ipAddress, sourceContext, isPrivate, lookupStatus, asnNumber, organization,
+                country, city, latitude, longitude, dataSource, observedAt, "UNAVAILABLE");
+    }
+
+    public IpArtifactDto(UUID id, String ipAddress, String sourceContext, Boolean isPrivate,
+                         String lookupStatus, String asnNumber, String organization,
+                         String country, String city, BigDecimal latitude,
+                         BigDecimal longitude, String dataSource, Instant observedAt,
+                         String dataMode) {
         this.id = id;
         this.ipAddress = ipAddress;
         this.sourceContext = sourceContext;
@@ -40,6 +50,7 @@ public class IpArtifactDto {
         this.longitude = longitude;
         this.dataSource = dataSource;
         this.observedAt = observedAt;
+        this.dataMode = dataMode;
     }
 
     public UUID getId() {
@@ -144,5 +155,13 @@ public class IpArtifactDto {
 
     public void setObservedAt(Instant observedAt) {
         this.observedAt = observedAt;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 }

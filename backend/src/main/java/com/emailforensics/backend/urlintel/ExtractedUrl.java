@@ -1,6 +1,7 @@
 package com.emailforensics.backend.urlintel;
 
 import com.emailforensics.backend.evidence.AnalysisRun;
+import com.emailforensics.backend.infrastructure.DataProvenance;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -63,6 +64,9 @@ public class ExtractedUrl {
     @Column(name = "url_risk_score")
     private Integer urlRiskScore;
 
+    @Column(name = "data_mode", nullable = false, length = 50)
+    private String dataMode = DataProvenance.NOT_CHECKED.name();
+
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
@@ -74,6 +78,16 @@ public class ExtractedUrl {
                         Boolean isIpUrl, Boolean isShortened, Boolean unusualPort,
                         Boolean subdomainExcess, Boolean lookalike, String dnsStatus,
                         Integer urlRiskScore) {
+        this(id, analysisRun, rawUrl, normalizedUrl, domain, sourceType, anchorText, anchorMismatch,
+                isIpUrl, isShortened, unusualPort, subdomainExcess, lookalike, dnsStatus, urlRiskScore,
+                DataProvenance.NOT_CHECKED.name());
+    }
+
+    public ExtractedUrl(UUID id, AnalysisRun analysisRun, String rawUrl, String normalizedUrl,
+                        String domain, String sourceType, String anchorText, Boolean anchorMismatch,
+                        Boolean isIpUrl, Boolean isShortened, Boolean unusualPort,
+                        Boolean subdomainExcess, Boolean lookalike, String dnsStatus,
+                        Integer urlRiskScore, String dataMode) {
         this.id = id;
         this.analysisRun = analysisRun;
         this.rawUrl = rawUrl;
@@ -89,6 +103,7 @@ public class ExtractedUrl {
         this.lookalike = lookalike != null ? lookalike : false;
         this.dnsStatus = dnsStatus;
         this.urlRiskScore = urlRiskScore;
+        this.dataMode = dataMode != null ? dataMode : DataProvenance.NOT_CHECKED.name();
         this.createdAt = Instant.now();
     }
 
@@ -220,6 +235,14 @@ public class ExtractedUrl {
 
     public void setUrlRiskScore(Integer urlRiskScore) {
         this.urlRiskScore = urlRiskScore;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 
     public Instant getCreatedAt() {

@@ -22,7 +22,7 @@ class AuthControllerTest {
 
     @Test
     void shouldLoginSuccessfullyWithValidCredentials() throws Exception {
-        String requestJson = "{\"username\":\"analyst\",\"password\":\"Analyst@123\"}";
+        String requestJson = "{\"username\":\"analyst\",\"password\":\"analyst123\"}";
 
         mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -47,7 +47,7 @@ class AuthControllerTest {
 
     @Test
     void shouldReturnProfileForAuthenticatedUser() throws Exception {
-        String loginJson = "{\"username\":\"analyst\",\"password\":\"Analyst@123\"}";
+        String loginJson = "{\"username\":\"analyst\",\"password\":\"analyst123\"}";
         MvcResult result = mockMvc.perform(post("/api/v1/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(loginJson))

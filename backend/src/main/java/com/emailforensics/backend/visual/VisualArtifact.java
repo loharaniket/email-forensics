@@ -1,6 +1,7 @@
 package com.emailforensics.backend.visual;
 
 import com.emailforensics.backend.evidence.AnalysisRun;
+import com.emailforensics.backend.infrastructure.DataProvenance;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -53,6 +54,9 @@ public class VisualArtifact {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "data_mode", nullable = false, length = 50)
+    private String dataMode = DataProvenance.NOT_CHECKED.name();
+
     @OneToMany(mappedBy = "visualArtifact", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<QrArtifact> qrArtifacts = new ArrayList<>();
 
@@ -62,6 +66,13 @@ public class VisualArtifact {
     public VisualArtifact(UUID id, AnalysisRun analysisRun, String filename, String contentType,
                           Long fileSizeBytes, String sha256Hash, String ocrText, String ocrStatus,
                           String processingError) {
+        this(id, analysisRun, filename, contentType, fileSizeBytes, sha256Hash, ocrText, ocrStatus,
+                processingError, DataProvenance.NOT_CHECKED.name());
+    }
+
+    public VisualArtifact(UUID id, AnalysisRun analysisRun, String filename, String contentType,
+                          Long fileSizeBytes, String sha256Hash, String ocrText, String ocrStatus,
+                          String processingError, String dataMode) {
         this.id = id;
         this.analysisRun = analysisRun;
         this.filename = filename;
@@ -71,6 +82,7 @@ public class VisualArtifact {
         this.ocrText = ocrText;
         this.ocrStatus = ocrStatus;
         this.processingError = processingError;
+        this.dataMode = dataMode != null ? dataMode : DataProvenance.NOT_CHECKED.name();
         this.createdAt = Instant.now();
     }
 
@@ -162,6 +174,14 @@ public class VisualArtifact {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 
     public List<QrArtifact> getQrArtifacts() {

@@ -5,7 +5,7 @@ import { ShieldCheck, Lock, User, AlertCircle, ArrowRight, Activity } from 'luci
 
 export default function LoginPage() {
   const [username, setUsername] = useState('analyst')
-  const [password, setPassword] = useState('Analyst@123')
+  const [password, setPassword] = useState('analyst123')
   const [error, setError] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -127,10 +127,17 @@ export default function LoginPage() {
 
           <div className="mt-6 pt-5 border-t border-slate-800 text-center">
             <span className="text-[11px] text-slate-400">Default Seed Credentials:</span>
-            <div className="mt-1.5 font-mono text-[11px] bg-slate-950/80 px-2.5 py-1.5 rounded-lg border border-slate-800 text-slate-300 flex justify-center items-center gap-2">
-              <span className="text-cyan-400">analyst</span>
-              <span className="text-slate-600">/</span>
-              <span className="text-slate-400">Analyst@123</span>
+            <div className="mt-1.5 flex flex-col gap-1">
+              <div className="font-mono text-[11px] bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 flex justify-center items-center gap-2">
+                <span className="text-cyan-400">analyst</span>
+                <span className="text-slate-600">/</span>
+                <span className="text-slate-400">analyst123</span>
+              </div>
+              <div className="font-mono text-[11px] bg-slate-950/80 px-2.5 py-1 rounded-lg border border-slate-800 text-slate-300 flex justify-center items-center gap-2">
+                <span className="text-purple-400">admin</span>
+                <span className="text-slate-600">/</span>
+                <span className="text-slate-400">admin123</span>
+              </div>
             </div>
           </div>
         </div>

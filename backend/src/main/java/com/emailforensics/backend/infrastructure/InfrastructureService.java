@@ -127,7 +127,8 @@ public class InfrastructureService {
                     art.getLatitude(),
                     art.getLongitude(),
                     art.getDataSource(),
-                    art.getObservedAt()
+                    art.getObservedAt(),
+                    art.getDataMode()
             ));
         }
         return dtos;

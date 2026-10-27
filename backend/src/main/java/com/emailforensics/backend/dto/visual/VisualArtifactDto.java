@@ -17,6 +17,7 @@ public class VisualArtifactDto {
     private String processingError;
     private Instant createdAt;
     private List<QrArtifactDto> qrArtifacts = new ArrayList<>();
+    private String dataMode;
 
     public VisualArtifactDto() {
     }
@@ -24,6 +25,14 @@ public class VisualArtifactDto {
     public VisualArtifactDto(UUID id, String filename, String contentType, Long fileSizeBytes,
                              String sha256Hash, String ocrText, String ocrStatus,
                              String processingError, Instant createdAt, List<QrArtifactDto> qrArtifacts) {
+        this(id, filename, contentType, fileSizeBytes, sha256Hash, ocrText, ocrStatus,
+                processingError, createdAt, qrArtifacts, "NOT_CHECKED");
+    }
+
+    public VisualArtifactDto(UUID id, String filename, String contentType, Long fileSizeBytes,
+                             String sha256Hash, String ocrText, String ocrStatus,
+                             String processingError, Instant createdAt, List<QrArtifactDto> qrArtifacts,
+                             String dataMode) {
         this.id = id;
         this.filename = filename;
         this.contentType = contentType;
@@ -34,6 +43,7 @@ public class VisualArtifactDto {
         this.processingError = processingError;
         this.createdAt = createdAt;
         this.qrArtifacts = qrArtifacts != null ? qrArtifacts : new ArrayList<>();
+        this.dataMode = dataMode;
     }
 
     public UUID getId() {
@@ -114,5 +124,13 @@ public class VisualArtifactDto {
 
     public void setQrArtifacts(List<QrArtifactDto> qrArtifacts) {
         this.qrArtifacts = qrArtifacts;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 }

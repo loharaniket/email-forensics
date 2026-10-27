@@ -152,6 +152,7 @@ public class VisualAnalysisService {
             visual.setOcrText(ocrResult.getOcrText());
             visual.setOcrStatus(ocrResult.getOcrStatus());
             visual.setProcessingError(ocrResult.getProcessingError());
+            visual.setDataMode(ocrResult.getDataMode());
 
             visualArtifactRepository.save(visual);
             savedList.add(visual);
@@ -204,7 +205,8 @@ public class VisualAnalysisService {
                     ocrResult.getOcrStatus(),
                     ocrResult.getProcessingError(),
                     null,
-                    qrDtos
+                    qrDtos,
+                    ocrResult.getDataMode()
             ));
         }
 
@@ -365,7 +367,8 @@ public class VisualAnalysisService {
                     v.getOcrStatus(),
                     v.getProcessingError(),
                     v.getCreatedAt(),
-                    qrDtos
+                    qrDtos,
+                    v.getDataMode()
             ));
         }
         return dtos;

@@ -275,6 +275,7 @@ public class HeaderForensicService {
                     dto.setActiveDmarcStatus(activeResult.getActiveDmarcStatus());
                     dto.setActiveDmarcPolicy(activeResult.getActiveDmarcPolicy());
                     dto.setActiveVerificationSummary(activeResult.getSummary());
+                    dto.setDataMode(activeResult.getDataMode());
 
                     entity.setIndependentVerification(activeResult.getSummary());
                     entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
@@ -731,6 +732,25 @@ public class HeaderForensicService {
         dto.setActiveDmarcStatus(extractJsonField(obsJson, "activeDmarc", "status"));
         dto.setActiveDmarcPolicy(extractJsonField(obsJson, "activeDmarc", "record"));
         dto.setActiveVerificationSummary(summary != null ? summary : "Active DNS authentication observations persistent.");
+        String topMode = extractTopLevelJsonField(obsJson, "dataMode");
+        if (topMode != null && !topMode.isBlank()) {
+            dto.setDataMode(topMode);
+        }
+    }
+
+    private String extractTopLevelJsonField(String json, String key) {
+        if (json == null || key == null) {
+            return null;
+        }
+        Pattern pattern = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(?:\"([^\"]*)\"|(null))");
+        Matcher m = pattern.matcher(json);
+        if (m.find()) {
+            if ("null".equals(m.group(2))) {
+                return null;
+            }
+            return m.group(1);
+        }
+        return null;
     }
 
     private String extractJsonField(String json, String parentKey, String childKey) {

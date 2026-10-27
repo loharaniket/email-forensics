@@ -64,6 +64,9 @@ public class IpArtifact {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
+    @Column(name = "data_mode", nullable = false, length = 50)
+    private String dataMode = DataProvenance.UNAVAILABLE.name();
+
     public IpArtifact() {
     }
 
@@ -71,6 +74,15 @@ public class IpArtifact {
                       Boolean isPrivate, String lookupStatus, String asnNumber, String organization,
                       String country, String city, BigDecimal latitude, BigDecimal longitude,
                       String dataSource, Instant observedAt) {
+        this(id, analysisRun, ipAddress, sourceContext, isPrivate, lookupStatus, asnNumber,
+                organization, country, city, latitude, longitude, dataSource, observedAt,
+                DataProvenance.UNAVAILABLE.name());
+    }
+
+    public IpArtifact(UUID id, AnalysisRun analysisRun, String ipAddress, String sourceContext,
+                      Boolean isPrivate, String lookupStatus, String asnNumber, String organization,
+                      String country, String city, BigDecimal latitude, BigDecimal longitude,
+                      String dataSource, Instant observedAt, String dataMode) {
         this.id = id;
         this.analysisRun = analysisRun;
         this.ipAddress = ipAddress;
@@ -86,6 +98,7 @@ public class IpArtifact {
         this.dataSource = dataSource;
         this.observedAt = observedAt != null ? observedAt : Instant.now();
         this.createdAt = Instant.now();
+        this.dataMode = dataMode != null ? dataMode : DataProvenance.UNAVAILABLE.name();
     }
 
     @PrePersist
@@ -219,5 +232,13 @@ public class IpArtifact {
 
     public void setCreatedAt(Instant createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public String getDataMode() {
+        return dataMode;
+    }
+
+    public void setDataMode(String dataMode) {
+        this.dataMode = dataMode;
     }
 }
