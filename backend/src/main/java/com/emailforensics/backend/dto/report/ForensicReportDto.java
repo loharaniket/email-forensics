@@ -1211,10 +1211,6 @@ public class ForensicReportDto {
     public static class CorrelationAndCampaignSummaryDto {
         private int historicalMatchesCount;
         private List<ReportCorrelationMatchDto> matchedIndicators = new ArrayList<>();
-        private boolean campaignMember;
-        private String campaignCode;
-        private String campaignName;
-        private Integer campaignConfidence;
 
         public CorrelationAndCampaignSummaryDto() {
         }
@@ -1233,38 +1229,6 @@ public class ForensicReportDto {
 
         public void setMatchedIndicators(List<ReportCorrelationMatchDto> matchedIndicators) {
             this.matchedIndicators = matchedIndicators;
-        }
-
-        public boolean isCampaignMember() {
-            return campaignMember;
-        }
-
-        public void setCampaignMember(boolean campaignMember) {
-            this.campaignMember = campaignMember;
-        }
-
-        public String getCampaignCode() {
-            return campaignCode;
-        }
-
-        public void setCampaignCode(String campaignCode) {
-            this.campaignCode = campaignCode;
-        }
-
-        public String getCampaignName() {
-            return campaignName;
-        }
-
-        public void setCampaignName(String campaignName) {
-            this.campaignName = campaignName;
-        }
-
-        public Integer getCampaignConfidence() {
-            return campaignConfidence;
-        }
-
-        public void setCampaignConfidence(Integer campaignConfidence) {
-            this.campaignConfidence = campaignConfidence;
         }
     }
 

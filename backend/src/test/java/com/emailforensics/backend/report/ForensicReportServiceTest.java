@@ -2,9 +2,6 @@ package com.emailforensics.backend.report;
 
 import com.emailforensics.backend.aiassessment.AiGroundedAssessment;
 import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
-import com.emailforensics.backend.campaign.Campaign;
-import com.emailforensics.backend.campaign.CampaignMember;
-import com.emailforensics.backend.campaign.CampaignMemberRepository;
 import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.casefile.CaseStatus;
@@ -105,9 +102,6 @@ class ForensicReportServiceTest {
     private HistoricalMatchRepository matchRepository;
 
     @Mock
-    private CampaignMemberRepository campaignMemberRepository;
-
-    @Mock
     private AiGroundedAssessmentRepository aiRepository;
 
     @Mock
@@ -139,7 +133,6 @@ class ForensicReportServiceTest {
                 riskRepository,
                 riskFactorRepository,
                 matchRepository,
-                campaignMemberRepository,
                 aiRepository,
                 storageService,
                 emailParserService
@@ -204,9 +197,6 @@ class ForensicReportServiceTest {
         HistoricalMatch match = new HistoricalMatch(UUID.randomUUID(), run, evidence, "SENDER_DOMAIN", "bad.org", "EXACT", "Domain match");
         when(matchRepository.findBySourceRunId(run.getId())).thenReturn(Collections.singletonList(match));
 
-        Campaign campaign = new Campaign(UUID.randomUUID(), "CAMP-001", "CEO Spoofing", 85, "DOMAIN_CLUSTER", "Active Phish", Instant.now(), Instant.now());
-        CampaignMember member = new CampaignMember(UUID.randomUUID(), campaign, evidence, "Domain match", 85);
-        when(campaignMemberRepository.findByEmailEvidenceId(emailId)).thenReturn(Collections.singletonList(member));
 
         AiGroundedAssessment ai = new AiGroundedAssessment(
                 UUID.randomUUID(), evidence, run, "openai", "gpt-4o", "v1.0.0", "LIVE_AI",
@@ -231,8 +221,7 @@ class ForensicReportServiceTest {
         assertTrue(report.getContentAnalysis().isPromptInjectionDetected());
         assertEquals(85, report.getRiskSummary().getDeterministicRiskScore());
         assertEquals("CRITICAL", report.getRiskSummary().getRiskLevel());
-        assertTrue(report.getCorrelationsAndCampaigns().isCampaignMember());
-        assertEquals("CAMP-001", report.getCorrelationsAndCampaigns().getCampaignCode());
+        assertEquals(1, report.getCorrelationsAndCampaigns().getHistoricalMatchesCount());
         assertTrue(report.getAiAssessment().isAssessmentPresent());
         assertEquals("LIVE_AI", report.getAiAssessment().getStatus());
         assertEquals("MALICIOUS_PHISHING", report.getAiAssessment().getThreatClassification());

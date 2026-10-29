@@ -7,7 +7,6 @@ import {
   RefreshCw,
   SlidersHorizontal,
   Layers,
-  Flame,
   Mail,
   Globe,
   Server,
@@ -28,7 +27,7 @@ export default function GlobalGraphPage() {
       const data = await getGlobalGraph(limit);
       setGraphData(data || { nodes: [], links: [] });
     } catch (err) {
-      setError(err.response?.data?.message || 'Failed to generate cross-case global threat graph');
+      setError(err.response?.data?.message || 'Failed to load global cyber threat graph');
     } finally {
       setIsLoading(false);
     }
@@ -41,8 +40,8 @@ export default function GlobalGraphPage() {
   const nodes = graphData.nodes || [];
   const links = graphData.links || [];
 
-  const countsByType = nodes.reduce((acc, n) => {
-    acc[n.type] = (acc[n.type] || 0) + 1;
+  const countsByType = nodes.reduce((acc, curr) => {
+    acc[curr.type] = (acc[curr.type] || 0) + 1;
     return acc;
   }, {});
 
@@ -65,7 +64,7 @@ export default function GlobalGraphPage() {
               </h1>
             </div>
             <p className="text-xs text-slate-400">
-              Interactive cyber graph cross-referencing email evidence, campaigns, malicious URLs, infrastructure IPs, and attachment hashes across all case files.
+              Interactive cyber graph cross-referencing email evidence, malicious URLs, infrastructure IPs, and attachment hashes across all case files.
             </p>
           </div>
 
@@ -99,23 +98,13 @@ export default function GlobalGraphPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-4 gap-2.5">
           <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex items-center gap-2.5">
             <Mail className="h-4 w-4 text-cyan-400" />
             <div>
               <span className="text-[10px] font-mono text-slate-400 block uppercase">Emails</span>
               <span className="text-sm font-bold font-mono text-white">
                 {countsByType['EMAIL'] || 0}
-              </span>
-            </div>
-          </div>
-
-          <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex items-center gap-2.5">
-            <Flame className="h-4 w-4 text-amber-400" />
-            <div>
-              <span className="text-[10px] font-mono text-slate-400 block uppercase">Campaigns</span>
-              <span className="text-sm font-bold font-mono text-white">
-                {countsByType['CAMPAIGN'] || 0}
               </span>
             </div>
           </div>
@@ -143,31 +132,31 @@ export default function GlobalGraphPage() {
           <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex items-center gap-2.5">
             <FileText className="h-4 w-4 text-pink-400" />
             <div>
-              <span className="text-[10px] font-mono text-slate-400 block uppercase">Payload Hashes</span>
+              <span className="text-[10px] font-mono text-slate-400 block uppercase">Attachments</span>
               <span className="text-sm font-bold font-mono text-white">
                 {countsByType['ATTACHMENT'] || 0}
               </span>
             </div>
           </div>
-
-
         </div>
 
-        {error && (
-          <div className="p-4 rounded-xl bg-rose-950/40 border border-rose-800/70 text-rose-300 text-xs flex items-center justify-between">
-            <span>{error}</span>
-            <button
-              onClick={fetchGraph}
-              className="px-2.5 py-1 bg-rose-900/60 hover:bg-rose-900 rounded font-medium cursor-pointer"
-            >
-              Retry
-            </button>
+        {error ? (
+          <div className="p-6 rounded-2xl bg-rose-950/20 border border-rose-900 text-center space-y-2">
+            <ShieldAlert className="h-8 w-8 text-rose-400 mx-auto" />
+            <h3 className="text-sm font-bold text-rose-300">Graph Load Error</h3>
+            <p className="text-xs text-rose-400/80">{error}</p>
+          </div>
+        ) : (
+          <div className="p-4 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-mono font-medium text-slate-400 flex items-center gap-2">
+                <Layers className="h-3.5 w-3.5 text-cyan-400" />
+                Cross-Case Threat Indicator Topology Canvas
+              </span>
+            </div>
+            <ThreatGraphCanvas graphData={graphData} height="680px" />
           </div>
         )}
-
-        <div className="relative">
-          <ThreatGraphCanvas graphData={graphData} height="640px" />
-        </div>
       </main>
     </div>
   );

@@ -1,6 +1,5 @@
 package com.emailforensics.backend.correlation;
 
-import com.emailforensics.backend.campaign.CampaignService;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
@@ -42,7 +41,6 @@ public class CorrelationService {
     private final VisualArtifactRepository visualRepository;
     private final QrArtifactRepository qrRepository;
     private final EvidenceService evidenceService;
-    private final CampaignService campaignService;
 
     public CorrelationService(HistoricalMatchRepository matchRepository,
                               EmailEvidenceRepository evidenceRepository,
@@ -52,8 +50,7 @@ public class CorrelationService {
                               HeaderAnalysisRepository headerRepository,
                               VisualArtifactRepository visualRepository,
                               QrArtifactRepository qrRepository,
-                              @Lazy EvidenceService evidenceService,
-                              CampaignService campaignService) {
+                              @Lazy EvidenceService evidenceService) {
         this.matchRepository = matchRepository;
         this.evidenceRepository = evidenceRepository;
         this.runRepository = runRepository;
@@ -63,7 +60,6 @@ public class CorrelationService {
         this.visualRepository = visualRepository;
         this.qrRepository = qrRepository;
         this.evidenceService = evidenceService;
-        this.campaignService = campaignService;
     }
 
     @Transactional
@@ -209,10 +205,6 @@ public class CorrelationService {
             if (!exists) {
                 savedMatches.add(matchRepository.save(candidate));
             }
-        }
-
-        if (!savedMatches.isEmpty()) {
-            campaignService.clusterIntoCampaign(sourceEvidence, savedMatches);
         }
 
         return mapMatchesToDto(matchRepository.findBySourceEmailId(emailId));

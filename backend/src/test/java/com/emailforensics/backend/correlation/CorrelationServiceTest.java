@@ -1,6 +1,5 @@
 package com.emailforensics.backend.correlation;
 
-import com.emailforensics.backend.campaign.CampaignService;
 import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
@@ -72,8 +71,6 @@ public class CorrelationServiceTest {
     @Mock
     private EvidenceService evidenceService;
 
-    @Mock
-    private CampaignService campaignService;
 
     private CorrelationService correlationService;
 
@@ -96,8 +93,7 @@ public class CorrelationServiceTest {
                 headerRepository,
                 visualRepository,
                 qrRepository,
-                evidenceService,
-                campaignService
+                evidenceService
         );
 
         analyst = new User(UUID.randomUUID(), "analyst", "analyst@test.local", "hashed", Role.ANALYST, true, Instant.now());
@@ -158,7 +154,6 @@ public class CorrelationServiceTest {
         assertEquals(email2.getId(), match.getMatchedEmailId());
         assertEquals("CASE-2026-0002", match.getMatchedCaseNumber());
 
-        verify(campaignService).clusterIntoCampaign(eq(email1), any());
     }
 
     @Test

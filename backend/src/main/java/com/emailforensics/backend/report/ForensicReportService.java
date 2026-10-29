@@ -2,8 +2,6 @@ package com.emailforensics.backend.report;
 
 import com.emailforensics.backend.aiassessment.AiGroundedAssessment;
 import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
-import com.emailforensics.backend.campaign.CampaignMember;
-import com.emailforensics.backend.campaign.CampaignMemberRepository;
 import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.common.ResourceNotFoundException;
@@ -67,7 +65,6 @@ public class ForensicReportService {
     private final RiskAssessmentRepository riskRepository;
     private final RiskFactorRepository riskFactorRepository;
     private final HistoricalMatchRepository matchRepository;
-    private final CampaignMemberRepository campaignMemberRepository;
     private final AiGroundedAssessmentRepository aiRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
@@ -85,7 +82,6 @@ public class ForensicReportService {
                                  RiskAssessmentRepository riskRepository,
                                  RiskFactorRepository riskFactorRepository,
                                  HistoricalMatchRepository matchRepository,
-                                 CampaignMemberRepository campaignMemberRepository,
                                  AiGroundedAssessmentRepository aiRepository,
                                  EvidenceStorageService storageService,
                                  EmailParserService emailParserService) {
@@ -102,7 +98,6 @@ public class ForensicReportService {
         this.riskRepository = riskRepository;
         this.riskFactorRepository = riskFactorRepository;
         this.matchRepository = matchRepository;
-        this.campaignMemberRepository = campaignMemberRepository;
         this.aiRepository = aiRepository;
         this.storageService = storageService;
         this.emailParserService = emailParserService;
@@ -535,14 +530,6 @@ public class ForensicReportService {
         }
         corr.setMatchedIndicators(rMatches);
 
-        List<CampaignMember> campMembers = campaignMemberRepository.findByEmailEvidenceId(evidence.getId());
-        if (!campMembers.isEmpty()) {
-            CampaignMember cm = campMembers.get(0);
-            corr.setCampaignMember(true);
-            corr.setCampaignCode(cm.getCampaign().getCampaignCode());
-            corr.setCampaignName(cm.getCampaign().getName());
-            corr.setCampaignConfidence(cm.getCampaign().getConfidenceScore());
-        }
         report.setCorrelationsAndCampaigns(corr);
 
         ForensicReportDto.AiAssessmentSummaryDto ai = new ForensicReportDto.AiAssessmentSummaryDto();

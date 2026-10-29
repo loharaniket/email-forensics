@@ -1,7 +1,7 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { ShieldCheck, FolderKanban, Activity, LogOut, User, Flame, Share2 } from 'lucide-react'
+import { ShieldCheck, FolderKanban, Activity, LogOut, User, Share2 } from 'lucide-react'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
@@ -45,19 +45,6 @@ export default function Navbar() {
             </Link>
 
             <Link
-              to="/campaigns"
-              id="nav-campaigns-link"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                location.pathname.startsWith('/campaigns')
-                  ? 'bg-amber-950 text-amber-300 border border-amber-800'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
-              }`}
-            >
-              <Flame className="h-3.5 w-3.5 text-amber-400" />
-              Campaigns
-            </Link>
-
-            <Link
               to="/graph"
               id="nav-graph-link"
               className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
@@ -98,11 +85,10 @@ export default function Navbar() {
             <button
               id="logout-btn"
               onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-300 hover:bg-rose-950/30 border border-transparent hover:border-rose-900/50 transition-colors"
-              title="Sign Out"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 border border-transparent hover:border-rose-900/50 transition-colors cursor-pointer"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Logout</span>
+              <span className="hidden sm:inline">Sign Out</span>
             </button>
           </div>
         )}

@@ -1,7 +1,5 @@
 package com.emailforensics.backend.aiassessment;
 
-import com.emailforensics.backend.campaign.CampaignMember;
-import com.emailforensics.backend.campaign.CampaignMemberRepository;
 import com.emailforensics.backend.content.ContentAnalysis;
 import com.emailforensics.backend.content.ContentAnalysisRepository;
 import com.emailforensics.backend.correlation.HistoricalMatch;
@@ -51,7 +49,6 @@ public class EvidenceContextAssembler {
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final RiskFactorRepository riskFactorRepository;
     private final HistoricalMatchRepository historicalMatchRepository;
-    private final CampaignMemberRepository campaignMemberRepository;
     private final EvidenceStorageService evidenceStorageService;
     private final EmailParserService emailParserService;
 
@@ -65,7 +62,6 @@ public class EvidenceContextAssembler {
                                    RiskAssessmentRepository riskAssessmentRepository,
                                    RiskFactorRepository riskFactorRepository,
                                    HistoricalMatchRepository historicalMatchRepository,
-                                   CampaignMemberRepository campaignMemberRepository,
                                    EvidenceStorageService evidenceStorageService,
                                    EmailParserService emailParserService) {
         this.headerAnalysisRepository = headerAnalysisRepository;
@@ -78,7 +74,6 @@ public class EvidenceContextAssembler {
         this.riskAssessmentRepository = riskAssessmentRepository;
         this.riskFactorRepository = riskFactorRepository;
         this.historicalMatchRepository = historicalMatchRepository;
-        this.campaignMemberRepository = campaignMemberRepository;
         this.evidenceStorageService = evidenceStorageService;
         this.emailParserService = emailParserService;
     }
@@ -265,16 +260,6 @@ public class EvidenceContextAssembler {
                 whitelist.add("CORRELATION:" + m.getIndicatorType());
             }
             sb.append("\n");
-        }
-
-        List<CampaignMember> campMembers = campaignMemberRepository.findByEmailEvidenceId(evidence.getId());
-        if (!campMembers.isEmpty()) {
-            CampaignMember cm = campMembers.get(0);
-            sb.append("9. THREAT CAMPAIGN CLUSTER:\n");
-            sb.append(" - Member of: ").append(cm.getCampaign().getCampaignCode())
-                    .append(" - ").append(cm.getCampaign().getName())
-                    .append(" (Cluster Confidence: ").append(cm.getCampaign().getConfidenceScore()).append("%)\n\n");
-            whitelist.add("CAMPAIGN:" + cm.getCampaign().getCampaignCode());
         }
 
         ParsedEmailDto parsedEmail = null;

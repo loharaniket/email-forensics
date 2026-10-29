@@ -12,7 +12,6 @@ import {
   X,
   ShieldAlert,
   Mail,
-  Flame,
   Globe,
   Server,
   FileText,
@@ -24,7 +23,6 @@ import {
 const NODE_COLORS = {
   PRIMARY_EMAIL: '#38bdf8',
   EMAIL: '#06b6d4',
-  CAMPAIGN: '#eab308',
   URL: '#f59e0b',
   DOMAIN: '#f59e0b',
   IP: '#ef4444',
@@ -65,14 +63,14 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
     const centerX = containerWidth / 2;
     const centerY = containerHeight / 2;
 
-    const primaryNode = rawNodes.find((n) => n.metadata?.isPrimary || n.type === 'CAMPAIGN');
+    const primaryNode = rawNodes.find((n) => n.metadata?.isPrimary);
     const positionedNodes = rawNodes.map((node, index) => {
       if (primaryNode && node.id === primaryNode.id) {
         return { ...node, x: centerX, y: centerY, vx: 0, vy: 0 };
       }
 
       const angle = (index / (rawNodes.length || 1)) * 2 * Math.PI;
-      const radius = node.type === 'EMAIL' || node.type === 'CAMPAIGN' ? 160 : 230 + ((index % 3) * 35);
+      const radius = node.type === 'EMAIL' ? 160 : 230 + ((index % 3) * 35);
       const x = centerX + Math.cos(angle) * radius;
       const y = centerY + Math.sin(angle) * radius;
 
@@ -97,7 +95,6 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
       const matchesFilter =
         filterType === 'ALL' ||
         (filterType === 'EMAIL' && (n.type === 'EMAIL' || n.group === 'PRIMARY_EMAIL')) ||
-        (filterType === 'CAMPAIGN' && n.type === 'CAMPAIGN') ||
         (filterType === 'URL' && (n.type === 'URL' || n.type === 'DOMAIN')) ||
         (filterType === 'IP' && n.type === 'IP') ||
         (filterType === 'ATTACHMENT' && n.type === 'ATTACHMENT');
@@ -185,10 +182,7 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
   const getNodeIcon = (type) => {
     switch (type) {
       case 'EMAIL':
-        return <Mail className="w-3.5 h-3.5 text-white" />;
-      case 'CAMPAIGN':
-        return <Flame className="w-3.5 h-3.5 text-white" />;
-      case 'URL':
+        return <Mail className="w-3.5 h-3.5 text-white" />;      case 'URL':
         return <LinkIcon className="w-3.5 h-3.5 text-white" />;
       case 'DOMAIN':
         return <Globe className="w-3.5 h-3.5 text-white" />;
@@ -240,7 +234,7 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
         </div>
 
         <div className="flex items-center gap-1 border-l border-slate-800 pl-2">
-          {['ALL', 'EMAIL', 'CAMPAIGN', 'URL', 'IP', 'ATTACHMENT'].map((type) => (
+          {['ALL', 'EMAIL', 'URL', 'IP', 'ATTACHMENT'].map((type) => (
             <button
               key={type}
               id={`graph-filter-${type.toLowerCase()}`}
@@ -512,14 +506,6 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
               </div>
             )}
 
-            {selectedNode.metadata?.campaignCode && (
-              <div className="flex items-center justify-between py-1 border-t border-slate-800/80">
-                <span className="text-slate-400">Campaign Code</span>
-                <span className="font-mono text-amber-400 font-medium">
-                  {selectedNode.metadata.campaignCode}
-                </span>
-              </div>
-            )}
 
 
 
@@ -548,19 +534,6 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
               </button>
             )}
 
-            {selectedNode.type === 'CAMPAIGN' && (
-              <button
-                id="graph-view-campaign-btn"
-                onClick={() => {
-                  const campId = selectedNode.id.replace('campaign-', '');
-                  navigate(`/campaigns/${campId}`);
-                }}
-                className="w-full flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-medium text-xs transition-colors shadow-md shadow-amber-600/20"
-              >
-                <span>View Full Campaign</span>
-                <ChevronRight className="w-3.5 h-3.5" />
-              </button>
-            )}
 
             {selectedNode.metadata?.caseId && selectedNode.type !== 'EMAIL' && (
               <button

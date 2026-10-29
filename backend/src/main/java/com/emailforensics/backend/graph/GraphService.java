@@ -1,9 +1,5 @@
 package com.emailforensics.backend.graph;
 
-import com.emailforensics.backend.campaign.Campaign;
-import com.emailforensics.backend.campaign.CampaignMember;
-import com.emailforensics.backend.campaign.CampaignMemberRepository;
-import com.emailforensics.backend.campaign.CampaignRepository;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
@@ -43,8 +39,6 @@ public class GraphService {
     private final ExtractedUrlRepository urlRepository;
     private final IpArtifactRepository ipRepository;
     private final HistoricalMatchRepository matchRepository;
-    private final CampaignRepository campaignRepository;
-    private final CampaignMemberRepository campaignMemberRepository;
     private final RiskAssessmentRepository riskAssessmentRepository;
     private final EvidenceService evidenceService;
 
@@ -53,8 +47,6 @@ public class GraphService {
                         ExtractedUrlRepository urlRepository,
                         IpArtifactRepository ipRepository,
                         HistoricalMatchRepository matchRepository,
-                        CampaignRepository campaignRepository,
-                        CampaignMemberRepository campaignMemberRepository,
                         RiskAssessmentRepository riskAssessmentRepository,
                         @Lazy EvidenceService evidenceService) {
         this.evidenceRepository = evidenceRepository;
@@ -62,8 +54,6 @@ public class GraphService {
         this.urlRepository = urlRepository;
         this.ipRepository = ipRepository;
         this.matchRepository = matchRepository;
-        this.campaignRepository = campaignRepository;
-        this.campaignMemberRepository = campaignMemberRepository;
         this.riskAssessmentRepository = riskAssessmentRepository;
         this.evidenceService = evidenceService;
     }
@@ -228,29 +218,6 @@ public class GraphService {
                     "EXACT".equalsIgnoreCase(m.getMatchStrength()) ? 0.9 : 0.7);
         }
 
-        List<CampaignMember> memberships = campaignMemberRepository.findByEmailEvidenceId(emailId);
-        for (CampaignMember cm : memberships) {
-            Campaign c = cm.getCampaign();
-            String cNodeId = "campaign-" + c.getId();
-
-            if (!nodeMap.containsKey(cNodeId)) {
-                GraphNodeDto cNode = new GraphNodeDto(
-                        cNodeId,
-                        c.getCampaignCode() + ": " + c.getName(),
-                        "CAMPAIGN",
-                        30,
-                        "CAMPAIGN",
-                        "#eab308",
-                        c.getConfidenceScore()
-                );
-                cNode.getMetadata().put("campaignCode", c.getCampaignCode());
-                cNode.getMetadata().put("confidenceScore", c.getConfidenceScore());
-                nodeMap.put(cNodeId, cNode);
-            }
-
-            addLink(links, linkKeys, primaryNodeId, cNodeId, "PART_OF_CAMPAIGN", "PART_OF_CAMPAIGN", 1.0);
-        }
-
         return new GraphDataDto(new ArrayList<>(nodeMap.values()), links);
     }
 
@@ -261,48 +228,6 @@ public class GraphService {
         Map<String, GraphNodeDto> nodeMap = new HashMap<>();
         List<GraphLinkDto> links = new ArrayList<>();
         Set<String> linkKeys = new HashSet<>();
-
-        List<Campaign> campaigns = campaignRepository.findAll();
-        for (Campaign c : campaigns) {
-            if (nodeMap.size() >= boundedLimit) break;
-            String cId = "campaign-" + c.getId();
-            GraphNodeDto cNode = new GraphNodeDto(
-                    cId,
-                    c.getCampaignCode() + ": " + c.getName(),
-                    "CAMPAIGN",
-                    28,
-                    "CAMPAIGN",
-                    "#eab308",
-                    c.getConfidenceScore()
-            );
-            cNode.getMetadata().put("campaignCode", c.getCampaignCode());
-            nodeMap.put(cId, cNode);
-
-            List<CampaignMember> members = campaignMemberRepository.findByCampaignIdOrderByCreatedAtAsc(c.getId());
-            for (CampaignMember cm : members) {
-                if (nodeMap.size() >= boundedLimit) break;
-                EmailEvidence ev = cm.getEmailEvidence();
-                String eId = "email-" + ev.getId();
-                if (!nodeMap.containsKey(eId)) {
-                    String label = ev.getSubject() != null && !ev.getSubject().isBlank()
-                            ? ev.getSubject()
-                            : ev.getOriginalFilename();
-                    GraphNodeDto eNode = new GraphNodeDto(
-                            eId,
-                            label,
-                            "EMAIL",
-                            16,
-                            "EMAIL",
-                            "#06b6d4",
-                            null
-                    );
-                    eNode.getMetadata().put("caseId", ev.getCaseFile().getId().toString());
-                    eNode.getMetadata().put("caseNumber", ev.getCaseFile().getCaseNumber());
-                    nodeMap.put(eId, eNode);
-                }
-                addLink(links, linkKeys, eId, cId, "PART_OF_CAMPAIGN", "PART_OF_CAMPAIGN", 1.0);
-            }
-        }
 
         List<HistoricalMatch> allMatches = matchRepository.findAll();
         for (HistoricalMatch m : allMatches) {
@@ -330,6 +255,24 @@ public class GraphService {
             }
 
             addLink(links, linkKeys, sId, tId, m.getIndicatorType(), "HISTORICAL_MATCH", 0.8);
+        }
+
+        // Also include standalone email evidence nodes if capacity allows
+        if (nodeMap.size() < boundedLimit) {
+            List<EmailEvidence> allEvidences = evidenceRepository.findAll();
+            for (EmailEvidence ev : allEvidences) {
+                if (nodeMap.size() >= boundedLimit) break;
+                String eId = "email-" + ev.getId();
+                if (!nodeMap.containsKey(eId)) {
+                    String label = ev.getSubject() != null && !ev.getSubject().isBlank()
+                            ? ev.getSubject()
+                            : ev.getOriginalFilename();
+                    GraphNodeDto eNode = new GraphNodeDto(eId, label, "EMAIL", 16, "EMAIL", "#06b6d4", null);
+                    eNode.getMetadata().put("caseNumber", ev.getCaseFile().getCaseNumber());
+                    eNode.getMetadata().put("caseId", ev.getCaseFile().getId().toString());
+                    nodeMap.put(eId, eNode);
+                }
+            }
         }
 
         return new GraphDataDto(new ArrayList<>(nodeMap.values()), links);

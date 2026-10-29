@@ -14,7 +14,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 - **Visual Artifacts & Quishing Defense:** Embedded image extraction and QR code detection/payload decoding via ZXing.
 - **Content NLP & Prompt Injection Firewall:** Tribuo ML machine learning baseline classification, rule-based social engineering cue detection (urgency, credential harvesting, extortion, impersonation), and proactive prompt injection defense against LLM hijacking.
 - **Explainable Deterministic Risk Scoring:** Rule-based scoring engine (0–100) with confidence calibration, weighted severity multipliers, and clear audit breakdowns.
-- **Historical Threat Correlation & Campaign Engine:** Graph-based indicator linking (senders, domains, hashes, IPs), interactive force-directed Threat Graph canvas, and automated threat campaign clustering.
+- **Historical Threat Correlation & Graph Engine:** Graph-based indicator linking (senders, domains, hashes, IPs), and interactive force-directed Threat Graph canvas.
 - **Grounded AI Forensic Intelligence:** Hallucination-shielded LLM synthesis generating grounded technical narratives, Mitre ATT&CK technique mapping, and strict citation validation.
 - **Court-Ready Forensic Dossier & Reporting:** Multi-format report generation (interactive UI, clean JSON API, and high-contrast `@media print` PDF layout with analyst sign-off and chain of custody certification).
 
@@ -28,7 +28,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 | **Backend Framework** | Spring Boot | 4.1.x / Spring 7 | Modular monolith architecture |
 | **Security** | Spring Security & JJWT | 0.12.x | Stateless JWT authentication & RBAC |
 | **Database** | PostgreSQL | 16 | Relational data store for cases and forensic telemetry |
-| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V12) |
+| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V13) |
 | **Email Parsing** | Jakarta Mail | 2.1.x | Robust RFC 5322 MIME stream parser |
 | **Machine Learning** | Oracle Tribuo | 4.3.x | Embedded Naive Bayes NLP classification |
 | **Visual Decoding** | ZXing | 3.5.x | QR barcode matrix decoding and payload routing |
