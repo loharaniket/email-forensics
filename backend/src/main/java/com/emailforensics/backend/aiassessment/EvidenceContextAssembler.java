@@ -177,14 +177,9 @@ public class EvidenceContextAssembler {
             for (int i = 0; i < limit; i++) {
                 IpArtifact ip = ips.get(i);
                 sb.append(" - ").append(ip.getIpAddress())
-                        .append(" (ASN: ").append(ip.getAsnNumber() != null ? ip.getAsnNumber() : "N/A")
-                        .append(", Org: ").append(ip.getOrganization() != null ? ip.getOrganization() : "N/A")
-                        .append(", Country: ").append(ip.getCountry() != null ? ip.getCountry() : "N/A").append(")\n");
+                        .append(Boolean.TRUE.equals(ip.getIsPrivate()) ? " (Private/Reserved)\n" : " (Public Routable)\n");
 
                 whitelist.add("IP:" + ip.getIpAddress());
-                if (ip.getAsnNumber() != null) {
-                    whitelist.add("ASN:" + ip.getAsnNumber());
-                }
             }
             sb.append("\n");
         }

@@ -158,28 +158,9 @@ public class GraphService {
                         ipColor,
                         null
                 );
-                ipNode.getMetadata().put("asn", ip.getAsnNumber());
-                ipNode.getMetadata().put("org", ip.getOrganization());
-                ipNode.getMetadata().put("country", ip.getCountry());
+                ipNode.getMetadata().put("isPrivate", ip.getIsPrivate());
                 nodeMap.put(ipNodeId, ipNode);
                 addLink(links, linkKeys, primaryNodeId, ipNodeId, "ROUTED_THROUGH", "ROUTED_THROUGH", 0.6);
-
-                if (ip.getAsnNumber() != null && !ip.getAsnNumber().isBlank()) {
-                    String asnNodeId = "asn-" + ip.getAsnNumber();
-                    if (!nodeMap.containsKey(asnNodeId)) {
-                        GraphNodeDto asnNode = new GraphNodeDto(
-                                asnNodeId,
-                                "AS" + ip.getAsnNumber() + " (" + (ip.getOrganization() != null ? ip.getOrganization() : "") + ")",
-                                "ASN",
-                                16,
-                                "ASN",
-                                "#8b5cf6",
-                                null
-                        );
-                        nodeMap.put(asnNodeId, asnNode);
-                    }
-                    addLink(links, linkKeys, ipNodeId, asnNodeId, "ASSIGNED_ASN", "ASSIGNED_ASN", 0.5);
-                }
             }
         }
 

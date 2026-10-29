@@ -24,18 +24,34 @@ public class InfrastructureService {
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final ReceivedHopRepository receivedHopRepository;
-    private final GeoIpService geoIpService;
+    private final IpClassifier ipClassifier;
 
     public InfrastructureService(IpArtifactRepository ipArtifactRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  ReceivedHopRepository receivedHopRepository,
-                                 GeoIpService geoIpService) {
+                                 IpClassifier ipClassifier) {
         this.ipArtifactRepository = ipArtifactRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.receivedHopRepository = receivedHopRepository;
-        this.geoIpService = geoIpService;
+        this.ipClassifier = ipClassifier;
+    }
+
+    public IpArtifact createIpArtifact(AnalysisRun run, String cleanIp, String sourceContext) {
+        boolean isPrivate = ipClassifier.isPrivateOrReserved(cleanIp);
+        String lookupStatus = isPrivate ? "PRIVATE_IP_SKIPPED" : "EXTRACTED";
+        String dataMode = isPrivate ? DataProvenance.NOT_CHECKED.name() : DataProvenance.REAL.name();
+        return new IpArtifact(
+                UUID.randomUUID(),
+                run,
+                cleanIp,
+                sourceContext,
+                isPrivate,
+                lookupStatus,
+                Instant.now(),
+                dataMode
+        );
     }
 
     @Transactional
@@ -63,8 +79,7 @@ public class InfrastructureService {
                     clean = clean.substring(1, clean.length() - 1);
                 }
                 if (seenIps.add(clean)) {
-                    IpArtifact artifact = geoIpService.enrichIp(clean, "RECEIVED_HOP_" + hop.getHopOrder());
-                    artifact.setAnalysisRun(run);
+                    IpArtifact artifact = createIpArtifact(run, clean, "RECEIVED_HOP_" + hop.getHopOrder());
                     toSave.add(artifact);
                 }
             }
@@ -78,8 +93,7 @@ public class InfrastructureService {
                         clean = clean.substring(1, clean.length() - 1);
                     }
                     if (seenIps.add(clean)) {
-                        IpArtifact artifact = geoIpService.enrichIp(clean, "URL_HOST_OR_DNS");
-                        artifact.setAnalysisRun(run);
+                        IpArtifact artifact = createIpArtifact(run, clean, "URL_HOST_OR_DNS");
                         toSave.add(artifact);
                     }
                 }
@@ -120,13 +134,6 @@ public class InfrastructureService {
                     art.getSourceContext(),
                     art.getIsPrivate(),
                     art.getLookupStatus(),
-                    art.getAsnNumber(),
-                    art.getOrganization(),
-                    art.getCountry(),
-                    art.getCity(),
-                    art.getLatitude(),
-                    art.getLongitude(),
-                    art.getDataSource(),
                     art.getObservedAt(),
                     art.getDataMode()
             ));

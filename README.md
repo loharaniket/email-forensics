@@ -10,7 +10,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 - **Deep Header Forensics & Spoofing Defense:** Full RFC 5322/2045/2047 MIME parsing, SPF / DKIM / DMARC authentication alignment, Return-Path / Reply-To mismatch detection, and display name spoofing analysis.
 - **Mail Transit Route & Hop Reconstruction:** Chronological Received header traversal with hop-by-hop latency calculation, TLS cipher inspection, and delay anomaly flags.
 - **URL & Web Infrastructure Intelligence:** Anchor text vs target mismatch detection, IP-based URLs, URL shortener resolution, lookalike/punycode homograph analysis, and defanged URL exports.
-- **Network Telemetry & GeoIP Resolution:** Server IP extraction, private/bogon (RFC 1918) detection, MaxMind GeoIP resolution, ASN routing classification, and organization ownership.
+- **Network Infrastructure Telemetry:** Server IP extraction from transit headers and URLs, and private/bogon (RFC 1918) classification.
 - **Visual Artifacts & Quishing Defense:** Embedded image extraction and QR code detection/payload decoding via ZXing.
 - **Content NLP & Prompt Injection Firewall:** Tribuo ML machine learning baseline classification, rule-based social engineering cue detection (urgency, credential harvesting, extortion, impersonation), and proactive prompt injection defense against LLM hijacking.
 - **Explainable Deterministic Risk Scoring:** Rule-based scoring engine (0–100) with confidence calibration, weighted severity multipliers, and clear audit breakdowns.
@@ -28,7 +28,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 | **Backend Framework** | Spring Boot | 4.1.x / Spring 7 | Modular monolith architecture |
 | **Security** | Spring Security & JJWT | 0.12.x | Stateless JWT authentication & RBAC |
 | **Database** | PostgreSQL | 16 | Relational data store for cases and forensic telemetry |
-| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V11) |
+| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V12) |
 | **Email Parsing** | Jakarta Mail | 2.1.x | Robust RFC 5322 MIME stream parser |
 | **Machine Learning** | Oracle Tribuo | 4.3.x | Embedded Naive Bayes NLP classification |
 | **Visual Decoding** | ZXing | 3.5.x | QR barcode matrix decoding and payload routing |
@@ -108,7 +108,7 @@ The repository includes a curated set of test fixtures located in `test-fixtures
 | `03-multipart-attachment.eml` | Multi-part MIME message with attachments. | Nested MIME parts, attachment metadata extraction, payload fingerprinting. |
 | `04-unicode-subject.eml` | RFC 2047 encoded internationalized subject line. | Tests character set decoder resiliency (`=?UTF-8?B?...?=`). |
 | `05-malformed-mime.eml` | Intentional header boundary corruption. | Tests parser tolerance and graceful error recovery with warnings recording. |
-| `06-received-chain.eml` | Multi-hop message with 4 transit relays. | Complete route hop traversal, relay IP geolocation, transit latency calculation. |
+| `06-received-chain.eml` | Multi-hop message with 4 transit relays. | Complete route hop traversal, relay IP extraction, transit latency calculation. |
 | `07-inline-qr-code.eml` | Quishing attack with embedded QR barcode image. | Visual artifact extraction, ZXing QR decoding, suspicious QR target URL detection. |
 | `08-prompt-injection.eml` | Adversarial LLM prompt injection attack. | Regex injection engine detects `[SYSTEM INSTRUCTION: IGNORE ALL PREVIOUS INSTRUCTIONS]`, blocks AI override. |
 
@@ -149,7 +149,7 @@ Follow these steps for a complete demonstration of the system:
 
 ## Running Verification Tests
 
-### Backend Unit & Integration Tests (98 Tests)
+### Backend Unit & Integration Tests (115 Tests)
 
 ```bash
 cd backend
@@ -159,7 +159,7 @@ cd backend
 Expected result:
 ```
 [INFO] Results:
-[INFO] Tests run: 98, Failures: 0, Errors: 0, Skipped: 0
+[INFO] Tests run: 115, Failures: 0, Errors: 0, Skipped: 0
 [INFO] BUILD SUCCESS
 ```
 

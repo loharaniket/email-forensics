@@ -392,11 +392,7 @@ export default function InvestigationPage() {
     const q = infraSearch.toLowerCase()
     return (
       (item.ipAddress && item.ipAddress.toLowerCase().includes(q)) ||
-      (item.sourceContext && item.sourceContext.toLowerCase().includes(q)) ||
-      (item.asnNumber && item.asnNumber.toLowerCase().includes(q)) ||
-      (item.organization && item.organization.toLowerCase().includes(q)) ||
-      (item.country && item.country.toLowerCase().includes(q)) ||
-      (item.city && item.city.toLowerCase().includes(q))
+      (item.sourceContext && item.sourceContext.toLowerCase().includes(q))
     )
   })
 
@@ -1772,7 +1768,7 @@ export default function InvestigationPage() {
                     <input
                       id="infra-search-input"
                       type="text"
-                      placeholder="Search by IP, ASN, Organization, Country, or Context..."
+                      placeholder="Search by IP or Context..."
                       value={infraSearch}
                       onChange={(e) => setInfraSearch(e.target.value)}
                       className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500"
@@ -1851,35 +1847,9 @@ export default function InvestigationPage() {
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-2 gap-2 text-xs font-mono">
-                          <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60">
-                            <span className="text-[10px] text-slate-500 block uppercase">
-                              ASN &amp; Provider:
-                            </span>
-                            <span className="text-slate-200 font-semibold truncate block">
-                              {item.asnNumber ? `${item.asnNumber}` : 'N/A'}
-                            </span>
-                            <span className="text-[11px] text-slate-400 truncate block">
-                              {item.organization || (item.isPrivate ? 'Internal Network' : 'Unknown Provider')}
-                            </span>
-                          </div>
-
-                          <div className="bg-slate-900/50 p-2 rounded-lg border border-slate-800/60">
-                            <span className="text-[10px] text-slate-500 block uppercase">
-                              Geolocation:
-                            </span>
-                            <span className="text-slate-200 font-semibold truncate block">
-                              {item.country || (item.isPrivate ? 'Private Range' : 'Unknown Country')}
-                            </span>
-                            <span className="text-[11px] text-slate-400 truncate block">
-                              {item.city || (item.latitude ? `${item.latitude}, ${item.longitude}` : 'No City Data')}
-                            </span>
-                          </div>
-                        </div>
-
                         <div className="flex items-center justify-between text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-800/40">
-                          <span>Source: {item.dataSource || 'Heuristic Classifier'}</span>
-                          <span>{item.observedAt ? new Date(item.observedAt).toLocaleString() : ''}</span>
+                          <span>Observed: {item.observedAt ? new Date(item.observedAt).toLocaleString() : 'N/A'}</span>
+                          <span>Status: {item.lookupStatus}</span>
                         </div>
                       </div>
                     ))}
@@ -3358,7 +3328,6 @@ export default function InvestigationPage() {
                         <option value="URL">URL</option>
                         <option value="DOMAIN">Domain</option>
                         <option value="IP">IP Address</option>
-                        <option value="ASN">ASN</option>
                         <option value="QR_PAYLOAD">QR Code Payload</option>
                         <option value="SENDER_DOMAIN">Sender Domain</option>
                       </select>
@@ -4076,7 +4045,7 @@ export default function InvestigationPage() {
                     <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
                       <span className="text-xs font-semibold text-slate-300 block">Forensic Pipeline Stage Health</span>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] font-mono">
-                        {['Ingestion', 'Header Parsing', 'Mail Route Hops', 'URL Intelligence', 'Infrastructure GeoIP', 'Visuals & QR', 'NLP & Injection', 'Deterministic Risk', 'Threat Correlation', 'AI Grounding'].map((stage, idx) => (
+                        {['Ingestion', 'Header Parsing', 'Mail Route Hops', 'URL Intelligence', 'Infrastructure & IPs', 'Visuals & QR', 'NLP & Injection', 'Deterministic Risk', 'Threat Correlation', 'AI Grounding'].map((stage, idx) => (
                           <div key={idx} className="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800">
                             <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />
                             <span className="text-slate-300 truncate">{stage}</span>
@@ -4305,7 +4274,7 @@ export default function InvestigationPage() {
                       <div className="border-b border-slate-800/80 pb-2">
                         <h3 className="text-sm font-bold text-white flex items-center gap-2">
                           <Network className="h-4 w-4 text-cyan-400" />
-                          <span>6. Network Infrastructure &amp; GeoIP Telemetry ({infrastructure.length} IPs)</span>
+                          <span>6. Network Infrastructure Telemetry ({infrastructure.length} IPs)</span>
                         </h3>
                       </div>
 
@@ -4315,10 +4284,8 @@ export default function InvestigationPage() {
                             <tr>
                               <th className="p-2.5">IP Address</th>
                               <th className="p-2.5">Context</th>
-                              <th className="p-2.5">Private / Bogon</th>
-                              <th className="p-2.5">Country</th>
-                              <th className="p-2.5">ASN</th>
-                              <th className="p-2.5">Organization</th>
+                              <th className="p-2.5">Classification</th>
+                              <th className="p-2.5">Lookup Status</th>
                             </tr>
                           </thead>
                           <tbody className="divide-y divide-slate-800/60 bg-slate-950/40 text-slate-300">
@@ -4328,14 +4295,12 @@ export default function InvestigationPage() {
                                 <td className="p-2.5 text-slate-400 text-[11px]">{item.sourceContext}</td>
                                 <td className="p-2.5">
                                   {item.isPrivate ? (
-                                    <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">RFC1918</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-amber-950 text-amber-300 border border-amber-800 text-[10px]">RFC1918 / INTERNAL</span>
                                   ) : (
-                                    <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">PUBLIC</span>
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-950 text-emerald-300 border border-emerald-800 text-[10px]">PUBLIC ROUTABLE</span>
                                   )}
                                 </td>
-                                <td className="p-2.5">{item.country || 'N/A'}</td>
-                                <td className="p-2.5">{item.asnNumber || 'N/A'}</td>
-                                <td className="p-2.5 max-w-[200px] truncate text-[11px]">{item.organization || 'N/A'}</td>
+                                <td className="p-2.5 text-slate-300 text-[11px]">{item.lookupStatus || 'EXTRACTED'}</td>
                               </tr>
                             ))}
                           </tbody>

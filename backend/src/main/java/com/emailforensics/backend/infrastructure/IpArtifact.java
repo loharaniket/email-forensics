@@ -10,7 +10,6 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
-import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -37,27 +36,6 @@ public class IpArtifact {
     @Column(name = "lookup_status", nullable = false, length = 50)
     private String lookupStatus;
 
-    @Column(name = "asn_number", length = 50)
-    private String asnNumber;
-
-    @Column(name = "organization", length = 255)
-    private String organization;
-
-    @Column(name = "country", length = 100)
-    private String country;
-
-    @Column(name = "city", length = 100)
-    private String city;
-
-    @Column(name = "latitude", precision = 9, scale = 6)
-    private BigDecimal latitude;
-
-    @Column(name = "longitude", precision = 9, scale = 6)
-    private BigDecimal longitude;
-
-    @Column(name = "data_source", length = 100)
-    private String dataSource;
-
     @Column(name = "observed_at", nullable = false)
     private Instant observedAt;
 
@@ -71,31 +49,19 @@ public class IpArtifact {
     }
 
     public IpArtifact(UUID id, AnalysisRun analysisRun, String ipAddress, String sourceContext,
-                      Boolean isPrivate, String lookupStatus, String asnNumber, String organization,
-                      String country, String city, BigDecimal latitude, BigDecimal longitude,
-                      String dataSource, Instant observedAt) {
-        this(id, analysisRun, ipAddress, sourceContext, isPrivate, lookupStatus, asnNumber,
-                organization, country, city, latitude, longitude, dataSource, observedAt,
+                      Boolean isPrivate, String lookupStatus, Instant observedAt) {
+        this(id, analysisRun, ipAddress, sourceContext, isPrivate, lookupStatus, observedAt,
                 DataProvenance.UNAVAILABLE.name());
     }
 
     public IpArtifact(UUID id, AnalysisRun analysisRun, String ipAddress, String sourceContext,
-                      Boolean isPrivate, String lookupStatus, String asnNumber, String organization,
-                      String country, String city, BigDecimal latitude, BigDecimal longitude,
-                      String dataSource, Instant observedAt, String dataMode) {
+                      Boolean isPrivate, String lookupStatus, Instant observedAt, String dataMode) {
         this.id = id;
         this.analysisRun = analysisRun;
         this.ipAddress = ipAddress;
         this.sourceContext = sourceContext;
         this.isPrivate = isPrivate != null ? isPrivate : false;
         this.lookupStatus = lookupStatus;
-        this.asnNumber = asnNumber;
-        this.organization = organization;
-        this.country = country;
-        this.city = city;
-        this.latitude = latitude;
-        this.longitude = longitude;
-        this.dataSource = dataSource;
         this.observedAt = observedAt != null ? observedAt : Instant.now();
         this.createdAt = Instant.now();
         this.dataMode = dataMode != null ? dataMode : DataProvenance.UNAVAILABLE.name();
@@ -160,62 +126,6 @@ public class IpArtifact {
 
     public void setLookupStatus(String lookupStatus) {
         this.lookupStatus = lookupStatus;
-    }
-
-    public String getAsnNumber() {
-        return asnNumber;
-    }
-
-    public void setAsnNumber(String asnNumber) {
-        this.asnNumber = asnNumber;
-    }
-
-    public String getOrganization() {
-        return organization;
-    }
-
-    public void setOrganization(String organization) {
-        this.organization = organization;
-    }
-
-    public String getCountry() {
-        return country;
-    }
-
-    public void setCountry(String country) {
-        this.country = country;
-    }
-
-    public String getCity() {
-        return city;
-    }
-
-    public void setCity(String city) {
-        this.city = city;
-    }
-
-    public BigDecimal getLatitude() {
-        return latitude;
-    }
-
-    public void setLatitude(BigDecimal latitude) {
-        this.latitude = latitude;
-    }
-
-    public BigDecimal getLongitude() {
-        return longitude;
-    }
-
-    public void setLongitude(BigDecimal longitude) {
-        this.longitude = longitude;
-    }
-
-    public String getDataSource() {
-        return dataSource;
-    }
-
-    public void setDataSource(String dataSource) {
-        this.dataSource = dataSource;
     }
 
     public Instant getObservedAt() {

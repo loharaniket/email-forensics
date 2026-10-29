@@ -99,7 +99,7 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
         (filterType === 'EMAIL' && (n.type === 'EMAIL' || n.group === 'PRIMARY_EMAIL')) ||
         (filterType === 'CAMPAIGN' && n.type === 'CAMPAIGN') ||
         (filterType === 'URL' && (n.type === 'URL' || n.type === 'DOMAIN')) ||
-        (filterType === 'IP' && (n.type === 'IP' || n.type === 'ASN')) ||
+        (filterType === 'IP' && n.type === 'IP') ||
         (filterType === 'ATTACHMENT' && n.type === 'ATTACHMENT');
 
       const matchesSearch =
@@ -521,19 +521,7 @@ export default function ThreatGraphCanvas({ graphData, height = '560px', onNodeC
               </div>
             )}
 
-            {selectedNode.metadata?.country && (
-              <div className="flex items-center justify-between py-1 border-t border-slate-800/80">
-                <span className="text-slate-400">GeoIP Country</span>
-                <span className="text-slate-200">{selectedNode.metadata.country}</span>
-              </div>
-            )}
 
-            {selectedNode.metadata?.asn && (
-              <div className="flex items-center justify-between py-1 border-t border-slate-800/80">
-                <span className="text-slate-400">Network ASN</span>
-                <span className="font-mono text-slate-200">AS{selectedNode.metadata.asn}</span>
-              </div>
-            )}
 
             {selectedNode.metadata?.filename && (
               <div className="flex items-center justify-between py-1 border-t border-slate-800/80">

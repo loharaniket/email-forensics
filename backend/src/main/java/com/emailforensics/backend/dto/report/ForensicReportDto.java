@@ -891,9 +891,6 @@ public class ForensicReportDto {
         private String ipAddress;
         private String sourceCategory;
         private boolean privateBogon;
-        private String countryCode;
-        private String asn;
-        private String reverseDns;
 
         public ReportIpDto() {
         }
@@ -920,30 +917,6 @@ public class ForensicReportDto {
 
         public void setPrivateBogon(boolean privateBogon) {
             this.privateBogon = privateBogon;
-        }
-
-        public String getCountryCode() {
-            return countryCode;
-        }
-
-        public void setCountryCode(String countryCode) {
-            this.countryCode = countryCode;
-        }
-
-        public String getAsn() {
-            return asn;
-        }
-
-        public void setAsn(String asn) {
-            this.asn = asn;
-        }
-
-        public String getReverseDns() {
-            return reverseDns;
-        }
-
-        public void setReverseDns(String reverseDns) {
-            this.reverseDns = reverseDns;
         }
     }
 

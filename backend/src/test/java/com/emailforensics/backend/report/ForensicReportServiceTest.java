@@ -186,7 +186,7 @@ class ForensicReportServiceTest {
         url.setIsIpUrl(true);
         when(urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId())).thenReturn(Collections.singletonList(url));
 
-        IpArtifact ip = new IpArtifact(UUID.randomUUID(), run, "198.51.100.1", "HEADER_HOP", false, "RESOLVED", "AS1234", "bad.org", "US", "New York", BigDecimal.valueOf(40.71), BigDecimal.valueOf(-74.00), "GEOIP", Instant.now());
+        IpArtifact ip = new IpArtifact(UUID.randomUUID(), run, "198.51.100.1", "HEADER_HOP", false, "EXTRACTED", Instant.now());
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId())).thenReturn(Collections.singletonList(ip));
 
         VisualArtifact vis = new VisualArtifact(UUID.randomUUID(), run, "image.png", "image/png", 500L, "imghash", null);

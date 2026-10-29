@@ -436,9 +436,6 @@ public class ForensicReportService {
             rIp.setIpAddress(ip.getIpAddress());
             rIp.setSourceCategory(ip.getSourceContext() != null ? ip.getSourceContext() : "NETWORK");
             rIp.setPrivateBogon(Boolean.TRUE.equals(ip.getIsPrivate()));
-            rIp.setCountryCode(ip.getCountry());
-            rIp.setAsn(ip.getAsnNumber());
-            rIp.setReverseDns(ip.getOrganization());
             if (Boolean.TRUE.equals(ip.getIsPrivate())) bogonCount++;
             rIps.add(rIp);
         }

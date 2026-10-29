@@ -99,7 +99,7 @@ export default function GlobalGraphPage() {
           </div>
         </div>
 
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-2.5">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
           <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex items-center gap-2.5">
             <Mail className="h-4 w-4 text-cyan-400" />
             <div>
@@ -150,15 +150,7 @@ export default function GlobalGraphPage() {
             </div>
           </div>
 
-          <div className="bg-slate-900/50 border border-slate-800 p-3 rounded-xl flex items-center gap-2.5">
-            <Layers className="h-4 w-4 text-purple-400" />
-            <div>
-              <span className="text-[10px] font-mono text-slate-400 block uppercase">ASNs & Routes</span>
-              <span className="text-sm font-bold font-mono text-white">
-                {countsByType['ASN'] || 0}
-              </span>
-            </div>
-          </div>
+
         </div>
 
         {error && (

@@ -11,14 +11,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class InfrastructureServiceTest {
 
     private IpClassifier ipClassifier;
-    private GeoIpService geoIpService;
     private DnsLookupService dnsLookupService;
+    private InfrastructureService infrastructureService;
 
     @BeforeEach
     void setUp() {
         ipClassifier = new IpClassifier();
-        geoIpService = new GeoIpService(ipClassifier, "nonexistent-geoip.mmdb");
         dnsLookupService = new DnsLookupService(1000);
+        infrastructureService = new InfrastructureService(null, null, null, null, ipClassifier);
     }
 
     @Test
@@ -50,24 +50,22 @@ class InfrastructureServiceTest {
     }
 
     @Test
-    void shouldHandlePrivateIpEnrichmentGracefullyWithoutExternalCall() {
-        IpArtifact artifact = geoIpService.enrichIp("192.168.1.50", "TEST_CONTEXT");
+    void shouldClassifyPrivateAndPublicIpArtifacts() {
+        IpArtifact privateArt = infrastructureService.createIpArtifact(null, "192.168.1.50", "TEST_CONTEXT");
+        assertNotNull(privateArt);
+        assertEquals("192.168.1.50", privateArt.getIpAddress());
+        assertTrue(privateArt.getIsPrivate());
+        assertEquals("PRIVATE_IP_SKIPPED", privateArt.getLookupStatus());
+        assertEquals("NOT_CHECKED", privateArt.getDataMode());
+        assertEquals("TEST_CONTEXT", privateArt.getSourceContext());
 
-        assertNotNull(artifact);
-        assertEquals("192.168.1.50", artifact.getIpAddress());
-        assertTrue(artifact.getIsPrivate());
-        assertEquals("PRIVATE_IP_SKIPPED", artifact.getLookupStatus());
-        assertEquals("NOT_CHECKED", artifact.getDataMode());
-        assertEquals("TEST_CONTEXT", artifact.getSourceContext());
-    }
-
-    @Test
-    void shouldReturnDatabaseUnavailableWhenGeoIpFileMissing() {
-        IpArtifact artifact = geoIpService.enrichIp("8.8.8.8", "URL_HOST");
-
-        assertNotNull(artifact);
-        assertEquals("8.8.8.8", artifact.getIpAddress());
-        assertFalse(artifact.getIsPrivate());
+        IpArtifact publicArt = infrastructureService.createIpArtifact(null, "140.82.121.3", "HOP_IP");
+        assertNotNull(publicArt);
+        assertEquals("140.82.121.3", publicArt.getIpAddress());
+        assertFalse(publicArt.getIsPrivate());
+        assertEquals("EXTRACTED", publicArt.getLookupStatus());
+        assertEquals("REAL", publicArt.getDataMode());
+        assertEquals("HOP_IP", publicArt.getSourceContext());
     }
 
     @Test
@@ -82,22 +80,5 @@ class InfrastructureServiceTest {
         assertNotNull(nxRes);
         assertEquals("NXDOMAIN", nxRes.getStatus());
         assertEquals("SIMULATED", nxRes.getDataMode());
-    }
-
-    @Test
-    void shouldEnrichPublicIpUsingBundledMaxMindDatabase() {
-        GeoIpService realGeoIpService = new GeoIpService(ipClassifier, "GeoLite2-City.mmdb");
-        IpArtifact artifact = realGeoIpService.enrichIp("140.82.121.3", "HOP_IP");
-        assertNotNull(artifact);
-        assertEquals("140.82.121.3", artifact.getIpAddress());
-        assertFalse(artifact.getIsPrivate());
-        assertEquals("ENRICHED", artifact.getLookupStatus());
-        assertEquals("REAL", artifact.getDataMode());
-        assertEquals("Germany", artifact.getCountry());
-        assertEquals("Frankfurt am Main", artifact.getCity());
-        assertNotNull(artifact.getLatitude());
-        assertNotNull(artifact.getLongitude());
-        assertEquals("AS36459", artifact.getAsnNumber());
-        assertTrue(artifact.getOrganization().contains("GitHub"));
     }
 }

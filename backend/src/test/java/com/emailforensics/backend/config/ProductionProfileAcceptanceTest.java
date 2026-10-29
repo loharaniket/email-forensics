@@ -3,11 +3,9 @@ package com.emailforensics.backend.config;
 import com.emailforensics.backend.infrastructure.DataProvenance;
 import com.emailforensics.backend.infrastructure.DnsLookupService;
 import com.emailforensics.backend.infrastructure.DnsResult;
-import com.emailforensics.backend.infrastructure.GeoIpService;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpClassifier;
 import com.emailforensics.backend.infrastructure.fixtures.DefaultDnsFixtureProvider;
-import com.emailforensics.backend.infrastructure.fixtures.DefaultGeoIpFixtureProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -125,36 +123,7 @@ public class ProductionProfileAcceptanceTest {
         assertNotNull(txtRecords);
     }
 
-    @Test
-    void productionProfileMustNeverReturnFabricatedAsnOrMockIpData() {
-        MockEnvironment prodEnv = new MockEnvironment();
-        prodEnv.setActiveProfiles("prod");
 
-        IpClassifier ipClassifier = new IpClassifier();
-        DefaultDnsFixtureProvider dnsFixture = new DefaultDnsFixtureProvider();
-        DnsLookupService dnsService = new DnsLookupService(1000, dnsFixture, prodEnv);
-        DefaultGeoIpFixtureProvider geoFixture = new DefaultGeoIpFixtureProvider();
-
-        IpArtifact mockArtifact = new IpArtifact(
-                null, null, "198.51.100.99", "TEST", false, "ENRICHED",
-                "AS99999", "Fabricated Corp", "FakeCountry", "FakeCity",
-                null, null, "MockSource", null, DataProvenance.SIMULATED.name()
-        );
-        geoFixture.registerMockIp("198.51.100.99", mockArtifact);
-
-        GeoIpService geoIpService = new GeoIpService(
-                ipClassifier,
-                dnsService,
-                "nonexistent-geolite.mmdb",
-                geoFixture,
-                prodEnv
-        );
-
-        IpArtifact enriched = geoIpService.enrichIp("198.51.100.99", "TEST_HOP");
-        assertNotNull(enriched);
-        assertNotEquals(DataProvenance.SIMULATED.name(), enriched.getDataMode());
-        assertNotEquals("Fabricated Corp", enriched.getOrganization());
-    }
 
 
     @Test
