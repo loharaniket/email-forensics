@@ -32,7 +32,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class VisualAnalysisServiceTest {
 
     private VisualAnalysisService visualAnalysisService;
-    private OcrService ocrService;
     private QrDecodingService qrDecodingService;
 
     @BeforeEach
@@ -49,7 +48,6 @@ class VisualAnalysisServiceTest {
         UrlNormalizationService urlNormalizationService = new UrlNormalizationService();
         UrlHeuristicsService urlHeuristicsService = new UrlHeuristicsService(ipClassifier, urlNormalizationService);
         qrDecodingService = new QrDecodingService(urlNormalizationService);
-        ocrService = new OcrService("./nonexistent_tessdata");
 
         visualAnalysisService = new VisualAnalysisService(
                 visualArtifactRepo,
@@ -58,7 +56,6 @@ class VisualAnalysisServiceTest {
                 analysisRunRepo,
                 storageService,
                 qrDecodingService,
-                ocrService,
                 urlNormalizationService,
                 urlHeuristicsService,
                 dnsLookupService,
@@ -114,8 +111,6 @@ class VisualAnalysisServiceTest {
             assertEquals(testUrl, visual.getQrArtifacts().get(0).getDecodedPayload());
             assertEquals("URL", visual.getQrArtifacts().get(0).getPayloadType());
             assertEquals(testUrl, visual.getQrArtifacts().get(0).getNormalizedUrl());
-
-            assertEquals("UNAVAILABLE", visual.getOcrStatus());
         }
     }
 

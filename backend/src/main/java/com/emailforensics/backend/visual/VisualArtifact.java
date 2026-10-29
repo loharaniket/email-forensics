@@ -42,12 +42,6 @@ public class VisualArtifact {
     @Column(name = "sha256_hash", nullable = false, length = 64)
     private String sha256Hash;
 
-    @Column(name = "ocr_text", columnDefinition = "TEXT")
-    private String ocrText;
-
-    @Column(name = "ocr_status", nullable = false, length = 50)
-    private String ocrStatus;
-
     @Column(name = "processing_error", columnDefinition = "TEXT")
     private String processingError;
 
@@ -64,23 +58,19 @@ public class VisualArtifact {
     }
 
     public VisualArtifact(UUID id, AnalysisRun analysisRun, String filename, String contentType,
-                          Long fileSizeBytes, String sha256Hash, String ocrText, String ocrStatus,
-                          String processingError) {
-        this(id, analysisRun, filename, contentType, fileSizeBytes, sha256Hash, ocrText, ocrStatus,
+                          Long fileSizeBytes, String sha256Hash, String processingError) {
+        this(id, analysisRun, filename, contentType, fileSizeBytes, sha256Hash,
                 processingError, DataProvenance.NOT_CHECKED.name());
     }
 
     public VisualArtifact(UUID id, AnalysisRun analysisRun, String filename, String contentType,
-                          Long fileSizeBytes, String sha256Hash, String ocrText, String ocrStatus,
-                          String processingError, String dataMode) {
+                          Long fileSizeBytes, String sha256Hash, String processingError, String dataMode) {
         this.id = id;
         this.analysisRun = analysisRun;
         this.filename = filename;
         this.contentType = contentType;
         this.fileSizeBytes = fileSizeBytes;
         this.sha256Hash = sha256Hash;
-        this.ocrText = ocrText;
-        this.ocrStatus = ocrStatus;
         this.processingError = processingError;
         this.dataMode = dataMode != null ? dataMode : DataProvenance.NOT_CHECKED.name();
         this.createdAt = Instant.now();
@@ -144,21 +134,6 @@ public class VisualArtifact {
         this.sha256Hash = sha256Hash;
     }
 
-    public String getOcrText() {
-        return ocrText;
-    }
-
-    public void setOcrText(String ocrText) {
-        this.ocrText = ocrText;
-    }
-
-    public String getOcrStatus() {
-        return ocrStatus;
-    }
-
-    public void setOcrStatus(String ocrStatus) {
-        this.ocrStatus = ocrStatus;
-    }
 
     public String getProcessingError() {
         return processingError;

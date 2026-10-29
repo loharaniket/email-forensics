@@ -93,7 +93,7 @@ class ContentAnalysisServiceTest {
         parsed.setExtractedText("Immediate action is required!");
         when(emailParserService.parse(any())).thenReturn(parsed);
 
-        VisualArtifact visual = new VisualArtifact(UUID.randomUUID(), run, "qr.png", "image/png", 100L, "hash", "Verify password on mobile", "EXTRACTED", null);
+        VisualArtifact visual = new VisualArtifact(UUID.randomUUID(), run, "qr.png", "image/png", 100L, "hash", null);
         when(visualArtifactRepo.findByAnalysisRunIdOrderByCreatedAtAsc(runId)).thenReturn(List.of(visual));
 
         QrArtifact qr = new QrArtifact(UUID.randomUUID(), visual, "https://phish.test/auth", "URL", "https://phish.test/auth");

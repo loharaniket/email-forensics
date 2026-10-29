@@ -8,8 +8,6 @@ import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpClassifier;
 import com.emailforensics.backend.infrastructure.fixtures.DefaultDnsFixtureProvider;
 import com.emailforensics.backend.infrastructure.fixtures.DefaultGeoIpFixtureProvider;
-import com.emailforensics.backend.visual.OcrService;
-import com.emailforensics.backend.visual.fixtures.DefaultOcrFixtureProvider;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
 
@@ -158,24 +156,6 @@ public class ProductionProfileAcceptanceTest {
         assertNotEquals("Fabricated Corp", enriched.getOrganization());
     }
 
-    @Test
-    void productionProfileMustNeverReturnMockOcrData() {
-        MockEnvironment prodEnv = new MockEnvironment();
-        prodEnv.setActiveProfiles("prod");
-
-        DefaultOcrFixtureProvider ocrFixture = new DefaultOcrFixtureProvider();
-        String testHash = "d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2d2";
-        ocrFixture.registerMockOcrText(testHash, "SECRET FABRICATED CREDENTIALS");
-
-        OcrService ocrService = new OcrService("./nonexistent_tessdata", ocrFixture, prodEnv);
-
-        byte[] fakeImage = new byte[]{1, 2, 3, 4, 5};
-        OcrService.OcrResult result = ocrService.processImage(fakeImage, testHash);
-
-        assertNotNull(result);
-        assertNotEquals(DataProvenance.SIMULATED.name(), result.getDataMode());
-        assertNull(result.getOcrText());
-    }
 
     @Test
     void shouldExposeAllFourDataModesAcrossSystem() {

@@ -463,14 +463,8 @@ public class ForensicReportService {
 
         List<VisualArtifact> visList = visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         vis.setVisualArtifactsCount(visList.size());
-        List<String> ocrSnippets = new ArrayList<>();
         List<String> qrPayloads = new ArrayList<>();
         for (VisualArtifact v : visList) {
-            if (v.getOcrText() != null && !v.getOcrText().isBlank()) {
-                String text = v.getOcrText().trim().replaceAll("[\\r\\n]+", " ");
-                if (text.length() > 200) text = text.substring(0, 200) + "...";
-                ocrSnippets.add(text);
-            }
             if (v.getQrArtifacts() != null) {
                 for (QrArtifact q : v.getQrArtifacts()) {
                     if (q.getDecodedPayload() != null) {
@@ -479,7 +473,6 @@ public class ForensicReportService {
                 }
             }
         }
-        vis.setOcrTextSnippets(ocrSnippets);
         vis.setQrDecodedPayloads(qrPayloads);
         report.setVisualsAndArtifacts(vis);
 

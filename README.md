@@ -11,7 +11,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 - **Mail Transit Route & Hop Reconstruction:** Chronological Received header traversal with hop-by-hop latency calculation, TLS cipher inspection, and delay anomaly flags.
 - **URL & Web Infrastructure Intelligence:** Anchor text vs target mismatch detection, IP-based URLs, URL shortener resolution, lookalike/punycode homograph analysis, and defanged URL exports.
 - **Network Telemetry & GeoIP Resolution:** Server IP extraction, private/bogon (RFC 1918) detection, MaxMind GeoIP resolution, ASN routing classification, and organization ownership.
-- **Visual Artifacts, OCR & Quishing Defense:** Embedded image extraction, automated OCR text extraction via Tesseract, and QR code detection/payload decoding via ZXing.
+- **Visual Artifacts & Quishing Defense:** Embedded image extraction and QR code detection/payload decoding via ZXing.
 - **Content NLP & Prompt Injection Firewall:** Tribuo ML machine learning baseline classification, rule-based social engineering cue detection (urgency, credential harvesting, extortion, impersonation), and proactive prompt injection defense against LLM hijacking.
 - **Explainable Deterministic Risk Scoring:** Rule-based scoring engine (0–100) with confidence calibration, weighted severity multipliers, and clear audit breakdowns.
 - **Historical Threat Correlation & Campaign Engine:** Graph-based indicator linking (senders, domains, hashes, IPs), interactive force-directed Threat Graph canvas, and automated threat campaign clustering.
@@ -28,10 +28,10 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 | **Backend Framework** | Spring Boot | 4.1.x / Spring 7 | Modular monolith architecture |
 | **Security** | Spring Security & JJWT | 0.12.x | Stateless JWT authentication & RBAC |
 | **Database** | PostgreSQL | 16 | Relational data store for cases and forensic telemetry |
-| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V9) |
+| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V11) |
 | **Email Parsing** | Jakarta Mail | 2.1.x | Robust RFC 5322 MIME stream parser |
 | **Machine Learning** | Oracle Tribuo | 4.3.x | Embedded Naive Bayes NLP classification |
-| **Computer Vision** | Tess4J & ZXing | 5.12.x / 3.5.x | Tesseract OCR and QR barcode matrix decoding |
+| **Visual Decoding** | ZXing | 3.5.x | QR barcode matrix decoding and payload routing |
 | **Frontend Framework** | React | 19.x (JSX, No TS) | Reactive component UI |
 | **Build & Bundler** | Vite | 8.x | Lightning-fast development & production bundling |
 | **Styling** | Tailwind CSS | 4.x & Vanilla CSS | Slate/cyan dark theme & print stylesheets |
@@ -134,7 +134,7 @@ Follow these steps for a complete demonstration of the system:
    - **Headers Tab (`#tab-headers`):** Inspect sender alignment, SPF/DKIM/DMARC verdicts, and identity alignment warnings.
    - **Mail Route Tab (`#tab-hops`):** Examine the chronological transit route, relay delays, and server hops.
    - **URLs Tab (`#tab-urls`):** Inspect extracted links, anchor text mismatches, and domain flags.
-   - **Visuals & QR Tab (`#tab-visuals`):** View OCR extracted text and decoded QR payloads.
+   - **Visuals & QR Tab (`#tab-visuals`):** View extracted visual artifacts and decoded QR payloads.
    - **Content & ML Tab (`#tab-content`):** Review Tribuo ML classification, social engineering indicators, and Adversarial Injection Defense alerts.
    - **Risk Scoring Tab (`#tab-risk`):** Audit the explainable deterministic risk factors table with weight contributions.
    - **Correlations & Graph Tab (`#tab-correlations`):** Review cross-case correlations and click nodes on the interactive Threat Graph canvas.

@@ -4,8 +4,6 @@ import com.emailforensics.backend.infrastructure.fixtures.DefaultDnsFixtureProvi
 import com.emailforensics.backend.infrastructure.fixtures.DefaultGeoIpFixtureProvider;
 import com.emailforensics.backend.infrastructure.fixtures.DnsFixtureProvider;
 import com.emailforensics.backend.infrastructure.fixtures.GeoIpFixtureProvider;
-import com.emailforensics.backend.visual.fixtures.DefaultOcrFixtureProvider;
-import com.emailforensics.backend.visual.fixtures.OcrFixtureProvider;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -25,9 +23,5 @@ public class MockFixtureConfiguration {
     public GeoIpFixtureProvider geoIpFixtureProvider() {
         return new DefaultGeoIpFixtureProvider();
     }
-
-    @Bean
-    public OcrFixtureProvider ocrFixtureProvider() {
-        return new DefaultOcrFixtureProvider();
-    }
 }
+

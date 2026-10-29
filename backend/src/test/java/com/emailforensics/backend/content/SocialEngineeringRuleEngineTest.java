@@ -44,13 +44,13 @@ class SocialEngineeringRuleEngineTest {
     }
 
     @Test
-    void shouldDetectPaymentInstructionsAcrossOcrChannel() {
-        Map<String, String> channels = Map.of("OCR_TEXT", "Please execute an urgent wire transfer for overdue invoice INV-449.");
+    void shouldDetectPaymentInstructionsAcrossBodyChannel() {
+        Map<String, String> channels = Map.of("BODY_TEXT", "Please execute an urgent wire transfer for overdue invoice INV-449.");
         SocialEngineeringRuleEngine.SocialEngineeringFindings findings = engine.analyze(channels);
 
         assertTrue(findings.isPaymentInstruction());
         assertTrue(findings.getMatches().stream().anyMatch(m -> "PAYMENT_INSTRUCTION".equals(m.getCategory())));
-        assertTrue(findings.getMatches().stream().anyMatch(m -> "OCR_TEXT".equals(m.getSourceChannel())));
+        assertTrue(findings.getMatches().stream().anyMatch(m -> "BODY_TEXT".equals(m.getSourceChannel())));
     }
 
     @Test

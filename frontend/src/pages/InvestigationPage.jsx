@@ -323,51 +323,6 @@ export default function InvestigationPage() {
     }
   }
 
-  const getOcrBadge = (status) => {
-    switch (status) {
-      case 'EXTRACTED':
-        return {
-          bg: 'bg-emerald-950/80',
-          text: 'text-emerald-300',
-          border: 'border-emerald-700/80',
-          label: 'TEXT EXTRACTED',
-          icon: CheckCircle2
-        }
-      case 'NO_TEXT_FOUND':
-        return {
-          bg: 'bg-slate-900',
-          text: 'text-slate-400',
-          border: 'border-slate-800',
-          label: 'NO TEXT DETECTED',
-          icon: Info
-        }
-      case 'UNAVAILABLE':
-        return {
-          bg: 'bg-amber-950/80',
-          text: 'text-amber-300',
-          border: 'border-amber-700/80',
-          label: 'ENGINE UNAVAILABLE',
-          icon: AlertTriangle
-        }
-      case 'SKIPPED':
-        return {
-          bg: 'bg-slate-900',
-          text: 'text-slate-400',
-          border: 'border-slate-800',
-          label: 'SKIPPED (SIZE/DIMS)',
-          icon: HelpCircle
-        }
-      case 'FAILED':
-      default:
-        return {
-          bg: 'bg-rose-950/80',
-          text: 'text-rose-300',
-          border: 'border-rose-700/80',
-          label: 'OCR FAILED',
-          icon: XCircle
-        }
-    }
-  }
 
   if (isLoading) {
     return (
@@ -451,7 +406,6 @@ export default function InvestigationPage() {
     return (
       (v.filename && v.filename.toLowerCase().includes(q)) ||
       (v.contentType && v.contentType.toLowerCase().includes(q)) ||
-      (v.ocrText && v.ocrText.toLowerCase().includes(q)) ||
       (v.qrArtifacts && v.qrArtifacts.some((qArt) => qArt.decodedPayload && qArt.decodedPayload.toLowerCase().includes(q)))
     )
   })
@@ -1951,7 +1905,7 @@ export default function InvestigationPage() {
                       type="text"
                       value={visualSearch}
                       onChange={(e) => setVisualSearch(e.target.value)}
-                      placeholder="Filter by image name, OCR text, or QR payload..."
+                      placeholder="Filter by image name or QR payload..."
                       className="w-full bg-slate-900 border border-slate-800 rounded-lg pl-9 pr-3 py-1.5 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-cyan-500 font-mono"
                     />
                   </div>
@@ -1972,8 +1926,6 @@ export default function InvestigationPage() {
                 ) : (
                   <div className="grid grid-cols-1 gap-4">
                     {filteredVisuals.map((v, idx) => {
-                      const ocrBadge = getOcrBadge(v.ocrStatus)
-                      const OcrIcon = ocrBadge.icon
                       return (
                         <div
                           key={v.id || idx}
@@ -2023,51 +1975,81 @@ export default function InvestigationPage() {
                             </div>
                           </div>
 
-                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                            <div className="space-y-3 bg-slate-900/40 p-3.5 rounded-lg border border-slate-800/60">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-                                  <QrCode className="h-3.5 w-3.5 text-cyan-400" />
-                                  <span>QR Code Detection</span>
-                                </div>
-                                <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-950 border border-slate-800 text-slate-400">
-                                  {v.qrArtifacts && v.qrArtifacts.length > 0
-                                    ? `${v.qrArtifacts.length} Detected`
-                                    : 'None Detected'}
-                                </span>
+                          <div className="space-y-3 bg-slate-900/40 p-3.5 rounded-lg border border-slate-800/60">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
+                                <QrCode className="h-3.5 w-3.5 text-cyan-400" />
+                                <span>QR Code Detection</span>
                               </div>
+                              <span className="text-[10px] font-mono px-2 py-0.5 rounded-full bg-slate-950 border border-slate-800 text-slate-400">
+                                {v.qrArtifacts && v.qrArtifacts.length > 0
+                                  ? `${v.qrArtifacts.length} Detected`
+                                  : 'None Detected'}
+                              </span>
+                            </div>
 
-                              {v.qrArtifacts && v.qrArtifacts.length > 0 ? (
-                                <div className="space-y-2.5">
-                                  {v.qrArtifacts.map((qr, qIdx) => (
-                                    <div
-                                      key={qr.id || qIdx}
-                                      className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2 text-xs"
-                                    >
-                                      <div className="flex items-center justify-between gap-2">
-                                        <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
-                                          {qr.payloadType || 'PAYLOAD'}
+                            {v.qrArtifacts && v.qrArtifacts.length > 0 ? (
+                              <div className="space-y-2.5">
+                                {v.qrArtifacts.map((qr, qIdx) => (
+                                  <div
+                                    key={qr.id || qIdx}
+                                    className="p-3 bg-slate-950 rounded-lg border border-slate-800 space-y-2 text-xs"
+                                  >
+                                    <div className="flex items-center justify-between gap-2">
+                                      <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase font-bold bg-cyan-950 text-cyan-300 border border-cyan-800">
+                                        {qr.payloadType || 'PAYLOAD'}
+                                      </span>
+                                      {qr.moduleCount && (
+                                        <span className="text-[10px] font-mono text-slate-500">
+                                          Modules: {qr.moduleCount}
                                         </span>
-                                        {qr.moduleCount && (
-                                          <span className="text-[10px] font-mono text-slate-500">
-                                            Modules: {qr.moduleCount}
-                                          </span>
-                                        )}
-                                      </div>
+                                      )}
+                                    </div>
 
-                                      <div className="space-y-1">
+                                    <div className="space-y-1">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-[10px] font-mono text-slate-400">
+                                          Decoded Content (Inert Preview):
+                                        </span>
+                                        <button
+                                          id={`copy-qr-payload-${idx}-${qIdx}`}
+                                          onClick={() =>
+                                            copyValue(`qr-payload-${idx}-${qIdx}`, qr.decodedPayload)
+                                          }
+                                          className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
+                                        >
+                                          {copiedKey === `qr-payload-${idx}-${qIdx}` ? (
+                                            <>
+                                              <Check className="h-3 w-3 text-emerald-400" />
+                                              <span>Copied</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <Copy className="h-3 w-3" />
+                                              <span>Copy</span>
+                                            </>
+                                          )}
+                                        </button>
+                                      </div>
+                                      <div className="p-2 bg-slate-900 rounded border border-slate-800/80 font-mono text-[11px] text-slate-200 select-all break-all whitespace-pre-wrap max-h-28 overflow-y-auto">
+                                        {qr.decodedPayload}
+                                      </div>
+                                    </div>
+
+                                    {qr.normalizedUrl && (
+                                      <div className="space-y-1 pt-1 border-t border-slate-800/60">
                                         <div className="flex items-center justify-between">
-                                          <span className="text-[10px] font-mono text-slate-400">
-                                            Decoded Content (Inert Preview):
+                                          <span className="text-[10px] font-mono text-cyan-400">
+                                            Normalized URL (Routed to URL Intel):
                                           </span>
                                           <button
-                                            id={`copy-qr-payload-${idx}-${qIdx}`}
+                                            id={`copy-qr-url-${idx}-${qIdx}`}
                                             onClick={() =>
-                                              copyValue(`qr-payload-${idx}-${qIdx}`, qr.decodedPayload)
+                                              copyValue(`qr-url-${idx}-${qIdx}`, qr.normalizedUrl)
                                             }
                                             className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
                                           >
-                                            {copiedKey === `qr-payload-${idx}-${qIdx}` ? (
+                                            {copiedKey === `qr-url-${idx}-${qIdx}` ? (
                                               <>
                                                 <Check className="h-3 w-3 text-emerald-400" />
                                                 <span>Copied</span>
@@ -2080,110 +2062,21 @@ export default function InvestigationPage() {
                                             )}
                                           </button>
                                         </div>
-                                        <div className="p-2 bg-slate-900 rounded border border-slate-800/80 font-mono text-[11px] text-slate-200 select-all break-all whitespace-pre-wrap max-h-28 overflow-y-auto">
-                                          {qr.decodedPayload}
+                                        <div className="text-[11px] font-mono text-slate-300 break-all select-all">
+                                          {qr.normalizedUrl}
                                         </div>
                                       </div>
-
-                                      {qr.normalizedUrl && (
-                                        <div className="space-y-1 pt-1 border-t border-slate-800/60">
-                                          <div className="flex items-center justify-between">
-                                            <span className="text-[10px] font-mono text-cyan-400">
-                                              Normalized URL (Routed to URL Intel):
-                                            </span>
-                                            <button
-                                              id={`copy-qr-url-${idx}-${qIdx}`}
-                                              onClick={() =>
-                                                copyValue(`qr-url-${idx}-${qIdx}`, qr.normalizedUrl)
-                                              }
-                                              className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
-                                            >
-                                              {copiedKey === `qr-url-${idx}-${qIdx}` ? (
-                                                <>
-                                                  <Check className="h-3 w-3 text-emerald-400" />
-                                                  <span>Copied</span>
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <Copy className="h-3 w-3" />
-                                                  <span>Copy</span>
-                                                </>
-                                              )}
-                                            </button>
-                                          </div>
-                                          <div className="text-[11px] font-mono text-slate-300 break-all select-all">
-                                            {qr.normalizedUrl}
-                                          </div>
-                                        </div>
-                                      )}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <div className="p-4 bg-slate-950/60 rounded-lg border border-slate-800/60 text-center">
-                                  <span className="text-xs text-slate-500 font-mono">
-                                    No QR codes detected in this image.
-                                  </span>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="space-y-3 bg-slate-900/40 p-3.5 rounded-lg border border-slate-800/60">
-                              <div className="flex items-center justify-between">
-                                <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-200">
-                                  <FileText className="h-3.5 w-3.5 text-cyan-400" />
-                                  <span>OCR Optical Recognition</span>
-                                </div>
-                                <span
-                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${ocrBadge.bg} ${ocrBadge.text} ${ocrBadge.border}`}
-                                >
-                                  <OcrIcon className="h-3 w-3" />
-                                  <span>{ocrBadge.label}</span>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="p-4 bg-slate-950/60 rounded-lg border border-slate-800/60 text-center">
+                                <span className="text-xs text-slate-500 font-mono">
+                                  No QR codes detected in this image.
                                 </span>
                               </div>
-
-                              {v.ocrText ? (
-                                <div className="space-y-1.5">
-                                  <div className="flex items-center justify-between">
-                                    <span className="text-[10px] font-mono text-slate-400">
-                                      Recognized Text Characters:
-                                    </span>
-                                    <button
-                                      id={`copy-ocr-text-${idx}`}
-                                      onClick={() => copyValue(`ocr-text-${idx}`, v.ocrText)}
-                                      className="text-[10px] font-mono text-cyan-400 hover:text-cyan-300 flex items-center gap-1 cursor-pointer"
-                                    >
-                                      {copiedKey === `ocr-text-${idx}` ? (
-                                        <>
-                                          <Check className="h-3 w-3 text-emerald-400" />
-                                          <span>Copied</span>
-                                        </>
-                                      ) : (
-                                        <>
-                                          <Copy className="h-3 w-3" />
-                                          <span>Copy</span>
-                                        </>
-                                      )}
-                                    </button>
-                                  </div>
-                                  <div className="p-2.5 bg-slate-950 rounded-lg border border-slate-800 font-mono text-xs text-slate-200 whitespace-pre-wrap select-all break-all max-h-44 overflow-y-auto">
-                                    {v.ocrText}
-                                  </div>
-                                </div>
-                              ) : (
-                                <div className="p-4 bg-slate-950/60 rounded-lg border border-slate-800/60 text-center">
-                                  <span className="text-xs text-slate-500 font-mono">
-                                    {v.ocrNotes || 'No text content detected by optical recognition.'}
-                                  </span>
-                                </div>
-                              )}
-
-                              {v.ocrNotes && v.ocrText && (
-                                <div className="text-[10px] font-mono text-slate-500 pt-1 border-t border-slate-800/40">
-                                  Note: {v.ocrNotes}
-                                </div>
-                              )}
-                            </div>
+                            )}
                           </div>
                         </div>
                       )
@@ -2437,7 +2330,7 @@ export default function InvestigationPage() {
                                 No Prompt Injection Indicators Detected
                               </span>
                               <span className="text-emerald-300/80 text-[11px]">
-                                Scanned email body, HTML text, OCR extracts, and QR payloads for adversarial AI overrides without triggering alerts.
+                                Scanned email body, HTML text, and QR payloads for adversarial AI overrides without triggering alerts.
                               </span>
                             </div>
                           </div>
@@ -2451,7 +2344,7 @@ export default function InvestigationPage() {
                             <span>Social Engineering Indicator Flags (5 Categories)</span>
                           </div>
                           <span className="text-[11px] font-mono text-slate-400">
-                            Multi-channel scan: Body Text, HTML, OCR Text, QR Payload
+                            Multi-channel scan: Body Text, HTML, QR Payload
                           </span>
                         </div>
 
@@ -2622,7 +2515,7 @@ export default function InvestigationPage() {
 
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-mono text-slate-400">Channel:</span>
-                            {['ALL', 'BODY_TEXT', 'HTML_TEXT', 'OCR_TEXT', 'QR_PAYLOAD'].map((chan) => (
+                            {['ALL', 'BODY_TEXT', 'HTML_TEXT', 'QR_PAYLOAD'].map((chan) => (
                               <button
                                 key={chan}
                                 onClick={() => setContentChannelFilter(chan)}
@@ -4183,7 +4076,7 @@ export default function InvestigationPage() {
                     <div className="p-3.5 rounded-xl bg-slate-950/60 border border-slate-800 space-y-2">
                       <span className="text-xs font-semibold text-slate-300 block">Forensic Pipeline Stage Health</span>
                       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 text-[11px] font-mono">
-                        {['Ingestion', 'Header Parsing', 'Mail Route Hops', 'URL Intelligence', 'Infrastructure GeoIP', 'Visuals OCR/QR', 'NLP & Injection', 'Deterministic Risk', 'Threat Correlation', 'AI Grounding'].map((stage, idx) => (
+                        {['Ingestion', 'Header Parsing', 'Mail Route Hops', 'URL Intelligence', 'Infrastructure GeoIP', 'Visuals & QR', 'NLP & Injection', 'Deterministic Risk', 'Threat Correlation', 'AI Grounding'].map((stage, idx) => (
                           <div key={idx} className="flex items-center gap-1.5 p-1.5 rounded bg-slate-900 border border-slate-800">
                             <CheckCircle2 className="h-3 w-3 text-emerald-400 shrink-0" />
                             <span className="text-slate-300 truncate">{stage}</span>
@@ -4468,12 +4361,6 @@ export default function InvestigationPage() {
                               <span className="text-[11px] text-slate-400">{v.contentType} ({v.imageWidth}x{v.imageHeight})</span>
                             </div>
 
-                            {v.ocrText && (
-                              <div className="p-2 rounded bg-slate-900 border border-slate-800 text-[11px] text-slate-300 max-h-24 overflow-y-auto">
-                                <span className="text-slate-500 block text-[10px] mb-0.5">OCR EXTRACTED TEXT:</span>
-                                {v.ocrText}
-                              </div>
-                            )}
 
                             {v.qrArtifacts && v.qrArtifacts.length > 0 && (
                               <div className="p-2 rounded bg-purple-950/30 border border-purple-800/60 text-[11px] text-purple-200 space-y-1">

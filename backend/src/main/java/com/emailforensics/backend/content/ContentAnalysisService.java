@@ -94,17 +94,9 @@ public class ContentAnalysisService {
         }
 
         List<VisualArtifact> visualArtifacts = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
-        StringBuilder ocrTextAggregator = new StringBuilder();
         StringBuilder qrPayloadAggregator = new StringBuilder();
 
         for (VisualArtifact va : visualArtifacts) {
-            if (va.getOcrText() != null && !va.getOcrText().isBlank()) {
-                if (!ocrTextAggregator.isEmpty()) {
-                    ocrTextAggregator.append("\n");
-                }
-                ocrTextAggregator.append(va.getOcrText());
-            }
-
             List<QrArtifact> qrs = qrArtifactRepository.findByVisualArtifactIdOrderByCreatedAtAsc(va.getId());
             for (QrArtifact qr : qrs) {
                 if (qr.getDecodedPayload() != null && !qr.getDecodedPayload().isBlank()) {
@@ -114,10 +106,6 @@ public class ContentAnalysisService {
                     qrPayloadAggregator.append(qr.getDecodedPayload());
                 }
             }
-        }
-
-        if (!ocrTextAggregator.isEmpty()) {
-            channelTexts.put("OCR_TEXT", ocrTextAggregator.toString());
         }
 
         if (!qrPayloadAggregator.isEmpty()) {

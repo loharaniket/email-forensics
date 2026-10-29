@@ -951,7 +951,6 @@ public class ForensicReportDto {
         private int totalAttachmentsCount;
         private List<ReportAttachmentDto> attachments = new ArrayList<>();
         private int visualArtifactsCount;
-        private List<String> ocrTextSnippets = new ArrayList<>();
         private List<String> qrDecodedPayloads = new ArrayList<>();
 
         public VisualAndArtifactSummaryDto() {
@@ -979,14 +978,6 @@ public class ForensicReportDto {
 
         public void setVisualArtifactsCount(int visualArtifactsCount) {
             this.visualArtifactsCount = visualArtifactsCount;
-        }
-
-        public List<String> getOcrTextSnippets() {
-            return ocrTextSnippets;
-        }
-
-        public void setOcrTextSnippets(List<String> ocrTextSnippets) {
-            this.ocrTextSnippets = ocrTextSnippets;
         }
 
         public List<String> getQrDecodedPayloads() {

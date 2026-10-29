@@ -7,6 +7,7 @@ import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
+import com.emailforensics.backend.infrastructure.DataProvenance;
 import com.emailforensics.backend.infrastructure.DnsLookupService;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
@@ -39,7 +40,6 @@ public class VisualAnalysisService {
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
     private final QrDecodingService qrDecodingService;
-    private final OcrService ocrService;
     private final UrlNormalizationService urlNormalizationService;
     private final UrlHeuristicsService urlHeuristicsService;
     private final DnsLookupService dnsLookupService;
@@ -51,7 +51,6 @@ public class VisualAnalysisService {
                                  AnalysisRunRepository analysisRunRepository,
                                  EvidenceStorageService storageService,
                                  QrDecodingService qrDecodingService,
-                                 OcrService ocrService,
                                  UrlNormalizationService urlNormalizationService,
                                  UrlHeuristicsService urlHeuristicsService,
                                  DnsLookupService dnsLookupService,
@@ -62,7 +61,6 @@ public class VisualAnalysisService {
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
         this.qrDecodingService = qrDecodingService;
-        this.ocrService = ocrService;
         this.urlNormalizationService = urlNormalizationService;
         this.urlHeuristicsService = urlHeuristicsService;
         this.dnsLookupService = dnsLookupService;
@@ -129,6 +127,7 @@ public class VisualAnalysisService {
             visual.setContentType(img.getContentType());
             visual.setFileSizeBytes((long) img.getData().length);
             visual.setSha256Hash(img.getSha256Hash());
+            visual.setDataMode(DataProvenance.REAL.name());
 
             List<QrDecodingService.DecodedQrPayload> qrs = qrDecodingService.decodeQrCodes(img.getData());
             List<QrArtifact> qrEntities = new ArrayList<>();
@@ -147,12 +146,6 @@ public class VisualAnalysisService {
                 }
             }
             visual.setQrArtifacts(qrEntities);
-
-            OcrService.OcrResult ocrResult = ocrService.processImage(img.getData(), img.getSha256Hash());
-            visual.setOcrText(ocrResult.getOcrText());
-            visual.setOcrStatus(ocrResult.getOcrStatus());
-            visual.setProcessingError(ocrResult.getProcessingError());
-            visual.setDataMode(ocrResult.getDataMode());
 
             visualArtifactRepository.save(visual);
             savedList.add(visual);
@@ -194,19 +187,16 @@ public class VisualAnalysisService {
                 ));
             }
 
-            OcrService.OcrResult ocrResult = ocrService.processImage(img.getData(), img.getSha256Hash());
             dtos.add(new VisualArtifactDto(
                     null,
                     img.getFilename(),
                     img.getContentType(),
                     (long) img.getData().length,
                     img.getSha256Hash(),
-                    ocrResult.getOcrText(),
-                    ocrResult.getOcrStatus(),
-                    ocrResult.getProcessingError(),
+                    null,
                     null,
                     qrDtos,
-                    ocrResult.getDataMode()
+                    DataProvenance.REAL.name()
             ));
         }
 
@@ -363,8 +353,6 @@ public class VisualAnalysisService {
                     v.getContentType(),
                     v.getFileSizeBytes(),
                     v.getSha256Hash(),
-                    v.getOcrText(),
-                    v.getOcrStatus(),
                     v.getProcessingError(),
                     v.getCreatedAt(),
                     qrDtos,

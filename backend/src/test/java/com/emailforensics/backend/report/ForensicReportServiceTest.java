@@ -189,7 +189,7 @@ class ForensicReportServiceTest {
         IpArtifact ip = new IpArtifact(UUID.randomUUID(), run, "198.51.100.1", "HEADER_HOP", false, "RESOLVED", "AS1234", "bad.org", "US", "New York", BigDecimal.valueOf(40.71), BigDecimal.valueOf(-74.00), "GEOIP", Instant.now());
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId())).thenReturn(Collections.singletonList(ip));
 
-        VisualArtifact vis = new VisualArtifact(UUID.randomUUID(), run, "image.png", "image/png", 500L, "imghash", "Urgent Notice Attached", "COMPLETED", null);
+        VisualArtifact vis = new VisualArtifact(UUID.randomUUID(), run, "image.png", "image/png", 500L, "imghash", null);
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId())).thenReturn(Collections.singletonList(vis));
 
         ContentAnalysis ca = new ContentAnalysis(UUID.randomUUID(), run, "v1.0.0", 0.95, "PHISHING", "SUCCESS", true, true, true, false, false, true, "[]", "[]");

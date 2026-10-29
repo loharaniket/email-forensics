@@ -403,19 +403,6 @@ public class RiskScoringService {
     private void collectVisualFactors(List<VisualArtifactDto> visuals, AnalysisRun run,
                                       List<RiskFactor> factors, Set<String> deduplicationKeys) {
         for (VisualArtifactDto visual : visuals) {
-            String ocrText = visual.getOcrText();
-            if (ocrText != null && !ocrText.isBlank()) {
-                String lower = ocrText.toLowerCase(Locale.ROOT);
-                if (lower.contains("password") || lower.contains("login") || lower.contains("verify account")
-                        || lower.contains("wire transfer") || lower.contains("bank account") || lower.contains("urgent payment")) {
-                    addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                            UUID.randomUUID(), run, CAT_VISUAL, "VISUAL_OCR_SENSITIVE_TEXT", "MEDIUM", 15,
-                            "OCR extracted image text containing credential or financial phishing lures.",
-                            "Image: " + visual.getFilename()
-                    ), "OCR_SENSITIVE");
-                }
-            }
-
             List<QrArtifactDto> qrs = visual.getQrArtifacts();
             if (qrs != null && !qrs.isEmpty()) {
                 for (QrArtifactDto qr : qrs) {
