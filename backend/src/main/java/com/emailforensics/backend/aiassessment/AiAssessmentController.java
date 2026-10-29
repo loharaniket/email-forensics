@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -27,12 +26,6 @@ public class AiAssessmentController {
     public ResponseEntity<AiAssessmentDto> getLatestAssessment(@PathVariable UUID emailId) {
         AiAssessmentDto dto = aiAssessmentService.getLatestAssessment(emailId);
         return ResponseEntity.ok(dto);
-    }
-
-    @GetMapping("/{emailId}/ai-assessments/history")
-    public ResponseEntity<List<AiAssessmentDto>> getAssessmentHistory(@PathVariable UUID emailId) {
-        List<AiAssessmentDto> history = aiAssessmentService.getAssessmentHistory(emailId);
-        return ResponseEntity.ok(history);
     }
 
     @PostMapping("/{emailId}/ai-assessment/generate")

@@ -14,7 +14,6 @@ import {
   getEvidenceCorrelations,
   getEvidenceGraph,
   getEvidenceAiAssessment,
-  getEvidenceAiHistory,
   generateEvidenceAiAssessment,
   downloadOriginalEvidence,
   checkEvidenceIntegrity
@@ -56,7 +55,6 @@ import {
   Flame,
   Share2,
   Tag,
-  History,
   RefreshCw,
   Printer,
   FileDown,
@@ -84,11 +82,8 @@ export default function InvestigationPage() {
   const [correlationStrengthFilter, setCorrelationStrengthFilter] = useState('ALL')
   const [correlationTypeFilter, setCorrelationTypeFilter] = useState('ALL')
   const [aiAssessment, setAiAssessment] = useState(null)
-  const [aiHistory, setAiHistory] = useState([])
   const [isAiGenerating, setIsAiGenerating] = useState(false)
-  const [selectedAiModel, setSelectedAiModel] = useState('openai/gpt-oss-20b')
   const [aiError, setAiError] = useState(null)
-  const [showAiHistoryDrawer, setShowAiHistoryDrawer] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState(null)
   const [activeTab, setActiveTab] = useState('headers')
@@ -127,7 +122,6 @@ export default function InvestigationPage() {
         correlationsData,
         graphData,
         aiData,
-        aiHistoryData,
         reportResult
       ] = await Promise.all([
         getInvestigationDetail(emailId),
@@ -141,7 +135,6 @@ export default function InvestigationPage() {
         getEvidenceCorrelations(emailId).catch(() => []),
         getEvidenceGraph(emailId).catch(() => ({ nodes: [], links: [] })),
         getEvidenceAiAssessment(emailId).catch(() => null),
-        getEvidenceAiHistory(emailId).catch(() => []),
         getEvidenceReport(emailId).catch(() => null)
       ])
       setDetail(detailData)
@@ -155,7 +148,6 @@ export default function InvestigationPage() {
       setCorrelations(correlationsData || [])
       setEvidenceGraph(graphData || { nodes: [], links: [] })
       setAiAssessment(aiData)
-      setAiHistory(aiHistoryData || [])
       setReportData(reportResult)
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to load email investigation details.')
@@ -187,15 +179,12 @@ export default function InvestigationPage() {
     }
   }
 
-  const handleGenerateAiAssessment = async (force = true, modelOverride = null) => {
+  const handleGenerateAiAssessment = async (force = true) => {
     setIsAiGenerating(true)
     setAiError(null)
-    const targetModel = modelOverride || selectedAiModel
     try {
-      const result = await generateEvidenceAiAssessment(emailId, force, targetModel)
+      const result = await generateEvidenceAiAssessment(emailId, force)
       setAiAssessment(result)
-      const history = await getEvidenceAiHistory(emailId).catch(() => [])
-      setAiHistory(history || [])
     } catch (err) {
       setAiError(err.response?.data?.message || 'Failed to generate AI assessment')
     } finally {
@@ -3483,34 +3472,14 @@ export default function InvestigationPage() {
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
-                      <select
-                        id="ai-model-select"
-                        value={selectedAiModel}
-                        onChange={(e) => setSelectedAiModel(e.target.value)}
-                        className="bg-slate-900 border border-slate-700 text-slate-200 text-xs rounded-lg px-2.5 py-1.5 focus:ring-1 focus:ring-purple-500 focus:outline-none font-mono"
-                      >
-                        <option value="openai/gpt-oss-20b">Groq: GPT-OSS 20B (Recommended)</option>
-                        <option value="qwen/qwen3.8-27b">Groq: Qwen 3.8 27B (Ultra-Fast 495ms)</option>
-                        <option value="openai/gpt-oss-120b">Groq: GPT-OSS 120B (Deep Reasoning)</option>
-                      </select>
-
                       <button
                         id="regenerate-ai-btn"
-                        onClick={() => handleGenerateAiAssessment(true, selectedAiModel)}
+                        onClick={() => handleGenerateAiAssessment(true)}
                         disabled={isAiGenerating}
                         className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-purple-950 hover:bg-purple-900 text-purple-300 border border-purple-800 transition-colors cursor-pointer disabled:opacity-50"
                       >
                         <RefreshCw className={`h-3.5 w-3.5 ${isAiGenerating ? 'animate-spin' : ''}`} />
                         <span>{isAiGenerating ? 'Generating...' : 'Regenerate Assessment'}</span>
-                      </button>
-
-                      <button
-                        id="view-ai-history-btn"
-                        onClick={() => setShowAiHistoryDrawer(!showAiHistoryDrawer)}
-                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-800 transition-colors cursor-pointer"
-                      >
-                        <History className="h-3.5 w-3.5 text-slate-400" />
-                        <span>History ({aiHistory.length})</span>
                       </button>
                     </div>
                   </div>
@@ -3577,65 +3546,6 @@ export default function InvestigationPage() {
                   )}
                 </div>
 
-                {showAiHistoryDrawer && (
-                  <div className="p-5 rounded-2xl bg-slate-900/50 border border-slate-800 space-y-3">
-                    <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                      <div className="flex items-center gap-2">
-                        <History className="h-4 w-4 text-purple-400" />
-                        <h3 className="text-sm font-semibold text-white">
-                          Assessment Generation History ({aiHistory.length})
-                        </h3>
-                      </div>
-                      <button
-                        onClick={() => setShowAiHistoryDrawer(false)}
-                        className="text-xs text-slate-400 hover:text-slate-200 cursor-pointer"
-                      >
-                        Close
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 max-h-60 overflow-y-auto">
-                      {aiHistory.map((item, idx) => (
-                        <div
-                          key={item.id}
-                          onClick={() => setAiAssessment(item)}
-                          className={`p-3 rounded-xl border text-xs cursor-pointer transition-colors flex items-center justify-between ${
-                            aiAssessment?.id === item.id
-                              ? 'bg-purple-950/40 border-purple-800 text-purple-200'
-                              : 'bg-slate-950/60 border-slate-800 hover:bg-slate-800/50 text-slate-300'
-                          }`}
-                        >
-                          <div className="space-y-0.5">
-                            <div className="flex items-center gap-2">
-                              <span className="font-bold text-white">Run #{aiHistory.length - idx}</span>
-                              <span className={`font-mono text-[10px] px-1.5 py-0.2 rounded border ${
-                                item.status === 'LIVE_AI'
-                                  ? 'bg-emerald-950 text-emerald-300 border-emerald-800'
-                                  : item.status === 'ASSESSMENT_FAILED'
-                                  ? 'bg-rose-950 text-rose-300 border-rose-800'
-                                  : 'bg-cyan-950 text-cyan-300 border-cyan-800'
-                              }`}>
-                                {item.status || 'OFFLINE'}
-                              </span>
-                              <span className="font-mono text-[10px] px-1.5 py-0.2 rounded bg-slate-800">
-                                {item.threatClassification}
-                              </span>
-                              <span className="text-[10px] font-mono text-slate-400">
-                                {item.provider} ({item.modelName})
-                              </span>
-                            </div>
-                            <p className="text-[11px] text-slate-400 line-clamp-1">
-                              {item.summaryExplanation}
-                            </p>
-                          </div>
-                          <span className="text-[10px] font-mono text-slate-500 whitespace-nowrap ml-3">
-                            {new Date(item.createdAt).toLocaleString()}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
 
                 <div className="p-6 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-3">
                   <div className="flex items-center justify-between border-b border-slate-800/70 pb-3">

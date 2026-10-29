@@ -136,28 +136,21 @@ class AiAssessmentServiceTest {
     }
 
     @Test
-    void testGetAssessmentHistoryRetainsRegenerations() {
+    void testGetLatestAssessmentReturnsExistingAssessment() {
         UUID emailId = evidence.getId();
-        when(evidenceRepository.existsById(emailId)).thenReturn(true);
 
-        AiGroundedAssessment a1 = new AiGroundedAssessment(
+        AiGroundedAssessment existing = new AiGroundedAssessment(
                 UUID.randomUUID(), evidence, run, "openai", "gpt-4o-mini", "v1.0.0",
-                "LIVE_AI", "MALICIOUS_PHISHING", "HIGH", "Summary 1", "[]", "[]", "[]",
+                "LIVE_AI", "MALICIOUS_PHISHING", "HIGH", "Existing summary", "[]", "[]", "[]",
                 "Limitations", false, "Context", null, 100, 200L
         );
-        AiGroundedAssessment a2 = new AiGroundedAssessment(
-                UUID.randomUUID(), evidence, run, "offline-rules", "heuristic-rule-engine-v1", "v1.0.0",
-                "OFFLINE_RULES", "MALICIOUS_PHISHING", "MEDIUM", "Summary 2", "[]", "[]", "[]",
-                "Limitations", false, "Context", null, 0, 50L
-        );
+        when(assessmentRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId))
+                .thenReturn(Optional.of(existing));
 
-        when(assessmentRepository.findAllByEmailEvidenceIdOrderByCreatedAtDesc(emailId))
-                .thenReturn(List.of(a1, a2));
+        AiAssessmentDto dto = service.getLatestAssessment(emailId);
 
-        List<AiAssessmentDto> history = service.getAssessmentHistory(emailId);
-
-        assertEquals(2, history.size());
-        assertEquals("Summary 1", history.get(0).getSummaryExplanation());
-        assertEquals("Summary 2", history.get(1).getSummaryExplanation());
+        assertNotNull(dto);
+        assertEquals("Existing summary", dto.getSummaryExplanation());
+        assertEquals("LIVE_AI", dto.getStatus());
     }
 }

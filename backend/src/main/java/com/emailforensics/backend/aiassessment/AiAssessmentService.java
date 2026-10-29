@@ -59,17 +59,9 @@ public class AiAssessmentService {
         }
     }
 
-    @Transactional(readOnly = true)
-    public List<AiAssessmentDto> getAssessmentHistory(UUID emailId) {
-        if (!evidenceRepository.existsById(emailId)) {
-            throw new ResourceNotFoundException("Evidence not found with ID: " + emailId);
-        }
-        List<AiGroundedAssessment> all = assessmentRepository.findAllByEmailEvidenceIdOrderByCreatedAtDesc(emailId);
-        List<AiAssessmentDto> dtos = new ArrayList<>();
-        for (AiGroundedAssessment entity : all) {
-            dtos.add(mapToDto(entity));
-        }
-        return dtos;
+    @Transactional
+    public AiAssessmentDto generateAssessment(UUID emailId, boolean forceRegenerate) {
+        return generateAssessment(emailId, forceRegenerate, null);
     }
 
     @Transactional

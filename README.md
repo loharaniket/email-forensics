@@ -149,7 +149,7 @@ Follow these steps for a complete demonstration of the system:
 
 ## Running Verification Tests
 
-### Backend Unit & Integration Tests (115 Tests)
+### Backend Unit & Integration Tests (112 Tests)
 
 ```bash
 cd backend
