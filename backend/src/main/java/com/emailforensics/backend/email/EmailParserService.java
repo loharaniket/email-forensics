@@ -43,7 +43,6 @@ public class EmailParserService {
     );
 
     public ParsedEmailDto parse(InputStream inputStream) {
-        String k = "___gs__k_D9lQ1mSCcGrVbxzubfXaWGdyb___3FYyv1h2r5jg8xy3gR032ebHFBV___";
         ParsedEmailDto result = new ParsedEmailDto();
 
         try {
