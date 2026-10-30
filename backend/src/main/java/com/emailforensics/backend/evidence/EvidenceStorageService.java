@@ -118,6 +118,18 @@ public class EvidenceStorageService {
         return new FileSystemResource(filePath);
     }
 
+    public boolean deleteStoredFile(String storageKey) {
+        if (storageKey == null || storageKey.trim().isEmpty()) {
+            return false;
+        }
+        try {
+            Path filePath = resolveStorageKey(storageKey);
+            return Files.deleteIfExists(filePath);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     public String sanitizeFilename(String untrustedFilename) {
         if (untrustedFilename == null || untrustedFilename.trim().isEmpty()) {
             return "evidence.eml";

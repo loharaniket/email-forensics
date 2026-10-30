@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import {
   Upload,
   FileCheck,
@@ -13,7 +13,11 @@ import {
   FileText,
   ShieldAlert,
   HardDrive,
-  Eye
+  Eye,
+  Layers,
+  FolderOpen,
+  ExternalLink,
+  ArrowRight
 } from 'lucide-react'
 import {
   uploadEvidence,
@@ -132,7 +136,13 @@ export default function EvidenceUploadSection({ caseId }) {
         filename: response.originalFilename,
         hash: response.sha256Hash,
         status: response.status,
-        size: response.fileSizeBytes
+        size: response.fileSizeBytes,
+        duplicate: Boolean(response.duplicate),
+        existingCaseId: response.existingCaseId,
+        existingCaseNumber: response.existingCaseNumber,
+        existingCaseTitle: response.existingCaseTitle,
+        evidenceId: response.emailId,
+        message: response.message
       })
       setSelectedFile(null)
       if (fileInputRef.current) {
@@ -236,7 +246,7 @@ export default function EvidenceUploadSection({ caseId }) {
                 Upload &amp; Preserve Email Evidence
               </h2>
               <p className="text-xs text-slate-400">
-                Evidence vault immutability: computes SHA-256 before storage and enqueues forensic analysis.
+                Evidence vault immutability with global deduplication: detects existing SHA-256 hashes to prevent duplicate storage.
               </p>
             </div>
           </div>
@@ -295,29 +305,116 @@ export default function EvidenceUploadSection({ caseId }) {
           )}
 
           {uploadSuccess && (
-            <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/80 text-xs text-emerald-200 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-emerald-400">
-                <CheckCircle2 className="h-4 w-4" />
-                <span>Evidence Successfully Preserved in Vault</span>
-                <span className="ml-auto font-mono text-[11px] bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded">
-                  HTTP 202 ACCEPTED
-                </span>
+            uploadSuccess.duplicate ? (
+              <div id="duplicate-evidence-banner" className="p-4 md:p-5 rounded-xl bg-cyan-950/40 border border-cyan-800/80 text-xs text-cyan-200 space-y-3.5 shadow-lg shadow-cyan-950/20">
+                <div className="flex items-center gap-2 font-semibold text-cyan-300">
+                  <Layers className="h-4 w-4 text-cyan-400" />
+                  <span className="text-sm">Global Deduplication: Duplicate Email Detected</span>
+                  <span className="ml-auto font-mono text-[11px] bg-cyan-900/60 text-cyan-200 px-2.5 py-0.5 rounded border border-cyan-700/60">
+                    REUSING EXISTING EVIDENCE
+                  </span>
+                </div>
+
+                <p className="text-xs text-slate-300 font-sans leading-relaxed">
+                  {uploadSuccess.message || 'This email file has an identical SHA-256 cryptographic digest to previously preserved evidence. Storage and forensic processing were reused without duplication.'}
+                </p>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 font-mono text-[11px] text-slate-300 bg-slate-950/60 p-3 rounded-lg border border-cyan-900/40">
+                  <div>
+                    <span className="text-slate-400">Filename: </span>
+                    <span className="text-slate-200">{uploadSuccess.filename}</span> ({formatBytes(uploadSuccess.size)})
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Analysis State: </span>
+                    <span className="text-emerald-400 font-semibold">{uploadSuccess.status}</span>
+                  </div>
+
+                  {uploadSuccess.existingCaseId && (
+                    <div className="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/80">
+                      <span className="text-slate-400 font-semibold">Actual Case: </span>
+                      <Link
+                        id="actual-case-link"
+                        to={`/cases/${uploadSuccess.existingCaseId}`}
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800/80 text-cyan-300 hover:text-cyan-200 hover:border-cyan-600 transition-colors"
+                      >
+                        <FolderOpen className="h-3.5 w-3.5 text-cyan-400" />
+                        <span className="font-bold">{uploadSuccess.existingCaseNumber || 'Open Case'}</span>
+                        {uploadSuccess.existingCaseTitle && (
+                          <span className="text-slate-300 font-normal"> — {uploadSuccess.existingCaseTitle}</span>
+                        )}
+                        <ExternalLink className="h-3 w-3 text-cyan-400 ml-0.5" />
+                      </Link>
+                    </div>
+                  )}
+
+                  <div className="sm:col-span-2 break-all text-[10px] pt-1">
+                    <span className="text-cyan-400 font-semibold">SHA-256 Vault Hash: </span>
+                    <span className="text-slate-400 select-all">{uploadSuccess.hash}</span>
+                  </div>
+                </div>
+
+                <div className="pt-2 flex flex-wrap items-center gap-3">
+                  {uploadSuccess.existingCaseId && (
+                    <button
+                      type="button"
+                      id="go-to-actual-case-btn"
+                      onClick={() => navigate(`/cases/${uploadSuccess.existingCaseId}`)}
+                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-md shadow-cyan-600/20 transition-all cursor-pointer"
+                    >
+                      <FolderOpen className="h-4 w-4" />
+                      <span>Go to Actual Case ({uploadSuccess.existingCaseNumber || 'Open Case'})</span>
+                      <ArrowRight className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+
+                  <button
+                    type="button"
+                    id="view-duplicate-evidence-btn"
+                    onClick={() => navigate(`/cases/${uploadSuccess.existingCaseId || caseId}/evidence/${uploadSuccess.evidenceId}`)}
+                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>Inspect Forensic Results Directly</span>
+                  </button>
+                </div>
               </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px] text-slate-300">
-                <div>
-                  <span className="text-slate-400">Filename: </span>
-                  {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
+            ) : (
+              <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/80 text-xs text-emerald-200 space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-emerald-400">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span>Evidence Successfully Preserved in Vault</span>
+                  <span className="ml-auto font-mono text-[11px] bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded">
+                    HTTP 202 ACCEPTED
+                  </span>
                 </div>
-                <div>
-                  <span className="text-slate-400">Initial Pipeline State: </span>
-                  <span className="text-amber-400 font-semibold">{uploadSuccess.status}</span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px] text-slate-300">
+                  <div>
+                    <span className="text-slate-400">Filename: </span>
+                    {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
+                  </div>
+                  <div>
+                    <span className="text-slate-400">Initial Pipeline State: </span>
+                    <span className="text-amber-400 font-semibold">{uploadSuccess.status}</span>
+                  </div>
+                  <div className="sm:col-span-2 break-all bg-slate-950/60 p-2 rounded border border-emerald-900/40">
+                    <span className="text-cyan-400 font-semibold">SHA-256 Vault Hash: </span>
+                    {uploadSuccess.hash}
+                  </div>
                 </div>
-                <div className="sm:col-span-2 break-all bg-slate-950/60 p-2 rounded border border-emerald-900/40">
-                  <span className="text-cyan-400 font-semibold">SHA-256 Vault Hash: </span>
-                  {uploadSuccess.hash}
-                </div>
+                {uploadSuccess.evidenceId && (
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => navigate(`/cases/${caseId}/evidence/${uploadSuccess.evidenceId}`)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-900/40 hover:bg-emerald-800/50 text-emerald-300 border border-emerald-700/50 transition-colors cursor-pointer"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>Inspect Artifact Investigation</span>
+                    </button>
+                  </div>
+                )}
               </div>
-            </div>
+            )
           )}
         </form>
       </section>

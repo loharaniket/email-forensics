@@ -11,8 +11,10 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 import java.util.UUID;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -27,6 +29,9 @@ class EvidenceControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private EmailEvidenceRepository evidenceRepository;
 
     private String authToken;
     private String caseId;
@@ -61,9 +66,11 @@ class EvidenceControllerTest {
 
     @Test
     void shouldUploadEmlEvidenceSuccessfullyAndReturn202() throws Exception {
+        String testRunId = UUID.randomUUID().toString();
         byte[] emlBytes = ("From: alice@test.org\r\n" +
                 "To: bob@test.org\r\n" +
-                "Subject: Test Evidence Email\r\n\r\n" +
+                "Subject: Test Evidence Email\r\n" +
+                "X-Test-Run-Id: " + testRunId + "\r\n\r\n" +
                 "This is the raw content of evidence.").getBytes(StandardCharsets.UTF_8);
 
         MockMultipartFile file = new MockMultipartFile(
@@ -84,6 +91,9 @@ class EvidenceControllerTest {
                 .andExpect(jsonPath("$.sha256Hash").isNotEmpty())
                 .andExpect(jsonPath("$.originalFilename").value("sample-evidence.eml"))
                 .andExpect(jsonPath("$.fileSizeBytes").value(emlBytes.length))
+                .andExpect(jsonPath("$.duplicate").value(false))
+                .andExpect(jsonPath("$.existingCaseId").value(caseId))
+                .andExpect(jsonPath("$.existingCaseTitle").value("Forensic Case Evidence Test"))
                 .andReturn();
 
         String uploadBody = uploadResult.getResponse().getContentAsString();
@@ -170,6 +180,135 @@ class EvidenceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mlModelVersion").value("tribuo-logreg-tfidf-v1.0.0"))
                 .andExpect(jsonPath("$.predictedLabel").isNotEmpty());
+    }
+
+    @Test
+    void shouldDeduplicateIdenticalEmailInSameCaseAndReturnPreviousResults() throws Exception {
+        String testRunId = UUID.randomUUID().toString();
+        byte[] emlBytes = ("From: dedupe-test@domain.com\r\n" +
+                "To: target@victim.org\r\n" +
+                "Subject: Deduplication Test Email\r\n" +
+                "X-Test-Run-Id: " + testRunId + "\r\n\r\n" +
+                "This email content tests exact SHA-256 deduplication.").getBytes(StandardCharsets.UTF_8);
+
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "dedupe-original.eml",
+                "message/rfc822",
+                emlBytes
+        );
+
+        // First upload: should create new evidence
+        MvcResult firstUploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
+                        .file(file1)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.duplicate").value(false))
+                .andExpect(jsonPath("$.emailId").isNotEmpty())
+                .andExpect(jsonPath("$.sha256Hash").isNotEmpty())
+                .andReturn();
+
+        String body1 = firstUploadResult.getResponse().getContentAsString();
+        int idStart = body1.indexOf("\"emailId\":\"") + 11;
+        int idEnd = body1.indexOf("\"", idStart);
+        String initialEmailId = body1.substring(idStart, idEnd);
+
+        int hashStart = body1.indexOf("\"sha256Hash\":\"") + 14;
+        int hashEnd = body1.indexOf("\"", hashStart);
+        String initialHash = body1.substring(hashStart, hashEnd);
+
+        // Second upload with identical bytes: should detect duplicate and return existing evidence
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "dedupe-duplicate-upload.eml",
+                "message/rfc822",
+                emlBytes
+        );
+
+        mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
+                        .file(file2)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.duplicate").value(true))
+                .andExpect(jsonPath("$.emailId").value(initialEmailId))
+                .andExpect(jsonPath("$.sha256Hash").value(initialHash))
+                .andExpect(jsonPath("$.existingCaseId").value(caseId))
+                .andExpect(jsonPath("$.existingCaseTitle").value("Forensic Case Evidence Test"));
+
+        // Verify only 1 record exists in database for this hash
+        List<EmailEvidence> matching = evidenceRepository.findAllBySha256Hash(initialHash);
+        assertThat(matching).hasSize(1);
+        assertThat(matching.get(0).getId().toString()).isEqualTo(initialEmailId);
+    }
+
+    @Test
+    void shouldDeduplicateIdenticalEmailAcrossDifferentCasesGlobally() throws Exception {
+        String testRunId = UUID.randomUUID().toString();
+        byte[] emlBytes = ("From: global-dedupe@domain.com\r\n" +
+                "To: security@company.org\r\n" +
+                "Subject: Cross-Case Global Deduplication Test\r\n" +
+                "X-Test-Run-Id: " + testRunId + "\r\n\r\n" +
+                "Unique content for cross-case deduplication testing.").getBytes(StandardCharsets.UTF_8);
+
+        MockMultipartFile file1 = new MockMultipartFile(
+                "file",
+                "first-case-file.eml",
+                "message/rfc822",
+                emlBytes
+        );
+
+        // Upload in Case 1
+        MvcResult firstUploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
+                        .file(file1)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.duplicate").value(false))
+                .andReturn();
+
+        String body1 = firstUploadResult.getResponse().getContentAsString();
+        int idStart = body1.indexOf("\"emailId\":\"") + 11;
+        int idEnd = body1.indexOf("\"", idStart);
+        String initialEmailId = body1.substring(idStart, idEnd);
+
+        int hashStart = body1.indexOf("\"sha256Hash\":\"") + 14;
+        int hashEnd = body1.indexOf("\"", hashStart);
+        String initialHash = body1.substring(hashStart, hashEnd);
+
+        // Create Case 2
+        String createCase2Json = "{\"title\":\"Second Forensic Case\",\"description\":\"Testing cross case dedupe\"}";
+        MvcResult case2Result = mockMvc.perform(post("/api/v1/cases")
+                        .header("Authorization", "Bearer " + authToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createCase2Json))
+                .andExpect(status().isCreated())
+                .andReturn();
+
+        String case2Body = case2Result.getResponse().getContentAsString();
+        int case2IdStart = case2Body.indexOf("\"id\":\"") + 6;
+        int case2IdEnd = case2Body.indexOf("\"", case2IdStart);
+        String case2Id = case2Body.substring(case2IdStart, case2IdEnd);
+
+        // Upload identical email in Case 2: should return Case 1's evidence and duplicate=true
+        MockMultipartFile file2 = new MockMultipartFile(
+                "file",
+                "second-case-same-file.eml",
+                "message/rfc822",
+                emlBytes
+        );
+
+        mockMvc.perform(multipart("/api/v1/cases/" + case2Id + "/evidence/upload")
+                        .file(file2)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isAccepted())
+                .andExpect(jsonPath("$.duplicate").value(true))
+                .andExpect(jsonPath("$.emailId").value(initialEmailId))
+                .andExpect(jsonPath("$.sha256Hash").value(initialHash))
+                .andExpect(jsonPath("$.existingCaseId").value(caseId))
+                .andExpect(jsonPath("$.existingCaseTitle").value("Forensic Case Evidence Test"));
+
+        // Verify only 1 record exists in the database
+        List<EmailEvidence> matching = evidenceRepository.findAllBySha256Hash(initialHash);
+        assertThat(matching).hasSize(1);
     }
 
     @Test

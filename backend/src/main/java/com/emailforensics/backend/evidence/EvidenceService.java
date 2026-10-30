@@ -92,46 +92,97 @@ public class EvidenceService {
             throw new IllegalStateException("Failed to read uploaded file stream", e);
         }
 
-        EmailEvidence evidence = new EmailEvidence(
-                UUID.randomUUID(),
-                caseFile,
-                sanitizedFilename,
-                stored.getStorageKey(),
-                stored.getFileSizeBytes(),
-                stored.getSha256Hash(),
-                uploader
-        );
+        // Global Deduplication:
+        // If an email with the identical SHA-256 hash has already been preserved anywhere in the system,
+        // do not store duplicate vault files or duplicate database records.
+        // Instead, reuse and return the existing evidence and its forensic analysis results along with the actual case link.
+        synchronized (stored.getSha256Hash().intern()) {
+            Optional<EmailEvidence> existingEvidenceOpt = evidenceRepository
+                    .findFirstBySha256HashOrderByUploadedAtAsc(stored.getSha256Hash());
 
-        try (InputStream streamForParse = storageService.loadAsResource(stored.getStorageKey()).getInputStream()) {
-            ParsedEmailDto parsed = emailParserService.parse(streamForParse);
-            if (parsed.getSubject() != null) evidence.setSubject(parsed.getSubject());
-            if (parsed.getMessageId() != null) evidence.setMessageId(parsed.getMessageId());
-            if (parsed.getSentDate() != null) evidence.setSentDate(parsed.getSentDate());
-        } catch (Exception ignored) {
+            if (existingEvidenceOpt.isPresent()) {
+                // Delete the redundant newly stored file to prevent disk bloat
+                storageService.deleteStoredFile(stored.getStorageKey());
+
+                EmailEvidence existing = existingEvidenceOpt.get();
+                AnalysisRun existingRun = analysisRunRepository
+                        .findTopByEmailEvidenceIdOrderByCreatedAtDesc(existing.getId())
+                        .orElse(null);
+
+                String status = existingRun != null ? existingRun.getStatus().name() : AnalysisStatus.COMPLETED.name();
+                UUID runId = existingRun != null ? existingRun.getId() : null;
+                String statusUrl = "/api/v1/evidence/" + existing.getId() + "/status";
+
+                UUID existingCaseId = existing.getCaseFile() != null ? existing.getCaseFile().getId() : null;
+                String existingCaseNumber = existing.getCaseFile() != null ? existing.getCaseFile().getCaseNumber() : "Unknown";
+                String existingCaseTitle = existing.getCaseFile() != null ? existing.getCaseFile().getTitle() : null;
+
+                String deduplicationMsg = (existingCaseId != null && existingCaseId.equals(caseId))
+                        ? "Duplicate email evidence detected with identical SHA-256 hash in this case. Reusing existing evidence and forensic analysis results."
+                        : "Duplicate email evidence detected globally in Case " + existingCaseNumber + " with identical SHA-256 hash. Reusing existing evidence and forensic analysis results.";
+
+                return new EvidenceUploadResponse(
+                        existing.getId(),
+                        runId,
+                        status,
+                        statusUrl,
+                        existing.getSha256Hash(),
+                        existing.getOriginalFilename(),
+                        existing.getFileSizeBytes(),
+                        true,
+                        existingCaseId,
+                        existingCaseNumber,
+                        existingCaseTitle,
+                        deduplicationMsg
+                );
+            }
+
+            EmailEvidence evidence = new EmailEvidence(
+                    UUID.randomUUID(),
+                    caseFile,
+                    sanitizedFilename,
+                    stored.getStorageKey(),
+                    stored.getFileSizeBytes(),
+                    stored.getSha256Hash(),
+                    uploader
+            );
+
+            try (InputStream streamForParse = storageService.loadAsResource(stored.getStorageKey()).getInputStream()) {
+                ParsedEmailDto parsed = emailParserService.parse(streamForParse);
+                if (parsed.getSubject() != null) evidence.setSubject(parsed.getSubject());
+                if (parsed.getMessageId() != null) evidence.setMessageId(parsed.getMessageId());
+                if (parsed.getSentDate() != null) evidence.setSentDate(parsed.getSentDate());
+            } catch (Exception ignored) {
+            }
+
+            evidence = evidenceRepository.save(evidence);
+
+            AnalysisRun run = new AnalysisRun(
+                    UUID.randomUUID(),
+                    evidence,
+                    pipelineVersion,
+                    AnalysisStatus.QUEUED,
+                    "QUEUED"
+            );
+            run = analysisRunRepository.save(run);
+
+            String statusUrl = "/api/v1/evidence/" + evidence.getId() + "/status";
+
+            return new EvidenceUploadResponse(
+                    evidence.getId(),
+                    run.getId(),
+                    run.getStatus().name(),
+                    statusUrl,
+                    evidence.getSha256Hash(),
+                    evidence.getOriginalFilename(),
+                    evidence.getFileSizeBytes(),
+                    false,
+                    caseFile.getId(),
+                    caseFile.getCaseNumber(),
+                    caseFile.getTitle(),
+                    "Evidence preserved and queued for forensic analysis."
+            );
         }
-
-        evidence = evidenceRepository.save(evidence);
-
-        AnalysisRun run = new AnalysisRun(
-                UUID.randomUUID(),
-                evidence,
-                pipelineVersion,
-                AnalysisStatus.QUEUED,
-                "QUEUED"
-        );
-        run = analysisRunRepository.save(run);
-
-        String statusUrl = "/api/v1/evidence/" + evidence.getId() + "/status";
-
-        return new EvidenceUploadResponse(
-                evidence.getId(),
-                run.getId(),
-                run.getStatus().name(),
-                statusUrl,
-                evidence.getSha256Hash(),
-                evidence.getOriginalFilename(),
-                evidence.getFileSizeBytes()
-        );
     }
 
     @Transactional(readOnly = true)
