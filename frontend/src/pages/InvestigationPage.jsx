@@ -12,14 +12,12 @@ import {
   getEvidenceContentAnalysis,
   getEvidenceRiskBreakdown,
   getEvidenceCorrelations,
-  getEvidenceGraph,
   getEvidenceAiAssessment,
   generateEvidenceAiAssessment,
   downloadOriginalEvidence,
   checkEvidenceIntegrity
 } from '../api/evidence'
 import { getEvidenceReport, downloadEvidenceReportJson } from '../api/report'
-import ThreatGraphCanvas from '../components/ThreatGraphCanvas'
 import {
   ArrowLeft,
   Mail,
@@ -53,7 +51,6 @@ import {
   Cpu,
   Sparkles,
   Flame,
-  Share2,
   Tag,
   RefreshCw,
   Printer,
@@ -77,7 +74,6 @@ export default function InvestigationPage() {
   const [contentAnalysis, setContentAnalysis] = useState(null)
   const [riskBreakdown, setRiskBreakdown] = useState(null)
   const [correlations, setCorrelations] = useState([])
-  const [evidenceGraph, setEvidenceGraph] = useState({ nodes: [], links: [] })
   const [correlationSearch, setCorrelationSearch] = useState('')
   const [correlationStrengthFilter, setCorrelationStrengthFilter] = useState('ALL')
   const [correlationTypeFilter, setCorrelationTypeFilter] = useState('ALL')
@@ -120,7 +116,6 @@ export default function InvestigationPage() {
         contentData,
         riskData,
         correlationsData,
-        graphData,
         aiData,
         reportResult
       ] = await Promise.all([
@@ -133,7 +128,6 @@ export default function InvestigationPage() {
         getEvidenceContentAnalysis(emailId).catch(() => null),
         getEvidenceRiskBreakdown(emailId).catch(() => null),
         getEvidenceCorrelations(emailId).catch(() => []),
-        getEvidenceGraph(emailId).catch(() => ({ nodes: [], links: [] })),
         getEvidenceAiAssessment(emailId).catch(() => null),
         getEvidenceReport(emailId).catch(() => null)
       ])
@@ -146,7 +140,6 @@ export default function InvestigationPage() {
       setContentAnalysis(contentData)
       setRiskBreakdown(riskData)
       setCorrelations(correlationsData || [])
-      setEvidenceGraph(graphData || { nodes: [], links: [] })
       setAiAssessment(aiData)
       setReportData(reportResult)
     } catch (err) {
@@ -406,7 +399,11 @@ export default function InvestigationPage() {
 
     const matchesType =
       correlationTypeFilter === 'ALL' ||
-      (c.indicatorType && c.indicatorType.toUpperCase() === correlationTypeFilter.toUpperCase())
+      (c.indicatorType && (
+        c.indicatorType.toUpperCase() === correlationTypeFilter.toUpperCase() ||
+        (correlationTypeFilter === 'IP_ADDRESS' && c.indicatorType.toUpperCase() === 'IP') ||
+        (correlationTypeFilter === 'IP' && c.indicatorType.toUpperCase() === 'IP_ADDRESS')
+      ))
 
     return matchesSearch && matchesStrength && matchesType
   })
@@ -758,7 +755,7 @@ export default function InvestigationPage() {
                 }`}
               >
                 <Flame className="h-3.5 w-3.5 text-amber-400" />
-                <span>Correlations &amp; Graph</span>
+                <span>Historical Correlations</span>
                 {correlations.length > 0 && (
                   <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-amber-900/80 text-amber-300 border border-amber-700">
                     {correlations.length}
@@ -3203,30 +3200,18 @@ export default function InvestigationPage() {
 
             {activeTab === 'correlations' && (
               <div className="space-y-6">
-
-                <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-4">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-800/70 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Share2 className="h-4 w-4 text-cyan-400" />
-                      <h3 className="text-sm font-semibold text-white">
-                        Evidence Threat &amp; Infrastructure Graph
-                      </h3>
-                    </div>
-                    <span className="text-xs font-mono text-slate-400">
-                      {evidenceGraph?.nodes?.length || 0} nodes · {evidenceGraph?.links?.length || 0} links
-                    </span>
-                  </div>
-
-                  <ThreatGraphCanvas graphData={evidenceGraph} height="500px" />
-                </div>
-
                 <div className="p-5 rounded-2xl bg-slate-900/40 border border-slate-800 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-800/70 pb-3">
-                    <div className="flex items-center gap-2">
-                      <Flame className="h-4 w-4 text-amber-400" />
-                      <h3 className="text-sm font-semibold text-white">
-                        Historical Prior Evidence Matches ({correlations.length})
-                      </h3>
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <Flame className="h-4 w-4 text-amber-400" />
+                        <h3 className="text-sm font-semibold text-white">
+                          Historical Prior Evidence Matches ({correlations.length})
+                        </h3>
+                      </div>
+                      <p className="text-xs text-slate-400">
+                        Cross-investigation indicator correlation matching identical email hashes, attachment payloads, URLs, destination domains, transit IPs, and sender identities.
+                      </p>
                     </div>
 
                     <div className="flex flex-wrap items-center gap-2">
@@ -3261,12 +3246,13 @@ export default function InvestigationPage() {
                         className="bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 focus:outline-none focus:border-cyan-500 cursor-pointer"
                       >
                         <option value="ALL">All Indicator Types</option>
+                        <option value="EMAIL_HASH">Email Hash</option>
                         <option value="ATTACHMENT_HASH">Attachment Hash</option>
                         <option value="URL">URL</option>
                         <option value="DOMAIN">Domain</option>
-                        <option value="IP">IP Address</option>
-                        <option value="QR_PAYLOAD">QR Code Payload</option>
+                        <option value="IP_ADDRESS">IP Address</option>
                         <option value="SENDER_DOMAIN">Sender Domain</option>
+                        <option value="QR_PAYLOAD">QR Code Payload</option>
                       </select>
                     </div>
                   </div>
@@ -3294,7 +3280,17 @@ export default function InvestigationPage() {
                           filteredCorrelations.map((match) => (
                             <tr key={match.id} className="hover:bg-slate-800/30 transition-colors">
                               <td className="py-3.5 px-4">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-slate-800 text-cyan-300 border border-slate-700">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                                    match.indicatorType === 'EMAIL_HASH' || match.indicatorType === 'ATTACHMENT_HASH'
+                                      ? 'bg-purple-950 text-purple-300 border-purple-800'
+                                      : match.indicatorType === 'IP_ADDRESS' || match.indicatorType === 'IP'
+                                      ? 'bg-rose-950 text-rose-300 border-rose-800'
+                                      : match.indicatorType === 'URL' || match.indicatorType === 'QR_PAYLOAD'
+                                      ? 'bg-cyan-950 text-cyan-300 border-cyan-800'
+                                      : 'bg-amber-950 text-amber-300 border-amber-800'
+                                  }`}
+                                >
                                   {match.indicatorType}
                                 </span>
                               </td>

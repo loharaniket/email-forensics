@@ -14,7 +14,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 - **Visual Artifacts & Quishing Defense:** Embedded image extraction and QR code detection/payload decoding via ZXing.
 - **Content NLP & Prompt Injection Firewall:** Tribuo ML machine learning baseline classification, rule-based social engineering cue detection (urgency, credential harvesting, extortion, impersonation), and proactive prompt injection defense against LLM hijacking.
 - **Explainable Deterministic Risk Scoring:** Rule-based scoring engine (0–100) with confidence calibration, weighted severity multipliers, and clear audit breakdowns.
-- **Historical Threat Correlation & Graph Engine:** Graph-based indicator linking (senders, domains, hashes, IPs), and interactive force-directed Threat Graph canvas.
+- **Historical Threat Correlation Engine:** Multi-dimensional indicator linking (senders, domains, hashes, IPs) across historical investigations with structured, searchable table presentation.
 - **Grounded AI Forensic Intelligence:** Hallucination-shielded LLM synthesis generating grounded technical narratives, Mitre ATT&CK technique mapping, and strict citation validation.
 - **Court-Ready Forensic Dossier & Reporting:** Multi-format report generation (interactive UI, clean JSON API, and high-contrast `@media print` PDF layout with analyst sign-off and chain of custody certification).
 
@@ -35,7 +35,7 @@ An enterprise-grade, academic-caliber digital forensics and threat intelligence 
 | **Frontend Framework** | React | 19.x (JSX, No TS) | Reactive component UI |
 | **Build & Bundler** | Vite | 8.x | Lightning-fast development & production bundling |
 | **Styling** | Tailwind CSS | 4.x & Vanilla CSS | Slate/cyan dark theme & print stylesheets |
-| **Icons & Graphs** | Lucide React & Canvas | Latest | Responsive iconography & custom HTML5 canvas graph |
+| **Icons & UI** | Lucide React | Latest | Responsive iconography & modern Tailwind DFIR interface |
 
 ---
 
@@ -137,7 +137,7 @@ Follow these steps for a complete demonstration of the system:
    - **Visuals & QR Tab (`#tab-visuals`):** View extracted visual artifacts and decoded QR payloads.
    - **Content & ML Tab (`#tab-content`):** Review Tribuo ML classification, social engineering indicators, and Adversarial Injection Defense alerts.
    - **Risk Scoring Tab (`#tab-risk`):** Audit the explainable deterministic risk factors table with weight contributions.
-   - **Correlations & Graph Tab (`#tab-correlations`):** Review cross-case correlations and click nodes on the interactive Threat Graph canvas.
+   - **Historical Correlations Tab (`#tab-correlations`):** Review cross-case correlations in a structured table filtered by match strength and indicator type.
    - **AI Grounded Assessment Tab (`#tab-ai`):** View the hallucination-shielded technical narrative and verified Mitre ATT&CK citations.
 5. **Generate & Export Court-Ready Dossier:**
    - Click the **"Forensic Dossier Report"** tab (`#tab-report`).

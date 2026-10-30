@@ -98,11 +98,6 @@ export const getEvidenceCorrelations = async (emailId) => {
   return response.data;
 };
 
-export const getEvidenceGraph = async (emailId) => {
-  const response = await client.get(`/graph/evidence/${emailId}`);
-  return response.data;
-};
-
 export const getEvidenceAiAssessment = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/ai-assessment`);
   return response.data;

@@ -6,7 +6,6 @@ import LoginPage from './pages/LoginPage'
 import CasesPage from './pages/CasesPage'
 import CaseDetailPage from './pages/CaseDetailPage'
 import InvestigationPage from './pages/InvestigationPage'
-import GlobalGraphPage from './pages/GlobalGraphPage'
 import HealthPage from './pages/HealthPage'
 
 export default function App() {
@@ -36,14 +35,6 @@ export default function App() {
             element={
               <ProtectedRoute>
                 <InvestigationPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/graph"
-            element={
-              <ProtectedRoute>
-                <GlobalGraphPage />
               </ProtectedRoute>
             }
           />
