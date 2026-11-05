@@ -109,3 +109,8 @@ export const generateEvidenceAiAssessment = async (emailId, forceRegenerate = tr
   });
   return response.data;
 };
+
+export const retryEvidenceAnalysis = async (emailId) => {
+  const response = await client.post(`/evidence/${emailId}/retry`);
+  return response.data;
+};

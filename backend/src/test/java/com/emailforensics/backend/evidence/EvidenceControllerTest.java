@@ -101,12 +101,23 @@ class EvidenceControllerTest {
         int emailIdEnd = uploadBody.indexOf("\"", emailIdStart);
         String emailId = uploadBody.substring(emailIdStart, emailIdEnd);
 
+        // Await background forensic pipeline completion
+        long deadline = System.currentTimeMillis() + 8000;
+        while (System.currentTimeMillis() < deadline) {
+            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")
+                            .header("Authorization", "Bearer " + authToken))
+                    .andReturn();
+            if (res.getResponse().getContentAsString().contains("\"status\":\"COMPLETED\"")) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+
         mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.emailId").value(emailId))
-                .andExpect(jsonPath("$.status").value("QUEUED"))
-                .andExpect(jsonPath("$.currentStage").value("QUEUED"));
+                .andExpect(jsonPath("$.status").value("COMPLETED"));
 
         mockMvc.perform(get("/api/v1/evidence/" + emailId + "/integrity")
                         .header("Authorization", "Bearer " + authToken))
@@ -121,7 +132,7 @@ class EvidenceControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.emailId").value(emailId))
                 .andExpect(jsonPath("$.originalFilename").value("sample-evidence.eml"))
-                .andExpect(jsonPath("$.processingStatus").value("QUEUED"));
+                .andExpect(jsonPath("$.processingStatus").value("COMPLETED"));
 
         mockMvc.perform(get("/api/v1/cases/" + caseId + "/evidence")
                         .header("Authorization", "Bearer " + authToken))
@@ -367,5 +378,52 @@ class EvidenceControllerTest {
         mockMvc.perform(get("/api/v1/cases/" + caseId + "/evidence"))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
+    }
+
+    @Test
+    void shouldRetryAnalysisSuccessfully() throws Exception {
+        String testRunId = UUID.randomUUID().toString();
+        byte[] emlBytes = ("From: retry-test@victim.org\r\n" +
+                "To: analyst@security.org\r\n" +
+                "Subject: Retry Pipeline Analysis Test\r\n" +
+                "X-Test-Run-Id: " + testRunId + "\r\n\r\n" +
+                "Testing retry orchestration endpoint.").getBytes(StandardCharsets.UTF_8);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "retry-sample.eml",
+                "message/rfc822",
+                emlBytes
+        );
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
+                        .file(file)
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isAccepted())
+                .andReturn();
+
+        String uploadBody = uploadResult.getResponse().getContentAsString();
+        int emailIdStart = uploadBody.indexOf("\"emailId\":\"") + 11;
+        int emailIdEnd = uploadBody.indexOf("\"", emailIdStart);
+        String emailId = uploadBody.substring(emailIdStart, emailIdEnd);
+
+        // Wait for initial run to complete
+        long deadline = System.currentTimeMillis() + 8000;
+        while (System.currentTimeMillis() < deadline) {
+            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")
+                            .header("Authorization", "Bearer " + authToken))
+                    .andReturn();
+            if (res.getResponse().getContentAsString().contains("\"status\":\"COMPLETED\"")) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+
+        // Trigger retry
+        mockMvc.perform(post("/api/v1/evidence/" + emailId + "/retry")
+                        .header("Authorization", "Bearer " + authToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.emailId").value(emailId))
+                .andExpect(jsonPath("$.attemptNumber").value(2));
     }
 }

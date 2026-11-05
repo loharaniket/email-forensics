@@ -62,13 +62,10 @@ public class CorrelationService {
         this.evidenceService = evidenceService;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<CorrelationMatchDto> getCorrelations(UUID emailId) {
         List<HistoricalMatch> existing = matchRepository.findBySourceEmailId(emailId);
-        if (!existing.isEmpty()) {
-            return mapMatchesToDto(existing);
-        }
-        return correlateAndSave(emailId);
+        return mapMatchesToDto(existing);
     }
 
     @Transactional
@@ -78,6 +75,8 @@ public class CorrelationService {
 
         AnalysisRun sourceRun = runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Analysis run not found for evidence: " + emailId));
+
+        matchRepository.deleteBySourceRunId(sourceRun.getId());
 
         List<ExtractedUrl> sourceUrls = urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
         List<IpArtifact> sourceIps = ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());

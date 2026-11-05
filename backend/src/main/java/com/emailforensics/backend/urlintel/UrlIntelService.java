@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -144,19 +145,15 @@ public class UrlIntelService {
         return toDtoList(entitiesToSave);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ExtractedUrlDto> getExtractedUrls(UUID emailId) {
-        EmailEvidence evidence = evidenceRepository.findById(emailId)
-                .orElseThrow(() -> new IllegalArgumentException("Evidence not found: " + emailId));
-
         AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
-                .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
-
-        List<ExtractedUrl> list = extractedUrlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
-        if (list.isEmpty()) {
-            return analyzeAndSaveUrls(emailId);
+                .orElse(null);
+        if (run == null) {
+            return Collections.emptyList();
         }
 
+        List<ExtractedUrl> list = extractedUrlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         return toDtoList(list);
     }
 

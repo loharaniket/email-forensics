@@ -188,9 +188,6 @@ public class RiskScoringService {
 
         riskAssessmentRepository.save(assessment);
 
-        run.setCurrentStage("RISK_EVALUATED");
-        analysisRunRepository.save(run);
-
         List<RiskCategoryScoreDto> categoryScoreDtos = buildCategoryScoreDtos(categoryScores, categoryCounts);
         List<RiskFactorDto> factorDtos = toFactorDtos(savedFactors);
 
@@ -209,17 +206,17 @@ public class RiskScoringService {
         );
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public RiskBreakdownDto getRiskBreakdown(UUID emailId) {
-        EmailEvidence evidence = evidenceRepository.findById(emailId)
-                .orElseThrow(() -> new ResourceNotFoundException("Evidence not found: " + emailId));
-
         AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
-                .orElseThrow(() -> new ResourceNotFoundException("No analysis run found for evidence: " + emailId));
+                .orElse(null);
+        if (run == null) {
+            return null;
+        }
 
         Optional<RiskAssessment> assessmentOpt = riskAssessmentRepository.findByAnalysisRunId(run.getId());
         if (assessmentOpt.isEmpty()) {
-            return evaluateAndSaveRisk(emailId);
+            return null;
         }
 
         RiskAssessment assessment = assessmentOpt.get();

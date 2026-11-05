@@ -44,19 +44,10 @@ public class AiAssessmentService {
         this.validator = validator;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public AiAssessmentDto getLatestAssessment(UUID emailId) {
         Optional<AiGroundedAssessment> opt = assessmentRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId);
-        if (opt.isPresent()) {
-            return mapToDto(opt.get());
-        }
-        synchronized (emailId.toString().intern()) {
-            Optional<AiGroundedAssessment> doubleCheck = assessmentRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId);
-            if (doubleCheck.isPresent()) {
-                return mapToDto(doubleCheck.get());
-            }
-            return generateAssessment(emailId, false, null);
-        }
+        return opt.map(this::mapToDto).orElse(null);
     }
 
     @Transactional

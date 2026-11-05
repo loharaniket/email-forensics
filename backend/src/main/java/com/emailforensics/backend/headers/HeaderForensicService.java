@@ -186,12 +186,6 @@ public class HeaderForensicService {
             }
         }
 
-        run.setCurrentStage("HEADERS_ANALYZED");
-        if (run.getStatus() == AnalysisStatus.QUEUED) {
-            run.setStatus(AnalysisStatus.COMPLETED);
-        }
-        analysisRunRepository.save(run);
-
         dto.setSpfResult(dto.getSpfResult());
         dto.setDkimResult(dto.getDkimResult());
         dto.setDmarcResult(dto.getDmarcResult());
@@ -199,159 +193,79 @@ public class HeaderForensicService {
         }
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public HeaderAnalysisDto getHeaderAnalysis(UUID emailId) {
-        synchronized (emailId.toString().intern()) {
-            EmailEvidence evidence = evidenceRepository.findById(emailId)
-                    .orElseThrow(() -> new IllegalArgumentException("Evidence not found: " + emailId));
-
-            AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
-                    .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
-
-            HeaderAnalysis entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
-            if (entity == null) {
-                return analyzeAndSaveHeaders(emailId);
-            }
-
-            List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
-            List<String> flags = parseFlagsJson(entity.getIdentityMismatchFlags());
-            Map<String, List<String>> rawMap = parseRawHeadersJson(entity.getRawHeadersJson());
-
-            String verificationNote = "Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported by receiving server headers in the original message. They are not independently verified in offline state.";
-
-            HeaderAnalysisDto dto = new HeaderAnalysisDto(
-                    run.getId(),
-                    entity.getFromAddress(),
-                    entity.getFromDomain(),
-                    entity.getReplyTo(),
-                    entity.getReturnPath(),
-                    entity.getDkimDomain(),
-                    entity.getReportedSpf(),
-                    entity.getReportedDkim(),
-                    entity.getReportedDmarc(),
-                    entity.getReportedArc(),
-                    flags,
-                    verificationNote,
-                    rawMap,
-                    hops.size()
-            );
-
-            if (entity.getCurrentDnsObservation() != null && !entity.getCurrentDnsObservation().isBlank()) {
-                populateActiveAuthFromObservation(dto, entity.getCurrentDnsObservation(), entity.getIndependentVerification());
-            } else if (activeEmailAuthService != null) {
-                List<ReceivedHopDto> hopDtos = new ArrayList<>();
-                for (ReceivedHop h : hops) {
-                    hopDtos.add(new ReceivedHopDto(
-                            h.getId(),
-                            h.getHopOrder(),
-                            h.getFromHost(),
-                            h.getByHost(),
-                            h.getProtocol(),
-                            h.getHopIp(),
-                            h.getHopTimestamp(),
-                            h.getDelaySeconds(),
-                            h.getRawHopLine(),
-                            h.getParsingWarning()
-                    ));
-                }
-                String dkimHeader = null;
-                if (rawMap != null && rawMap.containsKey("DKIM-Signature")) {
-                    List<String> dkimVals = rawMap.get("DKIM-Signature");
-                    if (dkimVals != null && !dkimVals.isEmpty()) {
-                        dkimHeader = dkimVals.get(0);
-                    }
-                }
-                try {
-                    String returnPathDomain = extractDomain(entity.getReturnPath());
-                    ActiveEmailAuthService.ActiveAuthResult activeResult = activeEmailAuthService.performActiveAuthentication(
-                            entity.getFromDomain(), returnPathDomain, dkimHeader, hopDtos
-                    );
-                    dto.setActiveSpfResult(activeResult.getActiveSpfResult());
-                    dto.setActiveSpfRecord(activeResult.getActiveSpfRecord());
-                    dto.setActiveSpfRelayIp(activeResult.getActiveSpfRelayIp());
-                    dto.setActiveDkimStatus(activeResult.getActiveDkimStatus());
-                    dto.setActiveDkimRecord(activeResult.getActiveDkimRecord());
-                    dto.setActiveDkimSelector(activeResult.getActiveDkimSelector());
-                    dto.setActiveDmarcStatus(activeResult.getActiveDmarcStatus());
-                    dto.setActiveDmarcPolicy(activeResult.getActiveDmarcPolicy());
-                    dto.setActiveVerificationSummary(activeResult.getSummary());
-                    dto.setDataMode(activeResult.getDataMode());
-
-                    entity.setIndependentVerification(activeResult.getSummary());
-                    entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
-                    headerAnalysisRepository.save(entity);
-                    headerAnalysisRepository.flush();
-                } catch (Throwable ignored) {
-                }
-            }
-
-            dto.setSpfResult(dto.getSpfResult());
-            dto.setDkimResult(dto.getDkimResult());
-            dto.setDmarcResult(dto.getDmarcResult());
-            return dto;
+        AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
+                .orElse(null);
+        if (run == null) {
+            return null;
         }
+
+        HeaderAnalysis entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
+        if (entity == null) {
+            return null;
+        }
+
+        List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
+        List<String> flags = parseFlagsJson(entity.getIdentityMismatchFlags());
+        Map<String, List<String>> rawMap = parseRawHeadersJson(entity.getRawHeadersJson());
+
+        String verificationNote = "Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported by receiving server headers in the original message. They are not independently verified in offline state.";
+
+        HeaderAnalysisDto dto = new HeaderAnalysisDto(
+                run.getId(),
+                entity.getFromAddress(),
+                entity.getFromDomain(),
+                entity.getReplyTo(),
+                entity.getReturnPath(),
+                entity.getDkimDomain(),
+                entity.getReportedSpf(),
+                entity.getReportedDkim(),
+                entity.getReportedDmarc(),
+                entity.getReportedArc(),
+                flags,
+                verificationNote,
+                rawMap,
+                hops.size()
+        );
+
+        if (entity.getCurrentDnsObservation() != null && !entity.getCurrentDnsObservation().isBlank()) {
+            populateActiveAuthFromObservation(dto, entity.getCurrentDnsObservation(), entity.getIndependentVerification());
+        } else if (entity.getIndependentVerification() != null) {
+            dto.setActiveVerificationSummary(entity.getIndependentVerification());
+        }
+
+        dto.setSpfResult(dto.getSpfResult());
+        dto.setDkimResult(dto.getDkimResult());
+        dto.setDmarcResult(dto.getDmarcResult());
+        return dto;
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<ReceivedHopDto> getReceivedHops(UUID emailId) {
-        synchronized (emailId.toString().intern()) {
-            EmailEvidence evidence = evidenceRepository.findById(emailId)
-                    .orElseThrow(() -> new IllegalArgumentException("Evidence not found: " + emailId));
-
-            AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
-                    .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
-
-            List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
-            if (hops.isEmpty()) {
-                HeaderAnalysis existing = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
-                if (existing == null) {
-                    analyzeAndSaveHeaders(emailId);
-                } else {
-                    List<ReceivedHopDto> extractedHops = extractHopsFromStream(evidence.getStorageKey());
-                    for (ReceivedHopDto hopDto : extractedHops) {
-                        ReceivedHop hopEntity = new ReceivedHop(
-                                UUID.randomUUID(),
-                                run,
-                                hopDto.getHopOrder(),
-                                hopDto.getFromHost(),
-                                hopDto.getByHost(),
-                                hopDto.getProtocol(),
-                                hopDto.getHopIp(),
-                                hopDto.getHopTimestamp(),
-                                hopDto.getDelaySeconds(),
-                                hopDto.getRawHopLine(),
-                                hopDto.getParsingWarning()
-                        );
-                        try {
-                            receivedHopRepository.save(hopEntity);
-                        } catch (Exception ignored) {
-                        }
-                    }
-                    try {
-                        receivedHopRepository.flush();
-                    } catch (Exception ignored) {
-                    }
-                }
-                hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
-            }
-
-            List<ReceivedHopDto> dtos = new ArrayList<>();
-            for (ReceivedHop hop : hops) {
-                dtos.add(new ReceivedHopDto(
-                        hop.getId(),
-                        hop.getHopOrder(),
-                        hop.getFromHost(),
-                        hop.getByHost(),
-                        hop.getProtocol(),
-                        hop.getHopIp(),
-                        hop.getHopTimestamp(),
-                        hop.getDelaySeconds(),
-                        hop.getRawHopLine(),
-                        hop.getParsingWarning()
-                ));
-            }
-            return dtos;
+        AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
+                .orElse(null);
+        if (run == null) {
+            return Collections.emptyList();
         }
+
+        List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
+        List<ReceivedHopDto> dtos = new ArrayList<>();
+        for (ReceivedHop hop : hops) {
+            dtos.add(new ReceivedHopDto(
+                    hop.getId(),
+                    hop.getHopOrder(),
+                    hop.getFromHost(),
+                    hop.getByHost(),
+                    hop.getProtocol(),
+                    hop.getHopIp(),
+                    hop.getHopTimestamp(),
+                    hop.getDelaySeconds(),
+                    hop.getRawHopLine(),
+                    hop.getParsingWarning()
+            ));
+        }
+        return dtos;
     }
 
     public HeaderAnalysisDto analyzeStream(String storageKey) {

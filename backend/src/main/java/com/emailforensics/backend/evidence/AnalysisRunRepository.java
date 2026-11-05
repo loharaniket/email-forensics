@@ -13,4 +13,6 @@ public interface AnalysisRunRepository extends JpaRepository<AnalysisRun, UUID> 
     Optional<AnalysisRun> findTopByEmailEvidenceIdOrderByCreatedAtDesc(UUID emailId);
 
     List<AnalysisRun> findByEmailEvidenceIdOrderByCreatedAtDesc(UUID emailId);
+
+    List<AnalysisRun> findByStatus(AnalysisStatus status);
 }

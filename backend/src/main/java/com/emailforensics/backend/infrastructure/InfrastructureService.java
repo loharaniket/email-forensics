@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -109,19 +110,15 @@ public class InfrastructureService {
         return mapToDto(all);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<IpArtifactDto> getInfrastructure(UUID emailId) {
-        EmailEvidence evidence = evidenceRepository.findById(emailId)
-                .orElseThrow(() -> new IllegalArgumentException("Evidence not found: " + emailId));
-
         AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
-                .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
-
-        List<IpArtifact> list = ipArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
-        if (list.isEmpty()) {
-            return analyzeAndSaveInfrastructure(emailId, null);
+                .orElse(null);
+        if (run == null) {
+            return Collections.emptyList();
         }
 
+        List<IpArtifact> list = ipArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         return mapToDto(list);
     }
 

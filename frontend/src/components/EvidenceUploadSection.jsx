@@ -123,15 +123,29 @@ export default function EvidenceUploadSection({ caseId }) {
   }
 
   const handleUpload = async (e) => {
-    e.preventDefault()
-    if (!selectedFile) return
+    if (e && e.preventDefault) e.preventDefault()
+    console.log('[DEBUG UPLOAD] handleUpload clicked, selectedFile:', selectedFile)
+    if (!selectedFile) {
+      console.warn('[DEBUG UPLOAD] No selectedFile in state! Checking input element directly...')
+      const inputEl = document.getElementById('evidence-file-input')
+      if (inputEl && inputEl.files && inputEl.files[0]) {
+        console.log('[DEBUG UPLOAD] Recovered file directly from input:', inputEl.files[0].name)
+        return proceedWithUpload(inputEl.files[0])
+      }
+      return
+    }
+    return proceedWithUpload(selectedFile)
+  }
 
+  const proceedWithUpload = async (fileToUpload) => {
     setIsUploading(true)
     setUploadError(null)
     setUploadSuccess(null)
 
     try {
-      const response = await uploadEvidence(caseId, selectedFile)
+      console.log('[DEBUG UPLOAD] Calling uploadEvidence with caseId:', caseId, 'file:', fileToUpload.name)
+      const response = await uploadEvidence(caseId, fileToUpload)
+      console.log('[DEBUG UPLOAD] Upload response received:', response)
       setUploadSuccess({
         filename: response.originalFilename,
         hash: response.sha256Hash,
@@ -271,8 +285,9 @@ export default function EvidenceUploadSection({ caseId }) {
 
             <button
               id="upload-evidence-btn"
-              type="submit"
-              disabled={!selectedFile || isUploading}
+              type="button"
+              onClick={handleUpload}
+              disabled={isUploading}
               className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
             >
               {isUploading ? (
@@ -404,6 +419,7 @@ export default function EvidenceUploadSection({ caseId }) {
                 {uploadSuccess.evidenceId && (
                   <div className="pt-1">
                     <button
+                      id="inspect-uploaded-evidence-btn"
                       type="button"
                       onClick={() => navigate(`/cases/${caseId}/evidence/${uploadSuccess.evidenceId}`)}
                       className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-900/40 hover:bg-emerald-800/50 text-emerald-300 border border-emerald-700/50 transition-colors cursor-pointer"

@@ -26,6 +26,7 @@ import java.io.InputStream;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HexFormat;
 import java.util.List;
 import java.util.Properties;
@@ -154,19 +155,15 @@ public class VisualAnalysisService {
         return toDtoList(savedList);
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public List<VisualArtifactDto> getVisualArtifacts(UUID emailId) {
-        EmailEvidence evidence = evidenceRepository.findById(emailId)
-                .orElseThrow(() -> new IllegalArgumentException("Evidence not found: " + emailId));
-
         AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
-                .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
-
-        List<VisualArtifact> list = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
-        if (list.isEmpty()) {
-            return analyzeAndSaveVisuals(emailId);
+                .orElse(null);
+        if (run == null) {
+            return Collections.emptyList();
         }
 
+        List<VisualArtifact> list = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         return toDtoList(list);
     }
 

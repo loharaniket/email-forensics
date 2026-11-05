@@ -43,6 +43,7 @@ public class EvidenceService {
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
     private final com.emailforensics.backend.risk.RiskAssessmentRepository riskAssessmentRepository;
+    private final AnalysisOrchestratorService orchestrator;
     private final String pipelineVersion;
 
     public EvidenceService(EmailEvidenceRepository evidenceRepository,
@@ -52,6 +53,7 @@ public class EvidenceService {
                            EvidenceStorageService storageService,
                            EmailParserService emailParserService,
                            com.emailforensics.backend.risk.RiskAssessmentRepository riskAssessmentRepository,
+                           AnalysisOrchestratorService orchestrator,
                            @Value("${emailforensics.pipeline.version:1.0.0}") String pipelineVersion) {
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
@@ -60,6 +62,7 @@ public class EvidenceService {
         this.storageService = storageService;
         this.emailParserService = emailParserService;
         this.riskAssessmentRepository = riskAssessmentRepository;
+        this.orchestrator = orchestrator;
         this.pipelineVersion = pipelineVersion;
     }
 
@@ -108,6 +111,10 @@ public class EvidenceService {
                 AnalysisRun existingRun = analysisRunRepository
                         .findTopByEmailEvidenceIdOrderByCreatedAtDesc(existing.getId())
                         .orElse(null);
+
+                if (existingRun != null && existingRun.getStatus() == AnalysisStatus.QUEUED && !orchestrator.isPipelineActive(existing.getId())) {
+                    orchestrator.startAnalysisAsync(existing.getId(), existingRun.getId());
+                }
 
                 String status = existingRun != null ? existingRun.getStatus().name() : AnalysisStatus.COMPLETED.name();
                 UUID runId = existingRun != null ? existingRun.getId() : null;
@@ -166,6 +173,21 @@ public class EvidenceService {
             );
             run = analysisRunRepository.save(run);
 
+            final UUID finalEvidenceId = evidence.getId();
+            final UUID finalRunId = run.getId();
+            if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                        new org.springframework.transaction.support.TransactionSynchronization() {
+                            @Override
+                            public void afterCommit() {
+                                orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+                            }
+                        }
+                );
+            } else {
+                orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+            }
+
             String statusUrl = "/api/v1/evidence/" + evidence.getId() + "/status";
 
             return new EvidenceUploadResponse(
@@ -185,7 +207,7 @@ public class EvidenceService {
         }
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public EvidenceStatusResponse getEvidenceStatus(UUID emailId) {
         if (!evidenceRepository.existsById(emailId)) {
             throw new ResourceNotFoundException("Email evidence not found with ID: " + emailId);
@@ -193,6 +215,10 @@ public class EvidenceService {
 
         AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("No analysis run found for evidence: " + emailId));
+
+        if (run.getStatus() == AnalysisStatus.QUEUED && !orchestrator.isPipelineActive(emailId)) {
+            orchestrator.startAnalysisAsync(emailId, run.getId());
+        }
 
         return new EvidenceStatusResponse(
                 emailId,
@@ -325,7 +351,7 @@ public class EvidenceService {
         return evidence.getOriginalFilename();
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public InvestigationDetailDto getInvestigationDetail(UUID emailId) {
         EmailEvidence evidence = evidenceRepository.findById(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
@@ -343,35 +369,6 @@ public class EvidenceService {
             throw new IllegalStateException("Failed to read evidence stream for parsing", e);
         }
 
-        boolean updated = false;
-        if (evidence.getSubject() == null && parsed.getSubject() != null) {
-            evidence.setSubject(parsed.getSubject());
-            updated = true;
-        }
-        if (evidence.getMessageId() == null && parsed.getMessageId() != null) {
-            evidence.setMessageId(parsed.getMessageId());
-            updated = true;
-        }
-        if (evidence.getSentDate() == null && parsed.getSentDate() != null) {
-            evidence.setSentDate(parsed.getSentDate());
-            updated = true;
-        }
-        if (updated) {
-            evidenceRepository.save(evidence);
-        }
-
-        if (run != null && (run.getStatus() == AnalysisStatus.QUEUED || run.getStatus() == AnalysisStatus.RUNNING)) {
-            run.setStatus(AnalysisStatus.COMPLETED);
-            run.setCurrentStage("MIME_PARSED");
-            if (run.getStartedAt() == null) {
-                run.setStartedAt(Instant.now());
-            }
-            run.setCompletedAt(Instant.now());
-            analysisRunRepository.save(run);
-            status = run.getStatus();
-            currentStage = run.getCurrentStage();
-        }
-
         return new InvestigationDetailDto(
                 evidence.getId(),
                 evidence.getCaseFile().getId(),
@@ -386,6 +383,47 @@ public class EvidenceService {
                 currentStage,
                 parsed
         );
+    }
+
+    @Transactional
+    public EvidenceStatusResponse retryAnalysis(UUID emailId, UserPrincipal currentUser) {
+        EmailEvidence evidence = evidenceRepository.findById(emailId)
+                .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
+
+        AnalysisRun latestRun = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
+                .orElseThrow(() -> new ResourceNotFoundException("No analysis run found for evidence: " + emailId));
+
+        if (latestRun.getStatus() == AnalysisStatus.RUNNING) {
+            throw new BadRequestException("Forensic analysis is currently running for this email evidence.");
+        }
+
+        int nextAttempt = (latestRun.getAttemptNumber() != null ? latestRun.getAttemptNumber() : 1) + 1;
+        AnalysisRun newRun = new AnalysisRun(
+                UUID.randomUUID(),
+                evidence,
+                pipelineVersion,
+                AnalysisStatus.QUEUED,
+                "QUEUED"
+        );
+        newRun.setAttemptNumber(nextAttempt);
+        newRun = analysisRunRepository.save(newRun);
+
+        final UUID finalEvidenceId = evidence.getId();
+        final UUID finalRunId = newRun.getId();
+        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
+            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
+                    new org.springframework.transaction.support.TransactionSynchronization() {
+                        @Override
+                        public void afterCommit() {
+                            orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+                        }
+                    }
+            );
+        } else {
+            orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+        }
+
+        return getEvidenceStatus(emailId);
     }
 
     @Transactional(readOnly = true)

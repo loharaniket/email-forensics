@@ -157,7 +157,7 @@ public class ContentAnalysisService {
         return toDto(saved, piFindings.getMatches(), seFindings.getMatches());
     }
 
-    @Transactional
+    @Transactional(readOnly = true)
     public Optional<ContentAnalysisDto> getContentAnalysis(UUID emailId) {
         EmailEvidence evidence = emailEvidenceRepository.findById(emailId).orElse(null);
         if (evidence == null) {
@@ -173,7 +173,7 @@ public class ContentAnalysisService {
 
         Optional<ContentAnalysis> entityOpt = contentAnalysisRepository.findByAnalysisRunId(run.getId());
         if (entityOpt.isEmpty()) {
-            return Optional.of(analyzeContent(emailId));
+            return Optional.empty();
         }
 
         ContentAnalysis entity = entityOpt.get();

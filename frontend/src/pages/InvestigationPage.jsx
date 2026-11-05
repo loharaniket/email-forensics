@@ -15,7 +15,9 @@ import {
   getEvidenceAiAssessment,
   generateEvidenceAiAssessment,
   downloadOriginalEvidence,
-  checkEvidenceIntegrity
+  checkEvidenceIntegrity,
+  getEvidenceStatus,
+  retryEvidenceAnalysis
 } from '../api/evidence'
 import { getEvidenceReport, downloadEvidenceReportJson } from '../api/report'
 import {
@@ -60,12 +62,28 @@ import {
   FileCheck
 } from 'lucide-react'
 
+const STAGE_LABELS = {
+  QUEUED: { label: 'Queued for Analysis', step: 1, desc: 'Evidence preserved in vault. Analysis run initialized.' },
+  PARSING_EMAIL: { label: 'Parsing MIME Structure', step: 2, desc: 'Extracting headers, body parts, and attachments.' },
+  ANALYZING_HEADERS: { label: 'Analyzing Email Headers', step: 3, desc: 'Evaluating SPF, DKIM, DMARC, and transit hops.' },
+  EXTRACTING_INDICATORS: { label: 'Extracting Indicators & IPs', step: 4, desc: 'Extracting URLs, analyzing link heuristics, and classifying IP artifacts.' },
+  ANALYZING_VISUALS: { label: 'Analyzing Visuals & QR Codes', step: 5, desc: 'Extracting inline images and decoding embedded QR codes.' },
+  ANALYZING_CONTENT: { label: 'Analyzing Content & Phishing ML', step: 6, desc: 'Scanning for social engineering, prompt injection, and Tribuo ML baseline.' },
+  CORRELATING_THREATS: { label: 'Correlating Cross-Case Threats', step: 7, desc: 'Matching indicators across all preserved cases in the vault.' },
+  ASSESSING_RISK: { label: 'Calculating Deterministic Risk Score', step: 8, desc: 'Synthesizing forensic findings into deterministic risk and confidence scores.' },
+  AI_ASSESSMENT: { label: 'Generating Grounded AI Assessment', step: 9, desc: 'Producing synthesis explanation via AI engine with offline fallback.' },
+  FINALIZING: { label: 'Finalizing Investigation', step: 10, desc: 'Persisting forensic findings and sealing analysis run.' },
+  COMPLETED: { label: 'Analysis Complete', step: 10, desc: 'All forensic analysis stages completed successfully.' }
+}
+
 export default function InvestigationPage() {
   const { caseId, emailId } = useParams()
   const navigate = useNavigate()
   const { user } = useAuth()
 
   const [detail, setDetail] = useState(null)
+  const [pipelineStatus, setPipelineStatus] = useState(null)
+  const [isRetrying, setIsRetrying] = useState(false)
   const [headerAnalysis, setHeaderAnalysis] = useState(null)
   const [hops, setHops] = useState([])
   const [urls, setUrls] = useState([])
@@ -102,7 +120,7 @@ export default function InvestigationPage() {
   const [integrityCheckResult, setIntegrityCheckResult] = useState(null)
   const [isVerifyingIntegrity, setIsVerifyingIntegrity] = useState(false)
 
-  const loadData = useCallback(async () => {
+  const loadInvestigationData = useCallback(async () => {
     setIsLoading(true)
     setError(null)
     try {
@@ -149,6 +167,88 @@ export default function InvestigationPage() {
     }
   }, [emailId])
 
+  useEffect(() => {
+    let intervalId = null
+    let isCancelled = false
+
+    const checkStatusAndProceed = async () => {
+      try {
+        const statusResp = await getEvidenceStatus(emailId)
+        if (isCancelled) return
+        setPipelineStatus(statusResp)
+
+        if (statusResp.status === 'COMPLETED' || statusResp.status === 'PARTIAL') {
+          loadInvestigationData()
+        } else if (statusResp.status === 'FAILED') {
+          setIsLoading(false)
+          setError(statusResp.safeErrorMessage || 'Forensic analysis pipeline failed.')
+        } else if (statusResp.status === 'QUEUED' || statusResp.status === 'RUNNING') {
+          intervalId = setInterval(async () => {
+            try {
+              const pollResp = await getEvidenceStatus(emailId)
+              if (isCancelled) return
+              setPipelineStatus(pollResp)
+
+              if (pollResp.status === 'COMPLETED' || pollResp.status === 'PARTIAL') {
+                clearInterval(intervalId)
+                loadInvestigationData()
+              } else if (pollResp.status === 'FAILED') {
+                clearInterval(intervalId)
+                setIsLoading(false)
+                setError(pollResp.safeErrorMessage || 'Forensic analysis pipeline failed.')
+              }
+            } catch (pollErr) {
+              console.error('Error polling analysis status:', pollErr)
+            }
+          }, 1500)
+        }
+      } catch (err) {
+        if (isCancelled) return
+        setError(err.response?.data?.message || 'Failed to retrieve evidence status.')
+        setIsLoading(false)
+      }
+    }
+
+    checkStatusAndProceed()
+
+    return () => {
+      isCancelled = true
+      if (intervalId) clearInterval(intervalId)
+    }
+  }, [emailId, loadInvestigationData])
+
+  const handleRetryAnalysis = async () => {
+    setIsRetrying(true)
+    setError(null)
+    try {
+      const resp = await retryEvidenceAnalysis(emailId)
+      setPipelineStatus(resp)
+      setIsLoading(true)
+
+      const pollInterval = setInterval(async () => {
+        try {
+          const pollResp = await getEvidenceStatus(emailId)
+          setPipelineStatus(pollResp)
+          if (pollResp.status === 'COMPLETED' || pollResp.status === 'PARTIAL') {
+            clearInterval(pollInterval)
+            setIsRetrying(false)
+            loadInvestigationData()
+          } else if (pollResp.status === 'FAILED') {
+            clearInterval(pollInterval)
+            setIsRetrying(false)
+            setIsLoading(false)
+            setError(pollResp.safeErrorMessage || 'Retry analysis pipeline failed.')
+          }
+        } catch (e) {
+          console.error(e)
+        }
+      }, 1500)
+    } catch (err) {
+      setError(err.response?.data?.message || 'Failed to trigger analysis retry.')
+      setIsRetrying(false)
+    }
+  }
+
   const handleExportReportJson = async () => {
     setIsExportingJson(true)
     try {
@@ -184,10 +284,6 @@ export default function InvestigationPage() {
       setIsAiGenerating(false)
     }
   }
-
-  useEffect(() => {
-    loadData()
-  }, [loadData])
 
   const copyValue = (key, text) => {
     navigator.clipboard.writeText(text)
@@ -301,38 +397,133 @@ export default function InvestigationPage() {
   }
 
 
-  if (isLoading) {
+  if (pipelineStatus?.status === 'QUEUED' || pipelineStatus?.status === 'RUNNING') {
+    const stageInfo = STAGE_LABELS[pipelineStatus.currentStage] || {
+      label: pipelineStatus.currentStage || 'Processing Forensic Pipeline',
+      step: 1,
+      desc: 'Executing forensic analysis stages in strict sequence...'
+    }
+
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        <Navbar />
+        <main className="flex-1 max-w-2xl w-full mx-auto p-6 flex flex-col items-center justify-center">
+          <div className="w-full bg-slate-900/60 border border-slate-800 rounded-2xl p-8 shadow-2xl backdrop-blur space-y-6">
+            <div className="flex items-center justify-between border-b border-slate-800/80 pb-4">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-cyan-950/60 border border-cyan-800/50 text-cyan-400">
+                  <Activity className="h-5 w-5 animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="text-sm font-semibold text-slate-100">Automated Forensic Pipeline</h2>
+                  <p className="text-[11px] text-slate-400">Executing structured forensic workflow in sequence</p>
+                </div>
+              </div>
+              <span className="px-2.5 py-1 rounded-full text-[10px] font-mono bg-cyan-950/80 border border-cyan-800 text-cyan-300">
+                {pipelineStatus.status}
+              </span>
+            </div>
+
+            <div className="space-y-3">
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-medium text-slate-300">{stageInfo.label}</span>
+                <span className="font-mono text-cyan-400 text-[11px]">Stage {stageInfo.step} of 10</span>
+              </div>
+              <div className="h-2 w-full bg-slate-950 rounded-full overflow-hidden border border-slate-800">
+                <div
+                  className="h-full bg-gradient-to-r from-cyan-500 to-blue-500 rounded-full transition-all duration-500"
+                  style={{ width: `${Math.max(10, (stageInfo.step / 10) * 100)}%` }}
+                />
+              </div>
+              <p className="text-xs text-slate-400 leading-relaxed">{stageInfo.desc}</p>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2 text-xs font-mono">
+              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <span className="text-[10px] text-slate-500 block uppercase">Attempt</span>
+                <span className="text-slate-300 font-semibold">#{pipelineStatus.attemptNumber || 1}</span>
+              </div>
+              <div className="p-3 rounded-lg bg-slate-950/60 border border-slate-800/80 space-y-1">
+                <span className="text-[10px] text-slate-500 block uppercase">Pipeline Version</span>
+                <span className="text-slate-300">{pipelineStatus.pipelineVersion || '1.0.0'}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col items-center justify-center gap-2 pt-2 text-[11px] text-slate-500">
+              <div className="flex items-center gap-2">
+                <RefreshCw className="h-3.5 w-3.5 animate-spin text-cyan-400" />
+                <span>Analyzing forensic artifacts in real-time...</span>
+              </div>
+              <button
+                type="button"
+                onClick={handleRetryAnalysis}
+                disabled={isRetrying}
+                className="mt-2 text-[10px] text-slate-400 hover:text-cyan-400 underline transition-colors cursor-pointer"
+              >
+                {isRetrying ? 'Retrying pipeline...' : 'Pipeline taking too long? Click to restart analysis'}
+              </button>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (pipelineStatus?.status === 'FAILED' || error || (!isLoading && !detail)) {
+    return (
+      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
+        <Navbar />
+        <main className="flex-1 max-w-xl w-full mx-auto p-6 flex flex-col items-center justify-center">
+          <div className="w-full bg-rose-950/20 border border-rose-900/60 rounded-2xl p-8 text-center space-y-5">
+            <div className="inline-flex p-3 rounded-2xl bg-rose-950/40 border border-rose-800/60 text-rose-400">
+              <AlertTriangle className="h-8 w-8" />
+            </div>
+            <div className="space-y-1.5">
+              <h2 className="text-base font-semibold text-rose-200">Forensic Analysis Pipeline Halted</h2>
+              <p className="text-xs text-rose-400/90 max-w-md mx-auto leading-relaxed">
+                {pipelineStatus?.safeErrorMessage || error || 'An error occurred during evidence analysis execution.'}
+              </p>
+              {pipelineStatus?.errorCode && (
+                <span className="inline-block px-2 py-0.5 rounded text-[10px] font-mono bg-rose-900/40 border border-rose-800/50 text-rose-300 mt-2">
+                  CODE: {pipelineStatus.errorCode}
+                </span>
+              )}
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-3">
+              <button
+                id="btn-retry-analysis"
+                onClick={handleRetryAnalysis}
+                disabled={isRetrying}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2 rounded-xl bg-cyan-600 hover:bg-cyan-500 text-slate-950 text-xs font-semibold shadow-lg shadow-cyan-900/30 transition-all cursor-pointer disabled:opacity-50"
+              >
+                <RefreshCw className={`h-3.5 w-3.5 ${isRetrying ? 'animate-spin' : ''}`} />
+                <span>{isRetrying ? 'Retrying Pipeline...' : 'Retry Forensic Analysis'}</span>
+              </button>
+              <Link
+                to={`/cases/${caseId}`}
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 border border-slate-800 text-xs text-slate-300 font-medium transition-colors"
+              >
+                <ArrowLeft className="h-3.5 w-3.5" />
+                <span>Return to Case Dossier</span>
+              </Link>
+            </div>
+          </div>
+        </main>
+      </div>
+    )
+  }
+
+  if (isLoading || !detail) {
     return (
       <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
         <Navbar />
         <div className="flex-1 flex flex-col items-center justify-center gap-3">
           <Mail className="h-9 w-9 text-cyan-400 animate-pulse" />
           <span className="text-xs font-mono text-slate-400">
-            Parsing MIME Structure &amp; Extracting Evidence Artifacts...
+            Loading Persisted Forensic Results...
           </span>
         </div>
-      </div>
-    )
-  }
-
-  if (error || !detail) {
-    return (
-      <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col">
-        <Navbar />
-        <main className="flex-1 max-w-4xl w-full mx-auto p-6 md:p-8">
-          <div className="p-8 rounded-2xl bg-rose-950/30 border border-rose-900/60 text-center space-y-4">
-            <AlertTriangle className="h-10 w-10 text-rose-400 mx-auto" />
-            <h2 className="text-base font-semibold text-rose-300">Investigation Slice Unavailable</h2>
-            <p className="text-xs text-rose-400/80">{error || 'Evidence record not found.'}</p>
-            <Link
-              to={`/cases/${caseId}`}
-              className="inline-flex items-center gap-2 text-xs text-cyan-400 hover:text-cyan-300 font-medium pt-2"
-            >
-              <ArrowLeft className="h-3.5 w-3.5" />
-              Return to Case Dossier
-            </Link>
-          </div>
-        </main>
       </div>
     )
   }
@@ -413,6 +604,26 @@ export default function InvestigationPage() {
       <Navbar />
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6 print:p-0 print:m-0 print:max-w-none print:w-full print:bg-white print:space-y-0">
+        {pipelineStatus?.status === 'PARTIAL' && (
+          <div className="no-print p-4 rounded-xl bg-amber-950/40 border border-amber-800/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
+              <div>
+                <p className="font-semibold text-amber-300">Analysis Completed with Partial Notices</p>
+                <p className="text-amber-400/80 text-[11px] mt-0.5">{pipelineStatus.safeErrorMessage || 'Some forensic stages completed with non-fatal warnings or fallback handling.'}</p>
+              </div>
+            </div>
+            <button
+              onClick={handleRetryAnalysis}
+              disabled={isRetrying}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-950 font-medium transition-colors shrink-0 disabled:opacity-50 cursor-pointer"
+            >
+              <RefreshCw className={`h-3 w-3 ${isRetrying ? 'animate-spin' : ''}`} />
+              <span>{isRetrying ? 'Retrying...' : 'Retry Analysis'}</span>
+            </button>
+          </div>
+        )}
+
         <div className="no-print flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <button
             id="back-to-case-btn"

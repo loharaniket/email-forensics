@@ -187,4 +187,12 @@ public class EvidenceController {
         List<CorrelationMatchDto> response = correlationService.getCorrelations(emailId);
         return ResponseEntity.ok(response);
     }
+
+    @PostMapping("/evidence/{emailId}/retry")
+    public ResponseEntity<EvidenceStatusResponse> retryAnalysis(
+            @PathVariable UUID emailId,
+            @AuthenticationPrincipal UserPrincipal currentUser) {
+        EvidenceStatusResponse response = evidenceService.retryAnalysis(emailId, currentUser);
+        return ResponseEntity.ok(response);
+    }
 }
