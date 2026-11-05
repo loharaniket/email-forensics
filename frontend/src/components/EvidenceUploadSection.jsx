@@ -11,10 +11,7 @@ import {
   Clock,
   CheckCircle2,
   FileText,
-  ShieldAlert,
-  HardDrive,
   Eye,
-  Layers,
   FolderOpen,
   ExternalLink,
   ArrowRight
@@ -102,19 +99,19 @@ export default function EvidenceUploadSection({ caseId }) {
     if (!file) return
 
     if (!file.name.toLowerCase().endsWith('.eml')) {
-      setUploadError('Only RFC 822/5322 .eml files are supported as email evidence.')
+      setUploadError('Please select a valid .eml email file.')
       setSelectedFile(null)
       return
     }
 
     if (file.size === 0) {
-      setUploadError('Selected evidence file is empty (0 bytes).')
+      setUploadError('The selected file is empty (0 bytes).')
       setSelectedFile(null)
       return
     }
 
     if (file.size > 25 * 1024 * 1024) {
-      setUploadError('Evidence file exceeds 25 MB maximum upload limit.')
+      setUploadError('The file exceeds the 25 MB maximum upload limit.')
       setSelectedFile(null)
       return
     }
@@ -124,12 +121,9 @@ export default function EvidenceUploadSection({ caseId }) {
 
   const handleUpload = async (e) => {
     if (e && e.preventDefault) e.preventDefault()
-    console.log('[DEBUG UPLOAD] handleUpload clicked, selectedFile:', selectedFile)
     if (!selectedFile) {
-      console.warn('[DEBUG UPLOAD] No selectedFile in state! Checking input element directly...')
       const inputEl = document.getElementById('evidence-file-input')
       if (inputEl && inputEl.files && inputEl.files[0]) {
-        console.log('[DEBUG UPLOAD] Recovered file directly from input:', inputEl.files[0].name)
         return proceedWithUpload(inputEl.files[0])
       }
       return
@@ -143,9 +137,7 @@ export default function EvidenceUploadSection({ caseId }) {
     setUploadSuccess(null)
 
     try {
-      console.log('[DEBUG UPLOAD] Calling uploadEvidence with caseId:', caseId, 'file:', fileToUpload.name)
       const response = await uploadEvidence(caseId, fileToUpload)
-      console.log('[DEBUG UPLOAD] Upload response received:', response)
       setUploadSuccess({
         filename: response.originalFilename,
         hash: response.sha256Hash,
@@ -164,7 +156,7 @@ export default function EvidenceUploadSection({ caseId }) {
       }
       await loadEvidence()
     } catch (err) {
-      setUploadError(err.response?.data?.message || 'Failed to upload evidence file.')
+      setUploadError(err.response?.data?.message || 'Failed to upload email file.')
     } finally {
       setIsUploading(false)
     }
@@ -188,7 +180,7 @@ export default function EvidenceUploadSection({ caseId }) {
         ...prev,
         [emailId]: {
           intact: false,
-          error: err.response?.data?.message || 'Integrity check failed'
+          error: err.response?.data?.message || 'File integrity check failed.'
         }
       }))
     } finally {
@@ -200,7 +192,7 @@ export default function EvidenceUploadSection({ caseId }) {
     try {
       await downloadOriginalEvidence(emailId, filename)
     } catch (err) {
-      alert('Failed to download original evidence.')
+      alert('Failed to download original email.')
     }
   }
 
@@ -216,31 +208,31 @@ export default function EvidenceUploadSection({ caseId }) {
     switch (st) {
       case 'QUEUED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-amber-950/80 text-amber-400 border border-amber-800/80">
-            QUEUED
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FFFBEB] text-[#B45309] border border-amber-200">
+            In queue
           </span>
         )
       case 'RUNNING':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-cyan-950/80 text-cyan-400 border border-cyan-800/80 animate-pulse">
-            RUNNING
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
+            Analyzing
           </span>
         )
       case 'COMPLETED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-emerald-950/80 text-emerald-400 border border-emerald-800/80">
-            COMPLETED
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#F0FDF4] text-[#15803D] border border-green-200">
+            Completed
           </span>
         )
       case 'FAILED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-rose-950/80 text-rose-400 border border-rose-800/80">
-            FAILED
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FEF2F2] text-[#B42318] border border-red-200">
+            Failed
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-mono font-medium bg-slate-800 text-slate-300">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#667085]">
             {st}
           </span>
         )
@@ -249,25 +241,15 @@ export default function EvidenceUploadSection({ caseId }) {
 
   return (
     <div className="space-y-6">
-      <section className="bg-slate-900/60 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-6">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-cyan-950/60 border border-cyan-800/60 text-cyan-400">
-              <Upload className="h-5 w-5" />
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-white tracking-tight">
-                Upload &amp; Preserve Email Evidence
-              </h2>
-              <p className="text-xs text-slate-400">
-                Evidence vault immutability with global deduplication: detects existing SHA-256 hashes to prevent duplicate storage.
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 text-xs font-mono text-slate-400 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-            <HardDrive className="h-3.5 w-3.5 text-cyan-400" />
-            <span>Vault: Private Storage</span>
-          </div>
+      {/* Upload email section */}
+      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-5">
+        <div className="pb-4 border-b border-[#E4E7EC]">
+          <h2 className="text-base font-bold text-[#202938]">
+            Upload email
+          </h2>
+          <p className="text-sm text-[#667085] mt-0.5">
+            Choose an .eml email file to start the analysis.
+          </p>
         </div>
 
         <form onSubmit={handleUpload} className="space-y-4">
@@ -279,7 +261,7 @@ export default function EvidenceUploadSection({ caseId }) {
                 type="file"
                 accept=".eml"
                 onChange={handleFileChange}
-                className="w-full text-xs text-slate-300 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-slate-800 file:text-cyan-400 hover:file:bg-slate-700 bg-slate-950 border border-slate-800 rounded-xl p-2 cursor-pointer focus:outline-none focus:border-cyan-500"
+                className="w-full text-xs text-[#202938] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#EFF6FF] file:text-[#2563EB] hover:file:bg-blue-100 bg-[#F5F6F8] border border-[#E4E7EC] rounded-lg p-2 cursor-pointer focus:outline-none focus:border-[#2563EB]"
               />
             </div>
 
@@ -288,83 +270,79 @@ export default function EvidenceUploadSection({ caseId }) {
               type="button"
               onClick={handleUpload}
               disabled={isUploading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-lg shadow-cyan-600/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
+              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
             >
               {isUploading ? (
                 <>
-                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
-                  <span>Preserving &amp; Hashing...</span>
+                  <RefreshCw className="h-4 w-4 animate-spin" />
+                  <span>Uploading email...</span>
                 </>
               ) : (
                 <>
-                  <FileCheck className="h-3.5 w-3.5" />
-                  <span>Upload &amp; Preserve (.eml)</span>
+                  <Upload className="h-4 w-4" />
+                  <span>Upload email</span>
                 </>
               )}
             </button>
           </div>
 
           {selectedFile && (
-            <div className="flex items-center gap-3 text-xs text-slate-400 font-mono bg-slate-950/60 p-3 rounded-xl border border-slate-800/80">
-              <FileText className="h-4 w-4 text-cyan-400" />
-              <span>Selected: <strong className="text-slate-200">{selectedFile.name}</strong></span>
+            <div className="flex items-center gap-2.5 text-xs text-[#667085] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC]">
+              <FileText className="h-4 w-4 text-[#2563EB]" />
+              <span>Selected file: <strong className="text-[#202938] font-medium">{selectedFile.name}</strong></span>
               <span>({formatBytes(selectedFile.size)})</span>
             </div>
           )}
 
           {uploadError && (
-            <div className="p-3.5 rounded-xl bg-rose-950/40 border border-rose-800/80 text-xs text-rose-300 flex items-center gap-2.5">
-              <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+            <div className="p-3.5 rounded-lg bg-[#FEF2F2] border border-[#FEE2E2] text-xs text-[#B42318] flex items-center gap-2.5">
+              <AlertTriangle className="h-4 w-4 text-[#B42318] shrink-0" />
               <span>{uploadError}</span>
             </div>
           )}
 
           {uploadSuccess && (
             uploadSuccess.duplicate ? (
-              <div id="duplicate-evidence-banner" className="p-4 md:p-5 rounded-xl bg-cyan-950/40 border border-cyan-800/80 text-xs text-cyan-200 space-y-3.5 shadow-lg shadow-cyan-950/20">
-                <div className="flex items-center gap-2 font-semibold text-cyan-300">
-                  <Layers className="h-4 w-4 text-cyan-400" />
-                  <span className="text-sm">Global Deduplication: Duplicate Email Detected</span>
-                  <span className="ml-auto font-mono text-[11px] bg-cyan-900/60 text-cyan-200 px-2.5 py-0.5 rounded border border-cyan-700/60">
-                    REUSING EXISTING EVIDENCE
-                  </span>
+              <div id="duplicate-evidence-banner" className="p-4 md:p-5 rounded-lg bg-[#EFF6FF] border border-blue-200 text-xs text-[#202938] space-y-3">
+                <div className="flex items-center gap-2 font-semibold text-[#2563EB]">
+                  <CheckCircle2 className="h-4 w-4" />
+                  <span className="text-sm">This email was already uploaded</span>
                 </div>
 
-                <p className="text-xs text-slate-300 font-sans leading-relaxed">
-                  {uploadSuccess.message || 'This email file has an identical SHA-256 cryptographic digest to previously preserved evidence. Storage and forensic processing were reused without duplication.'}
+                <p className="text-xs text-[#667085] leading-relaxed">
+                  An identical file is already stored. The application will use the existing copy.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 font-mono text-[11px] text-slate-300 bg-slate-950/60 p-3 rounded-lg border border-cyan-900/40">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#667085] bg-white p-3 rounded-lg border border-blue-100">
                   <div>
-                    <span className="text-slate-400">Filename: </span>
-                    <span className="text-slate-200">{uploadSuccess.filename}</span> ({formatBytes(uploadSuccess.size)})
+                    <span className="font-medium text-[#202938]">Filename: </span>
+                    {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
                   </div>
                   <div>
-                    <span className="text-slate-400">Analysis State: </span>
-                    <span className="text-emerald-400 font-semibold">{uploadSuccess.status}</span>
+                    <span className="font-medium text-[#202938]">Status: </span>
+                    {uploadSuccess.status}
                   </div>
 
                   {uploadSuccess.existingCaseId && (
-                    <div className="sm:col-span-2 flex flex-wrap items-center gap-2 pt-1 border-t border-slate-800/80">
-                      <span className="text-slate-400 font-semibold">Actual Case: </span>
+                    <div className="sm:col-span-2 flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
+                      <span className="font-medium text-[#202938]">Existing case: </span>
                       <Link
                         id="actual-case-link"
                         to={`/cases/${uploadSuccess.existingCaseId}`}
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-cyan-950 border border-cyan-800/80 text-cyan-300 hover:text-cyan-200 hover:border-cyan-600 transition-colors"
+                        className="inline-flex items-center gap-1 text-[#2563EB] hover:underline font-medium"
                       >
-                        <FolderOpen className="h-3.5 w-3.5 text-cyan-400" />
-                        <span className="font-bold">{uploadSuccess.existingCaseNumber || 'Open Case'}</span>
+                        <span>{uploadSuccess.existingCaseNumber || 'Case'}</span>
                         {uploadSuccess.existingCaseTitle && (
-                          <span className="text-slate-300 font-normal"> — {uploadSuccess.existingCaseTitle}</span>
+                          <span className="text-[#667085] font-normal"> — {uploadSuccess.existingCaseTitle}</span>
                         )}
-                        <ExternalLink className="h-3 w-3 text-cyan-400 ml-0.5" />
+                        <ExternalLink className="h-3 w-3 ml-0.5" />
                       </Link>
                     </div>
                   )}
 
-                  <div className="sm:col-span-2 break-all text-[10px] pt-1">
-                    <span className="text-cyan-400 font-semibold">SHA-256 Vault Hash: </span>
-                    <span className="text-slate-400 select-all">{uploadSuccess.hash}</span>
+                  <div className="sm:col-span-2 break-all text-[11px] pt-1">
+                    <span className="font-medium text-[#202938]">SHA-256: </span>
+                    <span className="font-mono text-[#667085]">{uploadSuccess.hash}</span>
                   </div>
                 </div>
 
@@ -374,11 +352,10 @@ export default function EvidenceUploadSection({ caseId }) {
                       type="button"
                       id="go-to-actual-case-btn"
                       onClick={() => navigate(`/cases/${uploadSuccess.existingCaseId}`)}
-                      className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow-md shadow-cyan-600/20 transition-all cursor-pointer"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
                     >
-                      <FolderOpen className="h-4 w-4" />
-                      <span>Go to Actual Case ({uploadSuccess.existingCaseNumber || 'Open Case'})</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
+                      <FolderOpen className="h-3.5 w-3.5" />
+                      <span>Open existing case</span>
                     </button>
                   )}
 
@@ -386,46 +363,43 @@ export default function EvidenceUploadSection({ caseId }) {
                     type="button"
                     id="view-duplicate-evidence-btn"
                     onClick={() => navigate(`/cases/${uploadSuccess.existingCaseId || caseId}/evidence/${uploadSuccess.evidenceId}`)}
-                    className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-medium bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-colors cursor-pointer"
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
                   >
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>Inspect Forensic Results Directly</span>
+                    <Eye className="h-3.5 w-3.5 text-[#667085]" />
+                    <span>View results</span>
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="p-4 rounded-xl bg-emerald-950/40 border border-emerald-800/80 text-xs text-emerald-200 space-y-2">
-                <div className="flex items-center gap-2 font-semibold text-emerald-400">
+              <div className="p-4 rounded-lg bg-[#F0FDF4] border border-[#DCFCE7] text-xs text-[#202938] space-y-2">
+                <div className="flex items-center gap-2 font-semibold text-[#15803D]">
                   <CheckCircle2 className="h-4 w-4" />
-                  <span>Evidence Successfully Preserved in Vault</span>
-                  <span className="ml-auto font-mono text-[11px] bg-emerald-900/60 text-emerald-300 px-2 py-0.5 rounded">
-                    HTTP 202 ACCEPTED
-                  </span>
+                  <span className="text-sm">Email uploaded successfully</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 font-mono text-[11px] text-slate-300">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#667085]">
                   <div>
-                    <span className="text-slate-400">Filename: </span>
+                    <span className="font-medium text-[#202938]">Filename: </span>
                     {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
                   </div>
                   <div>
-                    <span className="text-slate-400">Initial Pipeline State: </span>
-                    <span className="text-amber-400 font-semibold">{uploadSuccess.status}</span>
+                    <span className="font-medium text-[#202938]">Status: </span>
+                    {uploadSuccess.status}
                   </div>
-                  <div className="sm:col-span-2 break-all bg-slate-950/60 p-2 rounded border border-emerald-900/40">
-                    <span className="text-cyan-400 font-semibold">SHA-256 Vault Hash: </span>
+                  <div className="sm:col-span-2 break-all bg-white p-2.5 rounded-lg border border-green-100 font-mono text-[11px]">
+                    <span className="font-medium text-[#202938]">SHA-256: </span>
                     {uploadSuccess.hash}
                   </div>
                 </div>
                 {uploadSuccess.evidenceId && (
-                  <div className="pt-1">
+                  <div className="pt-2">
                     <button
                       id="inspect-uploaded-evidence-btn"
                       type="button"
                       onClick={() => navigate(`/cases/${caseId}/evidence/${uploadSuccess.evidenceId}`)}
-                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-emerald-900/40 hover:bg-emerald-800/50 text-emerald-300 border border-emerald-700/50 transition-colors cursor-pointer"
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#15803D] hover:bg-green-800 text-white transition-colors cursor-pointer"
                     >
                       <Eye className="h-3.5 w-3.5" />
-                      <span>Inspect Artifact Investigation</span>
+                      <span>View analysis</span>
                     </button>
                   </div>
                 )}
@@ -435,35 +409,35 @@ export default function EvidenceUploadSection({ caseId }) {
         </form>
       </section>
 
-      <section className="bg-slate-900/40 border border-slate-800 rounded-2xl p-6 md:p-8 space-y-4">
-        <div className="flex items-center justify-between">
+      {/* Uploaded files section */}
+      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
           <div className="flex items-center gap-2">
-            <ShieldCheck className="h-5 w-5 text-cyan-400" />
-            <h2 className="text-sm font-bold text-white tracking-tight">
-              Preserved Evidence Chain of Custody ({evidenceList.length})
+            <h2 className="text-base font-bold text-[#202938]">
+              Uploaded files ({evidenceList.length})
             </h2>
           </div>
           <button
             onClick={loadEvidence}
-            className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-[#667085] hover:text-[#202938] transition-colors cursor-pointer"
           >
-            <RefreshCw className="h-3 w-3" />
+            <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
           </button>
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-xs text-slate-400 font-mono">
-            Loading evidence inventory...
+          <div className="p-8 text-center text-xs text-[#667085]">
+            Loading files...
           </div>
         ) : evidenceList.length === 0 ? (
-          <div className="border border-dashed border-slate-800 rounded-xl p-8 text-center bg-slate-950/40 space-y-2">
-            <ShieldAlert className="h-8 w-8 text-slate-600 mx-auto" />
-            <h3 className="text-xs font-semibold text-slate-300 font-mono">
-              NO EVIDENCE ARTIFACTS ATTACHED YET
+          <div className="border border-dashed border-[#E4E7EC] rounded-xl p-8 text-center bg-[#F5F6F8] space-y-2">
+            <FileText className="h-8 w-8 text-[#98A2B3] mx-auto" />
+            <h3 className="text-sm font-semibold text-[#202938]">
+              No email files uploaded yet.
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Select an .eml email file above to compute the SHA-256 cryptographic digest and safely preserve it in the local vault.
+            <p className="text-xs text-[#667085] max-w-sm mx-auto">
+              Upload an .eml file to begin.
             </p>
           </div>
         ) : (
@@ -475,43 +449,38 @@ export default function EvidenceUploadSection({ caseId }) {
               return (
                 <div
                   key={item.id}
-                  className="bg-slate-950/80 border border-slate-800 rounded-xl p-4 md:p-5 space-y-3 transition-all hover:border-slate-700"
+                  className="bg-[#F5F6F8] border border-[#E4E7EC] rounded-xl p-4 md:p-5 space-y-3 transition-colors hover:border-slate-300"
                 >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-slate-800/80">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E4E7EC]">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-cyan-400 shrink-0" />
-                      <span className="text-xs font-semibold text-slate-200 font-mono">
+                      <FileText className="h-4 w-4 text-[#2563EB] shrink-0" />
+                      <span className="text-sm font-semibold text-[#202938]">
                         {item.originalFilename}
                       </span>
-                      <span className="text-[11px] text-slate-500 font-mono">
+                      <span className="text-xs text-[#667085]">
                         ({formatBytes(item.fileSizeBytes)})
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-400 font-mono">Status:</span>
+                      <span className="text-xs text-[#667085]">Status:</span>
                       {getStatusBadge(item.latestStatus)}
-                      {item.currentStage && (
-                        <span className="text-[11px] font-mono text-slate-400 bg-slate-900 px-2 py-0.5 rounded border border-slate-800">
-                          {item.currentStage}
-                        </span>
-                      )}
                     </div>
                   </div>
 
-                  <div className="space-y-2 text-xs font-mono">
-                    <div className="flex items-start gap-2 bg-slate-900/60 p-2.5 rounded-lg border border-slate-800">
-                      <Hash className="h-3.5 w-3.5 text-cyan-400 shrink-0 mt-0.5" />
-                      <div className="flex-1 break-all">
-                        <span className="text-slate-500">SHA-256: </span>
-                        <span className="text-slate-300 select-all">{item.sha256Hash}</span>
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-start gap-2 bg-white p-2.5 rounded-lg border border-[#E4E7EC]">
+                      <Hash className="h-3.5 w-3.5 text-[#98A2B3] shrink-0 mt-0.5" />
+                      <div className="flex-1 break-all font-mono text-[11px]">
+                        <span className="text-[#667085]">SHA-256: </span>
+                        <span className="text-[#202938] select-all">{item.sha256Hash}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-400 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#667085] pt-1">
                       <div className="flex items-center gap-4">
                         <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3 text-slate-500" />
+                          <Clock className="h-3.5 w-3.5 text-[#98A2B3]" />
                           <span>Uploaded: {new Date(item.uploadedAt).toLocaleString()}</span>
                         </div>
                         <span>By: {item.uploadedByUsername || 'analyst'}</span>
@@ -521,29 +490,29 @@ export default function EvidenceUploadSection({ caseId }) {
                         <button
                           id={`inspect-btn-${item.id}`}
                           onClick={() => navigate(`/cases/${caseId}/evidence/${item.id}`)}
-                          className="inspect-artifact-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-gradient-to-r from-cyan-600 to-blue-600 hover:from-cyan-500 hover:to-blue-500 text-white shadow shadow-cyan-600/20 transition-all cursor-pointer"
+                          className="inspect-artifact-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
                         >
-                          <Eye className="h-3 w-3" />
-                          <span>Inspect Artifact</span>
+                          <Eye className="h-3.5 w-3.5" />
+                          <span>View results</span>
                         </button>
 
                         <button
                           id={`verify-btn-${item.id}`}
                           onClick={() => handleVerifyIntegrity(item.id)}
                           disabled={verifying}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-slate-700 transition-colors disabled:opacity-50 cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors disabled:opacity-50 cursor-pointer"
                         >
-                          <ShieldCheck className={`h-3 w-3 ${verifying ? 'animate-spin' : ''}`} />
-                          <span>{verifying ? 'Verifying...' : 'Verify Vault Integrity'}</span>
+                          <ShieldCheck className={`h-3.5 w-3.5 text-[#667085] ${verifying ? 'animate-spin' : ''}`} />
+                          <span>{verifying ? 'Checking...' : 'Check file integrity'}</span>
                         </button>
 
                         <button
                           id={`download-btn-${item.id}`}
                           onClick={() => handleDownload(item.id, item.originalFilename)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition-colors cursor-pointer"
+                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
                         >
-                          <Download className="h-3 w-3" />
-                          <span>Download Original</span>
+                          <Download className="h-3.5 w-3.5 text-[#667085]" />
+                          <span>Download original</span>
                         </button>
                       </div>
                     </div>
@@ -552,23 +521,23 @@ export default function EvidenceUploadSection({ caseId }) {
                       <div
                         className={`p-3 rounded-lg text-xs flex items-center justify-between border ${
                           integrity.intact
-                            ? 'bg-emerald-950/40 border-emerald-800/80 text-emerald-300'
-                            : 'bg-rose-950/40 border-rose-800/80 text-rose-300'
+                            ? 'bg-[#F0FDF4] border-[#DCFCE7] text-[#15803D]'
+                            : 'bg-[#FEF2F2] border-[#FEE2E2] text-[#B42318]'
                         }`}
                       >
                         <div className="flex items-center gap-2">
                           {integrity.intact ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-[#15803D] shrink-0" />
                           ) : (
-                            <AlertTriangle className="h-4 w-4 text-rose-400 shrink-0" />
+                            <AlertTriangle className="h-4 w-4 text-[#B42318] shrink-0" />
                           )}
                           <span>
                             {integrity.intact
-                              ? 'Vault Cryptographic Integrity Verified: Stored file hash matches registered record.'
-                              : `Integrity Check Failed: ${integrity.error || 'Hash mismatch detected.'}`}
+                              ? 'File integrity verified: The stored file matches the original record.'
+                              : `File integrity check failed: ${integrity.error || 'Hash mismatch detected.'}`}
                           </span>
                         </div>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-[11px] text-[#667085] font-mono">
                           {new Date(integrity.checkedAt).toLocaleTimeString()}
                         </span>
                       </div>

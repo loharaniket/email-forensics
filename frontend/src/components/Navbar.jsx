@@ -1,32 +1,27 @@
 import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
-import { ShieldCheck, FolderKanban, Activity, LogOut, User } from 'lucide-react'
+import { Shield, FolderKanban, Activity, LogOut, User } from 'lucide-react'
 
 export default function Navbar() {
   const { user, logout } = useAuth()
   const location = useLocation()
 
   return (
-    <header className="border-b border-slate-800 bg-slate-900/80 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5">
+    <header className="border-b border-[#E4E7EC] bg-white sticky top-0 z-50 px-6 py-3 shadow-xs">
       <div className="max-w-6xl mx-auto flex items-center justify-between">
-        <div className="flex items-center gap-6">
-          <Link to="/cases" className="flex items-center gap-3 group">
-            <div className="h-9 w-9 rounded-xl bg-gradient-to-tr from-cyan-600 to-blue-600 flex items-center justify-center shadow-lg shadow-cyan-500/20 group-hover:scale-105 transition-transform">
-              <ShieldCheck className="h-5 w-5 text-white" />
+        <div className="flex items-center gap-8">
+          <Link to="/cases" className="flex items-center gap-2.5">
+            <div className="h-9 w-9 rounded-lg bg-[#EFF6FF] border border-blue-100 flex items-center justify-center text-[#2563EB]">
+              <Shield className="h-5 w-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold tracking-tight text-white">
-                  Email Forensics
-                </span>
-                <span className="text-[10px] px-2 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-mono">
-                  DFIR Suite
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-400 hidden sm:block">
-                Threat Correlation &amp; Case Platform
-              </p>
+              <span className="text-base font-semibold tracking-tight text-[#202938] block leading-tight">
+                Email Forensics
+              </span>
+              <span className="text-xs text-[#667085] hidden sm:block">
+                Email investigation workspace
+              </span>
             </div>
           </Link>
 
@@ -34,48 +29,50 @@ export default function Navbar() {
             <Link
               to="/cases"
               id="nav-cases-link"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname.startsWith('/cases')
-                  ? 'bg-slate-800 text-white border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-[#EFF6FF] text-[#2563EB]'
+                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
               }`}
             >
-              <FolderKanban className="h-3.5 w-3.5" />
-              Cases
+              <FolderKanban className="h-4 w-4" />
+              <span>Cases</span>
             </Link>
 
             <Link
               to="/health"
               id="nav-health-link"
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === '/health'
-                  ? 'bg-slate-800 text-white border border-slate-700'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                  ? 'bg-[#EFF6FF] text-[#2563EB]'
+                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
               }`}
             >
-              <Activity className="h-3.5 w-3.5" />
-              System Health
+              <Activity className="h-4 w-4" />
+              <span>Service status</span>
             </Link>
           </nav>
         </div>
 
         {user && (
           <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2 bg-slate-950 px-3 py-1.5 rounded-lg border border-slate-800">
-              <User className="h-3.5 w-3.5 text-cyan-400" />
-              <span className="text-xs font-medium text-slate-200">{user.username}</span>
-              <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 rounded bg-cyan-950 text-cyan-400 border border-cyan-900">
-                {user.role}
-              </span>
+            <div className="flex items-center gap-2 bg-[#F5F6F8] px-3 py-1.5 rounded-lg border border-[#E4E7EC]">
+              <User className="h-3.5 w-3.5 text-[#667085]" />
+              <span className="text-xs font-medium text-[#202938]">{user.username}</span>
+              {user.role && (
+                <span className="text-[11px] px-1.5 py-0.5 rounded bg-white text-[#667085] border border-[#E4E7EC] font-medium">
+                  {user.role}
+                </span>
+              )}
             </div>
 
             <button
               id="logout-btn"
               onClick={logout}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 hover:text-rose-400 hover:bg-rose-950/20 border border-transparent hover:border-rose-900/50 transition-colors cursor-pointer"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-[#667085] hover:text-[#B42318] hover:bg-red-50 border border-transparent hover:border-red-200 transition-colors cursor-pointer"
             >
               <LogOut className="h-3.5 w-3.5" />
-              <span className="hidden sm:inline">Sign Out</span>
+              <span className="hidden sm:inline">Sign out</span>
             </button>
           </div>
         )}
