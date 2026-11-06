@@ -1,5 +1,7 @@
 package com.emailforensics.backend.headers;
 
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.evidence.AnalysisRun;
@@ -36,7 +38,7 @@ import java.util.regex.Pattern;
 @Service
 public class HeaderForensicService {
 
-    private final HeaderAnalysisRepository headerAnalysisRepository;
+    private final AnalysisResultRepository analysisResultRepository;
     private final ReceivedHopRepository receivedHopRepository;
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
@@ -55,13 +57,13 @@ public class HeaderForensicService {
     private static final Pattern EMAIL_IN_TEXT_PATTERN = Pattern.compile("([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})");
 
     @org.springframework.beans.factory.annotation.Autowired
-    public HeaderForensicService(HeaderAnalysisRepository headerAnalysisRepository,
+    public HeaderForensicService(AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository receivedHopRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  EvidenceStorageService storageService,
                                  ActiveEmailAuthService activeEmailAuthService) {
-        this.headerAnalysisRepository = headerAnalysisRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.receivedHopRepository = receivedHopRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
@@ -69,12 +71,12 @@ public class HeaderForensicService {
         this.activeEmailAuthService = activeEmailAuthService;
     }
 
-    public HeaderForensicService(HeaderAnalysisRepository headerAnalysisRepository,
+    public HeaderForensicService(AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository receivedHopRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  EvidenceStorageService storageService) {
-        this(headerAnalysisRepository, receivedHopRepository, evidenceRepository, analysisRunRepository, storageService, null);
+        this(analysisResultRepository, receivedHopRepository, evidenceRepository, analysisRunRepository, storageService, null);
     }
 
     @Transactional
@@ -86,13 +88,16 @@ public class HeaderForensicService {
             AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                     .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
 
-            HeaderAnalysis existingEntity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
+            AnalysisResult existingEntity = analysisResultRepository.findByAnalysisRunId(run.getId()).orElse(null);
             HeaderAnalysisDto dto = analyzeStream(evidence.getStorageKey());
             dto.setAnalysisRunId(run.getId());
 
-            HeaderAnalysis entity = existingEntity != null ? existingEntity : new HeaderAnalysis();
-            if (entity.getId() == null) {
-                entity.setId(UUID.randomUUID());
+            AnalysisResult entity = existingEntity != null ? existingEntity : new AnalysisResult(run);
+            if (entity.getHeaderResultId() == null) {
+                entity.setHeaderResultId(UUID.randomUUID());
+            }
+            if (entity.getHeaderCreatedAt() == null) {
+                entity.setHeaderCreatedAt(Instant.now());
             }
             entity.setAnalysisRun(run);
             entity.setFromAddress(dto.getFromAddress());
@@ -106,7 +111,7 @@ public class HeaderForensicService {
             entity.setReportedArc(dto.getReportedArc());
             entity.setIdentityMismatchFlags(formatFlagsJson(dto.getIdentityMismatchFlags()));
             entity.setRawHeadersJson(formatRawHeadersJson(dto.getRawHeaders()));
-            entity = headerAnalysisRepository.saveAndFlush(entity);
+            entity = analysisResultRepository.saveAndFlush(entity);
 
             List<ReceivedHopDto> hopDtos = new ArrayList<>();
             List<ReceivedHop> existingHops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
@@ -180,8 +185,8 @@ public class HeaderForensicService {
 
                 entity.setIndependentVerification(activeResult.getSummary());
                 entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
-                headerAnalysisRepository.save(entity);
-                headerAnalysisRepository.flush();
+                analysisResultRepository.save(entity);
+                analysisResultRepository.flush();
             } catch (Throwable ignored) {
             }
         }
@@ -201,8 +206,8 @@ public class HeaderForensicService {
             return null;
         }
 
-        HeaderAnalysis entity = headerAnalysisRepository.findByAnalysisRunId(run.getId()).orElse(null);
-        if (entity == null) {
+        AnalysisResult entity = analysisResultRepository.findByAnalysisRunId(run.getId()).orElse(null);
+        if (entity == null || !entity.hasHeaderAnalysis()) {
             return null;
         }
 

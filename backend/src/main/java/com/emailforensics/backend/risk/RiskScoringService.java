@@ -1,5 +1,7 @@
 package com.emailforensics.backend.risk;
 
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.content.ContentAnalysisService;
 import com.emailforensics.backend.dto.content.ContentAnalysisDto;
@@ -55,7 +57,7 @@ public class RiskScoringService {
     private static final Pattern FIELD_PATTERN = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(?:\"((?:\\\\\"|[^\"])*)\"|([0-9]+))");
 
     private final RiskFactorRepository riskFactorRepository;
-    private final RiskAssessmentRepository riskAssessmentRepository;
+    private final AnalysisResultRepository analysisResultRepository;
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final HeaderForensicService headerForensicService;
@@ -65,7 +67,7 @@ public class RiskScoringService {
     private final ContentAnalysisService contentAnalysisService;
 
     public RiskScoringService(RiskFactorRepository riskFactorRepository,
-                              RiskAssessmentRepository riskAssessmentRepository,
+                              AnalysisResultRepository analysisResultRepository,
                               EmailEvidenceRepository evidenceRepository,
                               AnalysisRunRepository analysisRunRepository,
                               HeaderForensicService headerForensicService,
@@ -74,7 +76,7 @@ public class RiskScoringService {
                               VisualAnalysisService visualAnalysisService,
                               ContentAnalysisService contentAnalysisService) {
         this.riskFactorRepository = riskFactorRepository;
-        this.riskAssessmentRepository = riskAssessmentRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.headerForensicService = headerForensicService;
@@ -172,9 +174,15 @@ public class RiskScoringService {
         riskFactorRepository.deleteByAnalysisRunId(run.getId());
         List<RiskFactor> savedFactors = riskFactorRepository.saveAll(rawFactors);
 
-        RiskAssessment assessment = riskAssessmentRepository.findByAnalysisRunId(run.getId())
-                .orElseGet(RiskAssessment::new);
+        AnalysisResult assessment = analysisResultRepository.findByAnalysisRunId(run.getId())
+                .orElseGet(() -> new AnalysisResult(run));
 
+        if (assessment.getRiskResultId() == null) {
+            assessment.setRiskResultId(UUID.randomUUID());
+        }
+        if (assessment.getRiskCreatedAt() == null) {
+            assessment.setRiskCreatedAt(Instant.now());
+        }
         assessment.setAnalysisRun(run);
         assessment.setDeterministicRiskScore(deterministicScore);
         assessment.setRiskLevel(riskLevel);
@@ -186,7 +194,7 @@ public class RiskScoringService {
         assessment.setEngineVersion(ENGINE_VERSION);
         assessment.setEvaluatedAt(Instant.now());
 
-        riskAssessmentRepository.save(assessment);
+        analysisResultRepository.save(assessment);
 
         List<RiskCategoryScoreDto> categoryScoreDtos = buildCategoryScoreDtos(categoryScores, categoryCounts);
         List<RiskFactorDto> factorDtos = toFactorDtos(savedFactors);
@@ -214,12 +222,12 @@ public class RiskScoringService {
             return null;
         }
 
-        Optional<RiskAssessment> assessmentOpt = riskAssessmentRepository.findByAnalysisRunId(run.getId());
-        if (assessmentOpt.isEmpty()) {
+        Optional<AnalysisResult> assessmentOpt = analysisResultRepository.findByAnalysisRunId(run.getId());
+        if (assessmentOpt.isEmpty() || !assessmentOpt.get().hasRiskAssessment()) {
             return null;
         }
 
-        RiskAssessment assessment = assessmentOpt.get();
+        AnalysisResult assessment = assessmentOpt.get();
         List<RiskFactor> factors = riskFactorRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         List<RiskCategoryScoreDto> categoryScores = parseCategoryScoresJson(assessment.getCategoryScoresJson());
         List<RiskFactorDto> factorDtos = toFactorDtos(factors);

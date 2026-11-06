@@ -1,7 +1,7 @@
 package com.emailforensics.backend.aiassessment;
 
-import com.emailforensics.backend.content.ContentAnalysis;
-import com.emailforensics.backend.content.ContentAnalysisRepository;
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
 import com.emailforensics.backend.dto.aiassessment.EvidenceContextSummaryDto;
@@ -10,14 +10,10 @@ import com.emailforensics.backend.email.EmailParserService;
 import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
-import com.emailforensics.backend.headers.HeaderAnalysis;
-import com.emailforensics.backend.headers.HeaderAnalysisRepository;
 import com.emailforensics.backend.headers.ReceivedHop;
 import com.emailforensics.backend.headers.ReceivedHopRepository;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
-import com.emailforensics.backend.risk.RiskAssessment;
-import com.emailforensics.backend.risk.RiskAssessmentRepository;
 import com.emailforensics.backend.risk.RiskFactor;
 import com.emailforensics.backend.risk.RiskFactorRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
@@ -39,39 +35,33 @@ import java.util.Set;
 @Component
 public class EvidenceContextAssembler {
 
-    private final HeaderAnalysisRepository headerAnalysisRepository;
+    private final AnalysisResultRepository analysisResultRepository;
     private final ReceivedHopRepository receivedHopRepository;
     private final ExtractedUrlRepository extractedUrlRepository;
     private final IpArtifactRepository ipArtifactRepository;
     private final VisualArtifactRepository visualArtifactRepository;
     private final QrArtifactRepository qrArtifactRepository;
-    private final ContentAnalysisRepository contentAnalysisRepository;
-    private final RiskAssessmentRepository riskAssessmentRepository;
     private final RiskFactorRepository riskFactorRepository;
     private final HistoricalMatchRepository historicalMatchRepository;
     private final EvidenceStorageService evidenceStorageService;
     private final EmailParserService emailParserService;
 
-    public EvidenceContextAssembler(HeaderAnalysisRepository headerAnalysisRepository,
+    public EvidenceContextAssembler(AnalysisResultRepository analysisResultRepository,
                                    ReceivedHopRepository receivedHopRepository,
                                    ExtractedUrlRepository extractedUrlRepository,
                                    IpArtifactRepository ipArtifactRepository,
                                    VisualArtifactRepository visualArtifactRepository,
                                    QrArtifactRepository qrArtifactRepository,
-                                   ContentAnalysisRepository contentAnalysisRepository,
-                                   RiskAssessmentRepository riskAssessmentRepository,
                                    RiskFactorRepository riskFactorRepository,
                                    HistoricalMatchRepository historicalMatchRepository,
                                    EvidenceStorageService evidenceStorageService,
                                    EmailParserService emailParserService) {
-        this.headerAnalysisRepository = headerAnalysisRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.receivedHopRepository = receivedHopRepository;
         this.extractedUrlRepository = extractedUrlRepository;
         this.ipArtifactRepository = ipArtifactRepository;
         this.visualArtifactRepository = visualArtifactRepository;
         this.qrArtifactRepository = qrArtifactRepository;
-        this.contentAnalysisRepository = contentAnalysisRepository;
-        this.riskAssessmentRepository = riskAssessmentRepository;
         this.riskFactorRepository = riskFactorRepository;
         this.historicalMatchRepository = historicalMatchRepository;
         this.evidenceStorageService = evidenceStorageService;
@@ -91,9 +81,9 @@ public class EvidenceContextAssembler {
         whitelist.add("FILE:SHA256");
         whitelist.add("FILE:FILENAME");
 
-        Optional<HeaderAnalysis> headerOpt = headerAnalysisRepository.findByAnalysisRunId(run.getId());
-        if (headerOpt.isPresent()) {
-            HeaderAnalysis h = headerOpt.get();
+        Optional<AnalysisResult> analysisResultOpt = analysisResultRepository.findByAnalysisRunId(run.getId());
+        if (analysisResultOpt.isPresent() && analysisResultOpt.get().hasHeaderAnalysis()) {
+            AnalysisResult h = analysisResultOpt.get();
             sb.append("1. HEADER & AUTHENTICATION FINDINGS:\n");
             sb.append(" - From: ").append(h.getFromAddress() != null ? h.getFromAddress() : "N/A").append("\n");
             sb.append(" - Return-Path: ").append(h.getReturnPath() != null ? h.getReturnPath() : "N/A").append("\n");
@@ -199,9 +189,8 @@ public class EvidenceContextAssembler {
             sb.append("\n");
         }
 
-        Optional<ContentAnalysis> contentOpt = contentAnalysisRepository.findByAnalysisRunId(run.getId());
-        if (contentOpt.isPresent()) {
-            ContentAnalysis ca = contentOpt.get();
+        if (analysisResultOpt.isPresent() && analysisResultOpt.get().hasContentAnalysis()) {
+            AnalysisResult ca = analysisResultOpt.get();
             sb.append("6. CONTENT & ML CLASSIFICATION FINDINGS:\n");
             sb.append(" - Tribuo ML Predicted: ").append(ca.getPredictedLabel())
                     .append(" (Probability: ").append(ca.getProbability() != null ? ca.getProbability() : 0.0).append(")\n");
@@ -226,9 +215,8 @@ public class EvidenceContextAssembler {
             sb.append("\n");
         }
 
-        Optional<RiskAssessment> riskOpt = riskAssessmentRepository.findByAnalysisRunId(run.getId());
-        if (riskOpt.isPresent()) {
-            RiskAssessment ra = riskOpt.get();
+        if (analysisResultOpt.isPresent() && analysisResultOpt.get().hasRiskAssessment()) {
+            AnalysisResult ra = analysisResultOpt.get();
             sb.append("7. DETERMINISTIC RISK EVALUATION:\n");
             sb.append(" - Deterministic Risk Score: ").append(ra.getDeterministicRiskScore()).append("/100 (")
                     .append(ra.getRiskLevel()).append(")\n");

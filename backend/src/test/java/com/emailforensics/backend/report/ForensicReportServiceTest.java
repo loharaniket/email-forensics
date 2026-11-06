@@ -2,11 +2,11 @@ package com.emailforensics.backend.report;
 
 import com.emailforensics.backend.aiassessment.AiGroundedAssessment;
 import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.casefile.CaseStatus;
-import com.emailforensics.backend.content.ContentAnalysis;
-import com.emailforensics.backend.content.ContentAnalysisRepository;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
@@ -20,14 +20,10 @@ import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
-import com.emailforensics.backend.headers.HeaderAnalysis;
-import com.emailforensics.backend.headers.HeaderAnalysisRepository;
 import com.emailforensics.backend.headers.ReceivedHop;
 import com.emailforensics.backend.headers.ReceivedHopRepository;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
-import com.emailforensics.backend.risk.RiskAssessment;
-import com.emailforensics.backend.risk.RiskAssessmentRepository;
 import com.emailforensics.backend.risk.RiskFactor;
 import com.emailforensics.backend.risk.RiskFactorRepository;
 import com.emailforensics.backend.security.UserPrincipal;
@@ -72,7 +68,7 @@ class ForensicReportServiceTest {
     private CaseRepository caseRepository;
 
     @Mock
-    private HeaderAnalysisRepository headerRepository;
+    private AnalysisResultRepository analysisResultRepository;
 
     @Mock
     private ReceivedHopRepository hopRepository;
@@ -88,12 +84,6 @@ class ForensicReportServiceTest {
 
     @Mock
     private QrArtifactRepository qrRepository;
-
-    @Mock
-    private ContentAnalysisRepository contentRepository;
-
-    @Mock
-    private RiskAssessmentRepository riskRepository;
 
     @Mock
     private RiskFactorRepository riskFactorRepository;
@@ -123,14 +113,12 @@ class ForensicReportServiceTest {
                 evidenceRepository,
                 runRepository,
                 caseRepository,
-                headerRepository,
+                analysisResultRepository,
                 hopRepository,
                 urlRepository,
                 ipRepository,
                 visualRepository,
                 qrRepository,
-                contentRepository,
-                riskRepository,
                 riskFactorRepository,
                 matchRepository,
                 aiRepository,
@@ -161,13 +149,38 @@ class ForensicReportServiceTest {
         parsedEmail.setAttachments(Collections.singletonList(att));
         when(emailParserService.parse(any(InputStream.class))).thenReturn(parsedEmail);
 
-        HeaderAnalysis ha = new HeaderAnalysis();
-        ha.setFromAddress("ceo@spoofed.com");
-        ha.setReturnPath("attacker@bad.org");
-        ha.setReportedSpf("FAIL");
-        ha.setReportedDkim("FAIL");
-        ha.setReportedDmarc("FAIL");
-        when(headerRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ha));
+        AnalysisResult ar = new AnalysisResult(run);
+        ar.setHeaderResultId(UUID.randomUUID());
+        ar.setFromAddress("ceo@spoofed.com");
+        ar.setReturnPath("attacker@bad.org");
+        ar.setReportedSpf("FAIL");
+        ar.setReportedDkim("FAIL");
+        ar.setReportedDmarc("FAIL");
+
+        ar.setContentResultId(UUID.randomUUID());
+        ar.setMlModelVersion("v1.0.0");
+        ar.setProbability(0.95);
+        ar.setPredictedLabel("PHISHING");
+        ar.setMlStatus("SUCCESS");
+        ar.setUrgency(true);
+        ar.setCredentialRequest(true);
+        ar.setPaymentInstruction(true);
+        ar.setImpersonation(false);
+        ar.setSecrecy(false);
+        ar.setPromptInjectionDetected(true);
+        ar.setPromptMatchesJson("[]");
+        ar.setSocialEngineeringMatchesJson("[]");
+
+        ar.setRiskResultId(UUID.randomUUID());
+        ar.setDeterministicRiskScore(85);
+        ar.setRiskLevel("CRITICAL");
+        ar.setEvidenceConfidenceScore(90);
+        ar.setConfidenceLevel("HIGH");
+        ar.setConfidenceExplanation("High Confidence");
+        ar.setCategoryScoresJson("{}");
+        ar.setTotalUncappedScore(85);
+        ar.setEngineVersion("v1.0.0");
+        when(analysisResultRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ar));
 
         ReceivedHop hop = new ReceivedHop(UUID.randomUUID(), run, 1, "bad.org", "mx.company.com", "ESMTPS", "198.51.100.1", Instant.now(), 2L, "raw", null);
         when(hopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId())).thenReturn(Collections.singletonList(hop));
@@ -184,12 +197,6 @@ class ForensicReportServiceTest {
 
         VisualArtifact vis = new VisualArtifact(UUID.randomUUID(), run, "image.png", "image/png", 500L, "imghash", null);
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId())).thenReturn(Collections.singletonList(vis));
-
-        ContentAnalysis ca = new ContentAnalysis(UUID.randomUUID(), run, "v1.0.0", 0.95, "PHISHING", "SUCCESS", true, true, true, false, false, true, "[]", "[]");
-        when(contentRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ca));
-
-        RiskAssessment ra = new RiskAssessment(UUID.randomUUID(), run, 85, "CRITICAL", 90, "HIGH", "High Confidence", "{}", 85, "v1.0.0");
-        when(riskRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ra));
 
         RiskFactor rf = new RiskFactor(UUID.randomUUID(), run, "AUTHENTICATION", "SPF_FAIL", "CRITICAL", 30, "SPF Failed", "HEADER:SPF");
         when(riskFactorRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId())).thenReturn(Collections.singletonList(rf));
@@ -272,8 +279,17 @@ class ForensicReportServiceTest {
         when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(evidence.getId())).thenReturn(Optional.of(run));
         when(storageService.loadAsResource(anyString())).thenReturn(new ByteArrayResource("Subject: Clean".getBytes()));
 
-        RiskAssessment ra = new RiskAssessment(UUID.randomUUID(), run, 80, "HIGH", 85, "HIGH", "High Confidence", "{}", 80, "v1.0.0");
-        when(riskRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ra));
+        AnalysisResult ar = new AnalysisResult(run);
+        ar.setRiskResultId(UUID.randomUUID());
+        ar.setDeterministicRiskScore(80);
+        ar.setRiskLevel("HIGH");
+        ar.setEvidenceConfidenceScore(85);
+        ar.setConfidenceLevel("HIGH");
+        ar.setConfidenceExplanation("High Confidence");
+        ar.setCategoryScoresJson("{}");
+        ar.setTotalUncappedScore(80);
+        ar.setEngineVersion("v1.0.0");
+        when(analysisResultRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ar));
 
         CaseReportDto caseReport = service.generateCaseReport(caseId, null);
 

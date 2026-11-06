@@ -7,10 +7,10 @@ import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceService;
-import com.emailforensics.backend.headers.HeaderAnalysis;
-import com.emailforensics.backend.headers.HeaderAnalysisRepository;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
@@ -60,7 +60,7 @@ public class CorrelationServiceTest {
     private IpArtifactRepository ipRepository;
 
     @Mock
-    private HeaderAnalysisRepository headerRepository;
+    private AnalysisResultRepository analysisResultRepository;
 
     @Mock
     private VisualArtifactRepository visualRepository;
@@ -90,7 +90,7 @@ public class CorrelationServiceTest {
                 runRepository,
                 urlRepository,
                 ipRepository,
-                headerRepository,
+                analysisResultRepository,
                 visualRepository,
                 qrRepository,
                 evidenceService
@@ -123,7 +123,7 @@ public class CorrelationServiceTest {
 
         when(urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(List.of(url1));
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
-        when(headerRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
+        when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(evidenceService.getEvidenceAttachments(email1.getId())).thenReturn(Collections.emptyList());
         when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));
@@ -163,7 +163,7 @@ public class CorrelationServiceTest {
 
         when(urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
-        when(headerRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
+        when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));
 
@@ -195,7 +195,7 @@ public class CorrelationServiceTest {
 
         when(urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
-        when(headerRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
+        when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(evidenceService.getEvidenceAttachments(email1.getId())).thenReturn(Collections.emptyList());
         when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));

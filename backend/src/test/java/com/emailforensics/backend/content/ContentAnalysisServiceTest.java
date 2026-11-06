@@ -1,5 +1,7 @@
 package com.emailforensics.backend.content;
 
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.email.ParsedEmailDto;
 import com.emailforensics.backend.email.EmailParserService;
@@ -33,7 +35,7 @@ import static org.mockito.Mockito.when;
 class ContentAnalysisServiceTest {
 
     private ContentAnalysisService service;
-    private ContentAnalysisRepository contentAnalysisRepo;
+    private AnalysisResultRepository analysisResultRepo;
     private EmailEvidenceRepository emailEvidenceRepo;
     private AnalysisRunRepository analysisRunRepo;
     private EvidenceStorageService storageService;
@@ -43,7 +45,7 @@ class ContentAnalysisServiceTest {
 
     @BeforeEach
     void setUp() {
-        contentAnalysisRepo = Mockito.mock(ContentAnalysisRepository.class);
+        analysisResultRepo = Mockito.mock(AnalysisResultRepository.class);
         emailEvidenceRepo = Mockito.mock(EmailEvidenceRepository.class);
         analysisRunRepo = Mockito.mock(AnalysisRunRepository.class);
         storageService = Mockito.mock(EvidenceStorageService.class);
@@ -56,7 +58,7 @@ class ContentAnalysisServiceTest {
         TribuoBaselineService tribuoService = new TribuoBaselineService();
 
         service = new ContentAnalysisService(
-                contentAnalysisRepo,
+                analysisResultRepo,
                 emailEvidenceRepo,
                 analysisRunRepo,
                 storageService,
@@ -99,7 +101,7 @@ class ContentAnalysisServiceTest {
         QrArtifact qr = new QrArtifact(UUID.randomUUID(), visual, "https://phish.test/auth", "URL", "https://phish.test/auth");
         when(qrArtifactRepo.findByVisualArtifactIdOrderByCreatedAtAsc(visual.getId())).thenReturn(List.of(qr));
 
-        when(contentAnalysisRepo.save(any(ContentAnalysis.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(analysisResultRepo.save(any(AnalysisResult.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         ContentAnalysisDto result = service.analyzeContent(emailId);
 

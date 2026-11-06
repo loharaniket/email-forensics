@@ -1,5 +1,7 @@
 package com.emailforensics.backend.content;
 
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.content.PromptInjectionMatchDto;
 import com.emailforensics.backend.dto.content.SocialEngineeringMatchDto;
@@ -18,6 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.InputStream;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,7 +38,7 @@ public class ContentAnalysisService {
     private static final Pattern OBJECT_PATTERN = Pattern.compile("\\{([^{}]+)\\}");
     private static final Pattern FIELD_PATTERN = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"((?:\\\\\"|[^\"])*)\"");
 
-    private final ContentAnalysisRepository contentAnalysisRepository;
+    private final AnalysisResultRepository analysisResultRepository;
     private final EmailEvidenceRepository emailEvidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService evidenceStorageService;
@@ -46,7 +49,7 @@ public class ContentAnalysisService {
     private final PromptInjectionDetector promptInjectionDetector;
     private final TribuoBaselineService tribuoBaselineService;
 
-    public ContentAnalysisService(ContentAnalysisRepository contentAnalysisRepository,
+    public ContentAnalysisService(AnalysisResultRepository analysisResultRepository,
                                   EmailEvidenceRepository emailEvidenceRepository,
                                   AnalysisRunRepository analysisRunRepository,
                                   EvidenceStorageService evidenceStorageService,
@@ -56,7 +59,7 @@ public class ContentAnalysisService {
                                   SocialEngineeringRuleEngine socialEngineeringRuleEngine,
                                   PromptInjectionDetector promptInjectionDetector,
                                   TribuoBaselineService tribuoBaselineService) {
-        this.contentAnalysisRepository = contentAnalysisRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.emailEvidenceRepository = emailEvidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.evidenceStorageService = evidenceStorageService;
@@ -132,11 +135,14 @@ public class ContentAnalysisService {
         String promptMatchesJson = formatPromptMatchesJson(piFindings.getMatches());
         String seMatchesJson = formatSocialEngineeringMatchesJson(seFindings.getMatches());
 
-        ContentAnalysis contentAnalysis = contentAnalysisRepository.findByAnalysisRunId(run.getId())
-                .orElseGet(ContentAnalysis::new);
+        AnalysisResult contentAnalysis = analysisResultRepository.findByAnalysisRunId(run.getId())
+                .orElseGet(() -> new AnalysisResult(run));
 
-        if (contentAnalysis.getId() == null) {
-            contentAnalysis.setId(UUID.randomUUID());
+        if (contentAnalysis.getContentResultId() == null) {
+            contentAnalysis.setContentResultId(UUID.randomUUID());
+        }
+        if (contentAnalysis.getContentCreatedAt() == null) {
+            contentAnalysis.setContentCreatedAt(Instant.now());
         }
         contentAnalysis.setAnalysisRun(run);
         contentAnalysis.setMlModelVersion(tribuoBaselineService.getModelVersion());
@@ -152,7 +158,7 @@ public class ContentAnalysisService {
         contentAnalysis.setPromptMatchesJson(promptMatchesJson);
         contentAnalysis.setSocialEngineeringMatchesJson(seMatchesJson);
 
-        ContentAnalysis saved = contentAnalysisRepository.save(contentAnalysis);
+        AnalysisResult saved = analysisResultRepository.save(contentAnalysis);
 
         return toDto(saved, piFindings.getMatches(), seFindings.getMatches());
     }
@@ -171,23 +177,23 @@ public class ContentAnalysisService {
             return Optional.empty();
         }
 
-        Optional<ContentAnalysis> entityOpt = contentAnalysisRepository.findByAnalysisRunId(run.getId());
-        if (entityOpt.isEmpty()) {
+        Optional<AnalysisResult> entityOpt = analysisResultRepository.findByAnalysisRunId(run.getId());
+        if (entityOpt.isEmpty() || !entityOpt.get().hasContentAnalysis()) {
             return Optional.empty();
         }
 
-        ContentAnalysis entity = entityOpt.get();
+        AnalysisResult entity = entityOpt.get();
         List<PromptInjectionMatchDto> promptMatches = parsePromptMatchesJson(entity.getPromptMatchesJson());
         List<SocialEngineeringMatchDto> seMatches = parseSocialEngineeringMatchesJson(entity.getSocialEngineeringMatchesJson());
 
         return Optional.of(toDto(entity, promptMatches, seMatches));
     }
 
-    private ContentAnalysisDto toDto(ContentAnalysis entity,
+    private ContentAnalysisDto toDto(AnalysisResult entity,
                                      List<PromptInjectionMatchDto> promptMatches,
                                      List<SocialEngineeringMatchDto> seMatches) {
         ContentAnalysisDto dto = new ContentAnalysisDto();
-        dto.setId(entity.getId());
+        dto.setId(entity.getContentResultId());
         dto.setMlModelVersion(entity.getMlModelVersion());
         dto.setProbability(entity.getProbability());
         dto.setPredictedLabel(entity.getPredictedLabel());
@@ -201,7 +207,7 @@ public class ContentAnalysisService {
         dto.setPromptInjectionDetected(entity.isPromptInjectionDetected());
         dto.setPromptMatches(promptMatches != null ? promptMatches : Collections.emptyList());
         dto.setSocialEngineeringMatches(seMatches != null ? seMatches : Collections.emptyList());
-        dto.setCreatedAt(entity.getCreatedAt());
+        dto.setCreatedAt(entity.getContentCreatedAt());
         return dto;
     }
 

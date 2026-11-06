@@ -42,7 +42,7 @@ public class EvidenceService {
     private final UserRepository userRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
-    private final com.emailforensics.backend.risk.RiskAssessmentRepository riskAssessmentRepository;
+    private final com.emailforensics.backend.analysis.AnalysisResultRepository analysisResultRepository;
     private final AnalysisOrchestratorService orchestrator;
     private final String pipelineVersion;
 
@@ -52,7 +52,7 @@ public class EvidenceService {
                            UserRepository userRepository,
                            EvidenceStorageService storageService,
                            EmailParserService emailParserService,
-                           com.emailforensics.backend.risk.RiskAssessmentRepository riskAssessmentRepository,
+                           com.emailforensics.backend.analysis.AnalysisResultRepository analysisResultRepository,
                            AnalysisOrchestratorService orchestrator,
                            @Value("${emailforensics.pipeline.version:1.0.0}") String pipelineVersion) {
         this.evidenceRepository = evidenceRepository;
@@ -61,7 +61,7 @@ public class EvidenceService {
         this.userRepository = userRepository;
         this.storageService = storageService;
         this.emailParserService = emailParserService;
-        this.riskAssessmentRepository = riskAssessmentRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.orchestrator = orchestrator;
         this.pipelineVersion = pipelineVersion;
     }
@@ -288,10 +288,10 @@ public class EvidenceService {
         String riskLevel = null;
         Integer confidenceScore = null;
         if (latestRun.isPresent()) {
-            Optional<com.emailforensics.backend.risk.RiskAssessment> assessmentOpt =
-                    riskAssessmentRepository.findByAnalysisRunId(latestRun.get().getId());
-            if (assessmentOpt.isPresent()) {
-                com.emailforensics.backend.risk.RiskAssessment ra = assessmentOpt.get();
+            Optional<com.emailforensics.backend.analysis.AnalysisResult> assessmentOpt =
+                    analysisResultRepository.findByAnalysisRunId(latestRun.get().getId());
+            if (assessmentOpt.isPresent() && assessmentOpt.get().hasRiskAssessment()) {
+                com.emailforensics.backend.analysis.AnalysisResult ra = assessmentOpt.get();
                 riskScore = ra.getDeterministicRiskScore();
                 riskLevel = ra.getRiskLevel();
                 confidenceScore = ra.getEvidenceConfidenceScore();

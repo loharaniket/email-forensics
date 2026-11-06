@@ -2,11 +2,11 @@ package com.emailforensics.backend.report;
 
 import com.emailforensics.backend.aiassessment.AiGroundedAssessment;
 import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.common.ResourceNotFoundException;
-import com.emailforensics.backend.content.ContentAnalysis;
-import com.emailforensics.backend.content.ContentAnalysisRepository;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
@@ -19,14 +19,10 @@ import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
-import com.emailforensics.backend.headers.HeaderAnalysis;
-import com.emailforensics.backend.headers.HeaderAnalysisRepository;
 import com.emailforensics.backend.headers.ReceivedHop;
 import com.emailforensics.backend.headers.ReceivedHopRepository;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
-import com.emailforensics.backend.risk.RiskAssessment;
-import com.emailforensics.backend.risk.RiskAssessmentRepository;
 import com.emailforensics.backend.risk.RiskFactor;
 import com.emailforensics.backend.risk.RiskFactorRepository;
 import com.emailforensics.backend.security.UserPrincipal;
@@ -55,14 +51,12 @@ public class ForensicReportService {
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository runRepository;
     private final CaseRepository caseRepository;
-    private final HeaderAnalysisRepository headerRepository;
+    private final AnalysisResultRepository analysisResultRepository;
     private final ReceivedHopRepository hopRepository;
     private final ExtractedUrlRepository urlRepository;
     private final IpArtifactRepository ipRepository;
     private final VisualArtifactRepository visualRepository;
     private final QrArtifactRepository qrRepository;
-    private final ContentAnalysisRepository contentRepository;
-    private final RiskAssessmentRepository riskRepository;
     private final RiskFactorRepository riskFactorRepository;
     private final HistoricalMatchRepository matchRepository;
     private final AiGroundedAssessmentRepository aiRepository;
@@ -72,14 +66,12 @@ public class ForensicReportService {
     public ForensicReportService(EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository runRepository,
                                  CaseRepository caseRepository,
-                                 HeaderAnalysisRepository headerRepository,
+                                 AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository hopRepository,
                                  ExtractedUrlRepository urlRepository,
                                  IpArtifactRepository ipRepository,
                                  VisualArtifactRepository visualRepository,
                                  QrArtifactRepository qrRepository,
-                                 ContentAnalysisRepository contentRepository,
-                                 RiskAssessmentRepository riskRepository,
                                  RiskFactorRepository riskFactorRepository,
                                  HistoricalMatchRepository matchRepository,
                                  AiGroundedAssessmentRepository aiRepository,
@@ -88,14 +80,12 @@ public class ForensicReportService {
         this.evidenceRepository = evidenceRepository;
         this.runRepository = runRepository;
         this.caseRepository = caseRepository;
-        this.headerRepository = headerRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.hopRepository = hopRepository;
         this.urlRepository = urlRepository;
         this.ipRepository = ipRepository;
         this.visualRepository = visualRepository;
         this.qrRepository = qrRepository;
-        this.contentRepository = contentRepository;
-        this.riskRepository = riskRepository;
         this.riskFactorRepository = riskFactorRepository;
         this.matchRepository = matchRepository;
         this.aiRepository = aiRepository;
@@ -351,9 +341,9 @@ public class ForensicReportService {
         report.setExecutionStatus(exec);
 
         ForensicReportDto.HeaderForensicsSummaryDto headers = new ForensicReportDto.HeaderForensicsSummaryDto();
-        Optional<HeaderAnalysis> hOpt = headerRepository.findByAnalysisRunId(run.getId());
-        if (hOpt.isPresent()) {
-            HeaderAnalysis h = hOpt.get();
+        Optional<AnalysisResult> resOpt = analysisResultRepository.findByAnalysisRunId(run.getId());
+        if (resOpt.isPresent() && resOpt.get().hasHeaderAnalysis()) {
+            AnalysisResult h = resOpt.get();
             headers.setFromAddress(h.getFromAddress());
             headers.setFromDomain(h.getFromDomain());
             headers.setReturnPath(h.getReturnPath());
@@ -469,9 +459,8 @@ public class ForensicReportService {
         report.setVisualsAndArtifacts(vis);
 
         ForensicReportDto.ContentAnalysisSummaryDto cont = new ForensicReportDto.ContentAnalysisSummaryDto();
-        Optional<ContentAnalysis> cOpt = contentRepository.findByAnalysisRunId(run.getId());
-        if (cOpt.isPresent()) {
-            ContentAnalysis ca = cOpt.get();
+        if (resOpt.isPresent() && resOpt.get().hasContentAnalysis()) {
+            AnalysisResult ca = resOpt.get();
             cont.setUrgency(ca.isUrgency());
             cont.setCredentialRequest(ca.isCredentialRequest());
             cont.setPaymentInstruction(ca.isPaymentInstruction());
@@ -484,9 +473,8 @@ public class ForensicReportService {
         report.setContentAnalysis(cont);
 
         ForensicReportDto.DeterministicRiskSummaryDto risk = new ForensicReportDto.DeterministicRiskSummaryDto();
-        Optional<RiskAssessment> rOpt = riskRepository.findByAnalysisRunId(run.getId());
-        if (rOpt.isPresent()) {
-            RiskAssessment ra = rOpt.get();
+        if (resOpt.isPresent() && resOpt.get().hasRiskAssessment()) {
+            AnalysisResult ra = resOpt.get();
             risk.setDeterministicRiskScore(ra.getDeterministicRiskScore());
             risk.setRiskLevel(ra.getRiskLevel() != null ? ra.getRiskLevel() : "LOW");
             risk.setEvidenceConfidenceScore(ra.getEvidenceConfidenceScore());

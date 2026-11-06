@@ -1,5 +1,7 @@
 package com.emailforensics.backend.risk;
 
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.content.ContentAnalysisService;
 import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
@@ -41,7 +43,7 @@ class RiskScoringServiceTest {
 
     private RiskScoringService service;
     private RiskFactorRepository riskFactorRepo;
-    private RiskAssessmentRepository riskAssessmentRepo;
+    private AnalysisResultRepository analysisResultRepo;
     private EmailEvidenceRepository evidenceRepo;
     private AnalysisRunRepository analysisRunRepo;
     private HeaderForensicService headerForensicService;
@@ -58,7 +60,7 @@ class RiskScoringServiceTest {
     @BeforeEach
     void setUp() {
         riskFactorRepo = Mockito.mock(RiskFactorRepository.class);
-        riskAssessmentRepo = Mockito.mock(RiskAssessmentRepository.class);
+        analysisResultRepo = Mockito.mock(AnalysisResultRepository.class);
         evidenceRepo = Mockito.mock(EmailEvidenceRepository.class);
         analysisRunRepo = Mockito.mock(AnalysisRunRepository.class);
         headerForensicService = Mockito.mock(HeaderForensicService.class);
@@ -69,7 +71,7 @@ class RiskScoringServiceTest {
 
         service = new RiskScoringService(
                 riskFactorRepo,
-                riskAssessmentRepo,
+                analysisResultRepo,
                 evidenceRepo,
                 analysisRunRepo,
                 headerForensicService,
@@ -94,7 +96,7 @@ class RiskScoringServiceTest {
         when(evidenceRepo.findById(emailId)).thenReturn(Optional.of(evidence));
         when(analysisRunRepo.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(run));
         when(riskFactorRepo.saveAll(anyList())).thenAnswer(invocation -> invocation.getArgument(0));
-        when(riskAssessmentRepo.findByAnalysisRunId(runId)).thenReturn(Optional.empty());
+        when(analysisResultRepo.findByAnalysisRunId(runId)).thenReturn(Optional.empty());
     }
 
     @Test

@@ -3,13 +3,13 @@ package com.emailforensics.backend.correlation;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceService;
-import com.emailforensics.backend.headers.HeaderAnalysis;
-import com.emailforensics.backend.headers.HeaderAnalysisRepository;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
@@ -37,7 +37,7 @@ public class CorrelationService {
     private final AnalysisRunRepository runRepository;
     private final ExtractedUrlRepository urlRepository;
     private final IpArtifactRepository ipRepository;
-    private final HeaderAnalysisRepository headerRepository;
+    private final AnalysisResultRepository analysisResultRepository;
     private final VisualArtifactRepository visualRepository;
     private final QrArtifactRepository qrRepository;
     private final EvidenceService evidenceService;
@@ -47,7 +47,7 @@ public class CorrelationService {
                               AnalysisRunRepository runRepository,
                               ExtractedUrlRepository urlRepository,
                               IpArtifactRepository ipRepository,
-                              HeaderAnalysisRepository headerRepository,
+                              AnalysisResultRepository analysisResultRepository,
                               VisualArtifactRepository visualRepository,
                               QrArtifactRepository qrRepository,
                               @Lazy EvidenceService evidenceService) {
@@ -56,7 +56,7 @@ public class CorrelationService {
         this.runRepository = runRepository;
         this.urlRepository = urlRepository;
         this.ipRepository = ipRepository;
-        this.headerRepository = headerRepository;
+        this.analysisResultRepository = analysisResultRepository;
         this.visualRepository = visualRepository;
         this.qrRepository = qrRepository;
         this.evidenceService = evidenceService;
@@ -80,7 +80,7 @@ public class CorrelationService {
 
         List<ExtractedUrl> sourceUrls = urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
         List<IpArtifact> sourceIps = ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
-        Optional<HeaderAnalysis> sourceHeader = headerRepository.findByAnalysisRunId(sourceRun.getId());
+        Optional<AnalysisResult> sourceHeader = analysisResultRepository.findByAnalysisRunId(sourceRun.getId());
         List<VisualArtifact> sourceVisuals = visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
         List<AttachmentMetaDto> sourceAttachments = evidenceService.getEvidenceAttachments(emailId);
 
@@ -178,11 +178,11 @@ public class CorrelationService {
             }
         }
 
-        if (sourceHeader.isPresent()) {
+        if (sourceHeader.isPresent() && sourceHeader.get().hasHeaderAnalysis()) {
             String fromDomain = sourceHeader.get().getFromDomain();
             if (fromDomain != null && !fromDomain.isBlank()) {
-                List<HeaderAnalysis> hMatches = headerRepository.findByFromDomain(fromDomain);
-                for (HeaderAnalysis mH : hMatches) {
+                List<AnalysisResult> hMatches = analysisResultRepository.findByFromDomain(fromDomain);
+                for (AnalysisResult mH : hMatches) {
                     EmailEvidence other = mH.getAnalysisRun().getEmailEvidence();
                     if (!other.getId().equals(sourceEvidence.getId())) {
                         addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
