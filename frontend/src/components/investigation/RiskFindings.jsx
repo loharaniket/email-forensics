@@ -349,3 +349,4 @@ export default function RiskFindings({ riskBreakdown }) {
     </div>
   )
 }
+

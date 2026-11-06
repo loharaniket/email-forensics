@@ -178,3 +178,4 @@ export default function RelatedCases({ correlations = [] }) {
     </div>
   )
 }
+

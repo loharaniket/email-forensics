@@ -31,7 +31,6 @@ import MessageContent from '../components/investigation/MessageContent'
 import RiskFindings from '../components/investigation/RiskFindings'
 import RelatedCases from '../components/investigation/RelatedCases'
 import AutomatedAssessment from '../components/investigation/AutomatedAssessment'
-import TechnicalDetails from '../components/investigation/TechnicalDetails'
 import InvestigationReport from '../components/investigation/InvestigationReport'
 
 import {
@@ -408,8 +407,6 @@ export default function InvestigationPage() {
 
   const attachments = detail.attachments || []
   const inlineImages = detail.inlineImages || []
-  const rawHeaders = headerAnalysis?.rawHeaders || detail.rawHeaders || {}
-  const rawHeaderEntries = Object.entries(rawHeaders)
 
   const currentIntegrityStatus = integrityCheckResult
     ? integrityCheckResult.intact ? 'VERIFIED' : 'MISMATCH'
@@ -628,19 +625,6 @@ export default function InvestigationPage() {
           </button>
 
           <button
-            id="tab-raw-headers"
-            onClick={() => setActiveTab('raw-headers')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'raw-headers'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#667085] hover:text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Layers className="h-3.5 w-3.5" />
-            <span>Technical details</span>
-          </button>
-
-          <button
             id="tab-report"
             onClick={() => setActiveTab('report')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
@@ -759,13 +743,7 @@ export default function InvestigationPage() {
           />
         )}
 
-        {activeTab === 'raw-headers' && (
-          <TechnicalDetails
-            rawHeaders={rawHeaders}
-            copiedKey={copiedKey}
-            copyValue={copyValue}
-          />
-        )}
+
 
         {activeTab === 'report' && (
           <InvestigationReport

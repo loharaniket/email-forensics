@@ -287,3 +287,4 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
     </div>
   )
 }
+
