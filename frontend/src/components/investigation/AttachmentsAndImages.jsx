@@ -40,7 +40,7 @@ export default function AttachmentsAndImages({
   if (mode === 'attachments') {
     return (
       <div className="space-y-6">
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
           <div className="pb-3 border-b border-[#E4E7EC]">
             <h2 className="text-sm font-bold text-[#202938]">
               Attached files ({attachments.length})
@@ -151,7 +151,7 @@ export default function AttachmentsAndImages({
   return (
     <div className="space-y-4">
       {/* Visual search header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
         <div className="flex items-center gap-2">
           <QrCode className="h-4 w-4 text-[#2563EB]" />
           <span className="text-xs text-[#202938] font-semibold">
@@ -173,7 +173,7 @@ export default function AttachmentsAndImages({
       </div>
 
       {filteredVisuals.length === 0 ? (
-        <div className="p-12 text-center bg-white rounded-xl border border-[#E4E7EC] shadow-xs">
+        <div className="p-12 text-center bg-white rounded-xl border border-[#E4E7EC]">
           <ImageIcon className="h-10 w-10 text-[#98A2B3] mx-auto mb-3" />
           <p className="text-sm font-medium text-[#202938]">
             No image files found
@@ -189,7 +189,7 @@ export default function AttachmentsAndImages({
           {filteredVisuals.map((v, idx) => (
             <div
               key={v.id || idx}
-              className="bg-white p-5 rounded-xl border border-[#E4E7EC] space-y-4 shadow-xs"
+              className="bg-white p-5 rounded-xl border border-[#E4E7EC] space-y-4"
             >
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC]">
                 <div className="flex items-start gap-3">
@@ -204,7 +204,7 @@ export default function AttachmentsAndImages({
                       <span className="px-2 py-0.5 rounded bg-[#F5F6F8] border border-[#E4E7EC]">
                         {v.contentType || 'image/*'}
                       </span>
-                      <span>{formatBytes(v.byteSize)}</span>
+                      <span>{formatBytes(v.fileSizeBytes || v.byteSize || 0)}</span>
                       {v.width && v.height && (
                         <span>
                           {v.width} &times; {v.height} px

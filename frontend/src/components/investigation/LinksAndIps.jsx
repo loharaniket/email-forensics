@@ -47,7 +47,7 @@ export default function LinksAndIps({
     return (
       <div className="space-y-4">
         {/* URL search bar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC] shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
           <div className="relative flex-1 max-w-md">
             <Search className="h-4 w-4 text-[#98A2B3] absolute left-3 top-2.5" />
             <input
@@ -77,7 +77,7 @@ export default function LinksAndIps({
         </div>
 
         {filteredUrls.length === 0 ? (
-          <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#667085] shadow-xs">
+          <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#667085]">
             {urls.length === 0
               ? 'No links were found in this email.'
               : 'No links match your search.'}
@@ -96,7 +96,7 @@ export default function LinksAndIps({
               return (
                 <div
                   key={idx}
-                  className={`p-5 rounded-xl bg-white border transition-colors shadow-xs ${
+                  className={`p-5 rounded-xl bg-white border transition-colors ${
                     u.anchorMismatch || isHighRisk
                       ? 'border-red-200'
                       : 'border-[#E4E7EC]'
@@ -238,7 +238,7 @@ export default function LinksAndIps({
   return (
     <div className="space-y-4">
       {/* IP search bar */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC] shadow-xs">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
         <div className="relative flex-1 max-w-md">
           <Search className="h-4 w-4 text-[#98A2B3] absolute left-3 top-2.5" />
           <input
@@ -264,7 +264,7 @@ export default function LinksAndIps({
       </div>
 
       {filteredInfra.length === 0 ? (
-        <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#667085] shadow-xs">
+        <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#667085]">
           {infrastructure.length === 0
             ? 'No IP addresses found in this email.'
             : 'No IP addresses match your search.'}
@@ -274,7 +274,7 @@ export default function LinksAndIps({
           {filteredInfra.map((item, idx) => (
             <div
               key={idx}
-              className="p-5 rounded-xl bg-white border border-[#E4E7EC] hover:border-slate-300 transition-colors shadow-xs space-y-3"
+              className="p-5 rounded-xl bg-white border border-[#E4E7EC] hover:border-slate-300 transition-colors space-y-3"
             >
               <div className="flex items-start justify-between gap-2 pb-2.5 border-b border-[#E4E7EC]">
                 <div className="space-y-1">

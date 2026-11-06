@@ -79,7 +79,7 @@ export default function MessageContent({
   if (mode === 'body') {
     return (
       <div className="space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC] shadow-xs">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
           <div className="flex items-center gap-2 text-xs text-[#667085]">
             <Info className="h-4 w-4 text-[#2563EB]" />
             <span>Isolated message preview</span>
@@ -122,7 +122,7 @@ export default function MessageContent({
           </div>
         </div>
 
-        <div className="bg-white rounded-xl p-6 border border-[#E4E7EC] shadow-xs max-h-[600px] overflow-y-auto">
+        <div className="bg-white rounded-xl p-6 border border-[#E4E7EC] max-h-[600px] overflow-y-auto">
           <pre className="font-mono text-xs text-[#202938] whitespace-pre-wrap select-text leading-relaxed">
             {bodyMode === 'extracted'
               ? parsed?.extractedText || parsed?.plainTextBody || '(No text content extracted)'
@@ -138,7 +138,7 @@ export default function MessageContent({
   // Content & ML Analysis Mode
   if (!contentAnalysis) {
     return (
-      <div className="p-8 text-center text-xs text-[#667085] bg-white rounded-xl border border-[#E4E7EC] shadow-xs">
+      <div className="p-8 text-center text-xs text-[#667085] bg-white rounded-xl border border-[#E4E7EC]">
         No content analysis data available for this email.
       </div>
     )
@@ -149,7 +149,7 @@ export default function MessageContent({
       {/* Machine Learning Classification Card */}
       <div
         id="ml-baseline-card"
-        className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4"
+        className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4"
       >
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC]">
           <div className="flex items-center gap-2.5">
@@ -294,7 +294,7 @@ export default function MessageContent({
       </div>
 
       {/* Social Engineering Indicators */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
         <div>
           <h2 className="text-sm font-bold text-[#202938]">
             Suspicious language indicators

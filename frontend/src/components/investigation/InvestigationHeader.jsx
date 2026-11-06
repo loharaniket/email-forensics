@@ -26,6 +26,25 @@ export default function InvestigationHeader({
 }) {
   if (!detail) return null
 
+  const dateVal = parsed?.messageDate || parsed?.sentDate || parsed?.rawDate || detail?.sentDate
+  let displayMessageDate = '—'
+  if (dateVal) {
+    try {
+      const d = new Date(dateVal)
+      if (!isNaN(d.getTime())) {
+        displayMessageDate = d.toLocaleString()
+      } else {
+        displayMessageDate = String(dateVal)
+      }
+    } catch {
+      displayMessageDate = String(dateVal)
+    }
+  }
+
+  const replyToFormatted = Array.isArray(parsed?.replyTo)
+    ? (parsed.replyTo.length > 0 ? parsed.replyTo.join(', ') : '—')
+    : (parsed?.replyTo || '—')
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -41,7 +60,7 @@ export default function InvestigationHeader({
           <button
             id="btn-print-report"
             onClick={onPrint}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
           >
             <Printer className="h-3.5 w-3.5 text-[#2563EB]" />
             <span>Print / PDF report</span>
@@ -51,7 +70,7 @@ export default function InvestigationHeader({
             id="btn-export-report-json"
             onClick={onExportJson}
             disabled={isExportingJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer disabled:opacity-50"
           >
             <FileDown className="h-3.5 w-3.5 text-[#15803D]" />
             <span>{isExportingJson ? 'Exporting...' : 'Export JSON report'}</span>
@@ -60,7 +79,7 @@ export default function InvestigationHeader({
           <button
             id="download-original-btn"
             onClick={onDownloadOriginal}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer shadow-xs"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
           >
             <Download className="h-3.5 w-3.5 text-[#667085]" />
             <span>Download original .eml</span>
@@ -68,7 +87,7 @@ export default function InvestigationHeader({
         </div>
       </div>
 
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-5">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4 pb-5 border-b border-[#E4E7EC]">
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs">
@@ -128,29 +147,29 @@ export default function InvestigationHeader({
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3">
           <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
             <span className="text-xs text-[#667085] block mb-1">Message date</span>
-            <span className="text-xs font-medium text-[#202938] block truncate">
-              {parsed?.messageDate ? new Date(parsed.messageDate).toLocaleDateString() : '—'}
+            <span className="text-xs font-medium text-[#202938] block truncate" title={displayMessageDate}>
+              {displayMessageDate}
             </span>
           </div>
 
           <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
             <span className="text-xs text-[#667085] block mb-1">From address</span>
-            <span className="text-xs font-medium text-[#202938] block truncate font-mono text-[11px]">
+            <span className="text-xs font-medium text-[#202938] block truncate font-mono text-[11px]" title={parsed?.from}>
               {parsed?.from || '—'}
             </span>
           </div>
 
           <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
             <span className="text-xs text-[#667085] block mb-1">Return-Path</span>
-            <span className="text-xs font-medium text-[#202938] block truncate font-mono text-[11px]">
+            <span className="text-xs font-medium text-[#202938] block truncate font-mono text-[11px]" title={parsed?.returnPath}>
               {parsed?.returnPath || '—'}
             </span>
           </div>
 
           <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
             <span className="text-xs text-[#667085] block mb-1">Reply-To</span>
-            <span className="text-xs font-medium text-[#202938] block truncate font-mono text-[11px]">
-              {parsed?.replyTo || '—'}
+            <span className="text-xs font-medium text-[#202938] block truncate font-mono text-[11px]" title={replyToFormatted}>
+              {replyToFormatted}
             </span>
           </div>
 

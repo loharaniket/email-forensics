@@ -59,7 +59,7 @@ export default function HealthPage() {
       <Navbar />
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6">
-        <section className="bg-white rounded-xl border border-[#E4E7EC] p-6 md:p-8 shadow-xs">
+        <section className="bg-white rounded-xl border border-[#E4E7EC] p-6 md:p-8">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#E4E7EC]">
             <div>
               <h1 className="text-2xl font-bold tracking-tight text-[#202938]">

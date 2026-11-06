@@ -35,7 +35,7 @@ export default function RelatedCases({ correlations = [] }) {
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7EC] pb-4">
           <div>
             <h2 className="text-sm font-bold text-[#202938]">

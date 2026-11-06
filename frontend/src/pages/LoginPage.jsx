@@ -54,7 +54,7 @@ export default function LoginPage() {
       </header>
 
       <main className="max-w-md w-full mx-auto my-auto py-8">
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-8 shadow-xs">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-8">
           <div className="text-center mb-6">
             <div className="inline-flex h-12 w-12 rounded-full bg-[#EFF6FF] items-center justify-center mb-3 text-[#2563EB]">
               <Lock className="h-6 w-6" />

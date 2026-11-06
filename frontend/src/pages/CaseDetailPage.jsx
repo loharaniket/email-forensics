@@ -111,7 +111,7 @@ export default function CaseDetailPage() {
       <div className="min-h-screen bg-[#F5F6F8] text-[#202938] flex flex-col">
         <Navbar />
         <main className="flex-1 max-w-4xl w-full mx-auto p-6 md:p-8">
-          <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center space-y-3 shadow-xs">
+          <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center space-y-3">
             <AlertCircle className="h-10 w-10 text-[#B42318] mx-auto" />
             <h2 className="text-base font-semibold text-[#202938]">Case unavailable</h2>
             <p className="text-sm text-[#667085]">{error}</p>
@@ -148,7 +148,7 @@ export default function CaseDetailPage() {
         </div>
 
         {/* Section 1: Case Information */}
-        <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-6">
+        <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-6">
           <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 pb-6 border-b border-[#E4E7EC]">
             <div className="space-y-1.5">
               <div className="flex items-center gap-3">

@@ -242,7 +242,7 @@ export default function EvidenceUploadSection({ caseId }) {
   return (
     <div className="space-y-6">
       {/* Upload email section */}
-      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-5">
+      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
         <div className="pb-4 border-b border-[#E4E7EC]">
           <h2 className="text-base font-bold text-[#202938]">
             Upload email
@@ -410,7 +410,7 @@ export default function EvidenceUploadSection({ caseId }) {
       </section>
 
       {/* Uploaded files section */}
-      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
           <div className="flex items-center gap-2">
             <h2 className="text-base font-bold text-[#202938]">
@@ -468,6 +468,12 @@ export default function EvidenceUploadSection({ caseId }) {
                     </div>
                   </div>
 
+                  {item.subject && (
+                    <div className="text-xs text-[#202938] font-medium truncate">
+                      Subject: {item.subject}
+                    </div>
+                  )}
+
                   <div className="space-y-2 text-xs">
                     <div className="flex items-start gap-2 bg-white p-2.5 rounded-lg border border-[#E4E7EC]">
                       <Hash className="h-3.5 w-3.5 text-[#98A2B3] shrink-0 mt-0.5" />
@@ -478,11 +484,14 @@ export default function EvidenceUploadSection({ caseId }) {
                     </div>
 
                     <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#667085] pt-1">
-                      <div className="flex items-center gap-4">
+                      <div className="flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-1">
                           <Clock className="h-3.5 w-3.5 text-[#98A2B3]" />
                           <span>Uploaded: {new Date(item.uploadedAt).toLocaleString()}</span>
                         </div>
+                        {item.sentDate && (
+                          <span>Sent: {new Date(item.sentDate).toLocaleString()}</span>
+                        )}
                         <span>By: {item.uploadedByUsername || 'analyst'}</span>
                       </div>
 

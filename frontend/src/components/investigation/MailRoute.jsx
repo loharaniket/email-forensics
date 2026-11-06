@@ -23,7 +23,7 @@ export default function MailRoute({ hops, formatSeconds }) {
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="p-5 rounded-xl bg-white border border-[#E4E7EC] shadow-xs">
+        <div className="p-5 rounded-xl bg-white border border-[#E4E7EC]">
           <span className="text-xs text-[#667085] block">Total mail route hops</span>
           <span className="text-2xl font-bold text-[#202938] mt-1 block font-mono">
             {hops?.length || 0}
@@ -31,7 +31,7 @@ export default function MailRoute({ hops, formatSeconds }) {
           <span className="text-xs text-[#667085] mt-1 block">Servers traversed</span>
         </div>
 
-        <div className="p-5 rounded-xl bg-white border border-[#E4E7EC] shadow-xs">
+        <div className="p-5 rounded-xl bg-white border border-[#E4E7EC]">
           <span className="text-xs text-[#667085] block">Total transit delay</span>
           <span className="text-2xl font-bold text-[#202938] mt-1 block font-mono">
             {totalTransitDelaySeconds > 0
@@ -41,7 +41,7 @@ export default function MailRoute({ hops, formatSeconds }) {
           <span className="text-xs text-[#667085] mt-1 block">Accumulated delay</span>
         </div>
 
-        <div className="p-5 rounded-xl bg-white border border-[#E4E7EC] shadow-xs">
+        <div className="p-5 rounded-xl bg-white border border-[#E4E7EC]">
           <span className="text-xs text-[#667085] block">Originating server</span>
           <span className="text-sm font-semibold text-[#202938] mt-2 block truncate font-mono">
             {hops && hops.length > 0
@@ -52,14 +52,11 @@ export default function MailRoute({ hops, formatSeconds }) {
         </div>
       </div>
 
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-6">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-6">
         <div>
           <h2 className="text-sm font-bold text-[#202938]">
-            Mail transit path
+            Mail route
           </h2>
-          <p className="text-xs text-[#667085] mt-0.5">
-            Sequential list of mail transfer agents (MTAs) extracted from Received headers, ordered from sender to destination.
-          </p>
         </div>
 
         {!hops || hops.length === 0 ? (
@@ -108,9 +105,16 @@ export default function MailRoute({ hops, formatSeconds }) {
                       <div className="flex items-center gap-2 text-xs text-[#667085]">
                         <Clock className="h-3.5 w-3.5 text-[#98A2B3]" />
                         <span>
-                          {hop.timestamp
-                            ? new Date(hop.timestamp).toLocaleString()
-                            : '(No timestamp)'}
+                          {(() => {
+                            const tVal = hop.hopTimestamp || hop.timestamp
+                            if (!tVal) return '(No timestamp)'
+                            try {
+                              const d = new Date(tVal)
+                              return !isNaN(d.getTime()) ? d.toLocaleString() : String(tVal)
+                            } catch {
+                              return String(tVal)
+                            }
+                          })()}
                         </span>
                         {hop.delaySeconds != null && hop.delaySeconds > 0 && (
                           <span className="font-mono text-[#B45309] bg-[#FFFBEB] px-1.5 py-0.5 rounded border border-amber-200 text-[11px]">
@@ -161,7 +165,7 @@ export default function MailRoute({ hops, formatSeconds }) {
                       )}
                     </div>
 
-                    {hop.rawHeader && (
+                    {(hop.rawHopLine || hop.rawHeader) && (
                       <div className="pt-2 border-t border-[#E4E7EC]">
                         <button
                           onClick={() => toggleHopExpand(hop.hopOrder)}
@@ -177,7 +181,7 @@ export default function MailRoute({ hops, formatSeconds }) {
 
                         {isExpanded && (
                           <div className="mt-2 p-3 rounded-lg bg-white border border-[#E4E7EC] font-mono text-[11px] text-[#202938] break-all whitespace-pre-wrap leading-relaxed select-all">
-                            {hop.rawHeader}
+                            {hop.rawHopLine || hop.rawHeader}
                           </div>
                         )}
                       </div>

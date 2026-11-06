@@ -291,7 +291,7 @@ export default function InvestigationPage() {
       <div className="min-h-screen bg-[#F5F6F8] text-[#202938] flex flex-col">
         <Navbar />
         <main className="flex-1 max-w-xl w-full mx-auto p-6 flex flex-col items-center justify-center">
-          <div className="w-full bg-white border border-[#E4E7EC] rounded-xl p-8 shadow-xs space-y-6">
+          <div className="w-full bg-white border border-[#E4E7EC] rounded-xl p-8 space-y-6">
             <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-4">
               <div>
                 <h2 className="text-base font-bold text-[#202938]">Email analysis</h2>
@@ -342,7 +342,7 @@ export default function InvestigationPage() {
       <div className="min-h-screen bg-[#F5F6F8] text-[#202938] flex flex-col">
         <Navbar />
         <main className="flex-1 max-w-xl w-full mx-auto p-6 flex flex-col items-center justify-center">
-          <div className="w-full bg-white border border-[#E4E7EC] rounded-xl p-8 text-center space-y-5 shadow-xs">
+          <div className="w-full bg-white border border-[#E4E7EC] rounded-xl p-8 text-center space-y-5">
             <div className="inline-flex p-3 rounded-full bg-[#FEF2F2] text-[#B42318]">
               <AlertTriangle className="h-8 w-8" />
             </div>
@@ -390,23 +390,51 @@ export default function InvestigationPage() {
     )
   }
 
-  const parsed = detail.parsedEmail || {
-    subject: detail.subject,
-    from: detail.sender,
-    returnPath: detail.returnPath,
-    replyTo: detail.replyTo ? [detail.replyTo] : [],
-    messageId: detail.messageId,
-    messageDate: detail.messageDate,
-    originatingIp: detail.originatingIp,
-    to: detail.recipients || [],
-    cc: [],
-    extractedText: detail.extractedText,
-    plainTextBody: detail.plainTextBody,
-    htmlBody: detail.htmlBody
+  const emailDate =
+    detail?.parsedEmail?.sentDate ||
+    detail?.parsedEmail?.rawDate ||
+    detail?.parsedEmail?.messageDate ||
+    detail?.sentDate ||
+    detail?.rawDate ||
+    detail?.messageDate ||
+    reportData?.messageMetadata?.sentDate ||
+    null
+
+  const originatingIp =
+    (hops && hops.length > 0 && (hops[0].hopIp || hops[0].ip)) ||
+    reportData?.headers?.firstOriginatingIp ||
+    (infrastructure && infrastructure.length > 0 && infrastructure[0].ipAddress) ||
+    detail?.parsedEmail?.originatingIp ||
+    detail?.originatingIp ||
+    null
+
+  const rawParsed = detail?.parsedEmail || {}
+  const parsed = {
+    ...rawParsed,
+    subject: rawParsed.subject || detail?.subject || '(No subject)',
+    from: rawParsed.from || detail?.sender || detail?.from || '—',
+    returnPath: rawParsed.returnPath || detail?.returnPath || '—',
+    replyTo: rawParsed.replyTo && rawParsed.replyTo.length > 0
+      ? rawParsed.replyTo
+      : detail?.replyTo
+      ? (Array.isArray(detail.replyTo) ? detail.replyTo : [detail.replyTo])
+      : [],
+    messageId: rawParsed.messageId || detail?.messageId || '—',
+    sentDate: emailDate,
+    messageDate: emailDate,
+    rawDate: rawParsed.rawDate || emailDate,
+    originatingIp: originatingIp,
+    to: rawParsed.to && rawParsed.to.length > 0
+      ? rawParsed.to
+      : detail?.recipients || detail?.to || [],
+    cc: rawParsed.cc || detail?.cc || [],
+    extractedText: rawParsed.extractedText || detail?.extractedText || '',
+    plainTextBody: rawParsed.plainTextBody || detail?.plainTextBody || '',
+    htmlBody: rawParsed.htmlBody || detail?.htmlBody || ''
   }
 
-  const attachments = detail.attachments || []
-  const inlineImages = detail.inlineImages || []
+  const attachments = detail?.parsedEmail?.attachments || detail?.attachments || []
+  const inlineImages = detail?.parsedEmail?.inlineImages || detail?.inlineImages || []
 
   const currentIntegrityStatus = integrityCheckResult
     ? integrityCheckResult.intact ? 'VERIFIED' : 'MISMATCH'
@@ -748,6 +776,9 @@ export default function InvestigationPage() {
         {activeTab === 'report' && (
           <InvestigationReport
             detail={detail}
+            parsed={parsed}
+            attachments={attachments}
+            correlations={correlations}
             reportData={reportData}
             riskBreakdown={riskBreakdown}
             headerAnalysis={headerAnalysis}

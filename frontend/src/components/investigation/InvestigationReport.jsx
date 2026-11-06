@@ -1,28 +1,10 @@
 import React from 'react'
-import {
-  Printer,
-  FileDown,
-  FileCheck,
-  ShieldAlert,
-  ShieldCheck,
-  Mail,
-  Server,
-  Link2,
-  Network,
-  QrCode,
-  Brain,
-  AlertOctagon,
-  Sparkles,
-  Check,
-  CheckCircle2,
-  AlertTriangle,
-  Clock,
-  Hash,
-  User
-} from 'lucide-react'
 
 export default function InvestigationReport({
   detail = {},
+  parsed = {},
+  attachments = [],
+  correlations = [],
   reportData,
   riskBreakdown,
   headerAnalysis,
@@ -39,13 +21,55 @@ export default function InvestigationReport({
   handleExportReportJson,
   isVerifyingIntegrity,
   handleVerifyIntegrity,
-  currentIntegrityStatus,
+  currentIntegrityStatus = 'NOT_VERIFIED',
   primaryHash,
   calculatedHash,
   integrityTimestamp,
   formatBytes,
   formatSeconds
 }) {
+  const safeFormatBytes = (bytes) => {
+    if (typeof formatBytes === 'function') return formatBytes(bytes)
+    if (!bytes || isNaN(bytes)) return '0 B'
+    const units = ['B', 'KB', 'MB', 'GB']
+    let size = Number(bytes)
+    let unitIdx = 0
+    while (size >= 1024 && unitIdx < units.length - 1) {
+      size /= 1024
+      unitIdx++
+    }
+    return `${size.toFixed(1)} ${units[unitIdx]}`
+  }
+
+  const safeFormatSeconds = (seconds) => {
+    if (typeof formatSeconds === 'function') return formatSeconds(seconds)
+    if (!seconds || seconds <= 0) return '0s'
+    if (seconds < 60) return `${seconds}s`
+    const mins = Math.floor(seconds / 60)
+    const rem = seconds % 60
+    return rem > 0 ? `${mins}m ${rem}s` : `${mins}m`
+  }
+
+  const formatUtcDate = (dateVal) => {
+    if (!dateVal) return 'N/A'
+    try {
+      const d = new Date(dateVal)
+      return !isNaN(d.getTime()) ? d.toUTCString() : String(dateVal)
+    } catch {
+      return String(dateVal)
+    }
+  }
+
+  const formatLocalDate = (dateVal) => {
+    if (!dateVal) return 'N/A'
+    try {
+      const d = new Date(dateVal)
+      return !isNaN(d.getTime()) ? d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }) : String(dateVal)
+    } catch {
+      return String(dateVal)
+    }
+  }
+
   const predictedLabel =
     contentAnalysis?.predictedLabel ||
     contentAnalysis?.mlPredictedLabel ||
@@ -70,6 +94,9 @@ export default function InvestigationReport({
   const impersonationDetected = !!(
     contentAnalysis?.impersonation || contentAnalysis?.impersonationDetected
   )
+  const secrecyDetected = !!(
+    contentAnalysis?.secrecy || contentAnalysis?.secrecyDetected
+  )
   const promptMatches =
     contentAnalysis?.promptMatches ||
     contentAnalysis?.promptInjectionMatches ||
@@ -78,16 +105,35 @@ export default function InvestigationReport({
     contentAnalysis?.promptInjectionDetected || promptMatches.length > 0
   )
 
+  const riskScore = riskBreakdown?.deterministicRiskScore ?? 0
+  const riskLevel = riskBreakdown?.riskLevel || 'LOW'
+  const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? riskBreakdown?.confidenceScore ?? 0
+  const confidenceLevel = riskBreakdown?.confidenceLevel || 'LOW'
+  const factors = riskBreakdown?.factors || []
+
+  const reportId = reportData?.reportId || `DFIR-${(emailId || '00000000').substring(0, 8).toUpperCase()}`
+  const caseNumber = detail.caseNumber || 'N/A'
+  const caseTitle = detail.caseTitle || 'Email Evidence Investigation'
+  const examinerName = reportData?.analystSignoff?.signoffAnalyst || user?.username || 'analyst'
+  const examinerRole = reportData?.analystSignoff?.signoffRole || user?.role || 'Digital Forensics Analyst'
+  const reportDate = formatLocalDate(reportData?.generatedAt || new Date())
+  const sentDateDisplay = formatUtcDate(parsed?.sentDate || parsed?.messageDate || parsed?.rawDate || detail?.sentDate)
+  const uploadDateDisplay = formatUtcDate(detail?.uploadedAt)
+  const replyToDisplay = Array.isArray(parsed?.replyTo)
+    ? (parsed.replyTo.length > 0 ? parsed.replyTo.join(', ') : 'None specified')
+    : (parsed?.replyTo || detail?.replyTo || 'None specified')
+
+  const verifiedHash = primaryHash || detail.sha256Hash || 'N/A'
+
   return (
-    <div id="forensic-printable-dossier" className="space-y-6 font-sans">
-      {/* Action bar (hidden in print) */}
-      <div className="no-print flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-white border border-[#E4E7EC] text-xs shadow-xs">
-        <div className="flex items-center gap-2 text-[#202938]">
-          <FileCheck className="h-4 w-4 text-[#2563EB]" />
-          <span className="font-semibold text-[#202938]">Investigation report</span>
+    <div id="forensic-printable-dossier" className="space-y-6 font-sans text-[#202938]">
+      {/* Action Toolbar (hidden during printing / PDF generation) */}
+      <div className="no-print flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-white border border-[#E4E7EC] text-xs">
+        <div className="flex items-center gap-2">
+          <span className="font-semibold text-[#202938]">Investigation Report</span>
           <span className="text-[#98A2B3]">•</span>
           <span className="text-[#667085]">
-            Formatted for printing, PDF export and review.
+            NIST SP 800-86 aligned forensic examination report. Ready for print or PDF export.
           </span>
         </div>
 
@@ -95,306 +141,454 @@ export default function InvestigationReport({
           <button
             id="btn-report-tab-print"
             onClick={() => window.print()}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
           >
-            <Printer className="h-3.5 w-3.5" />
-            <span>Print / PDF report</span>
+            Print / Save as PDF
           </button>
 
           <button
             id="btn-report-tab-export-json"
             onClick={handleExportReportJson}
             disabled={isExportingJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer disabled:opacity-50"
+            className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer disabled:opacity-50"
           >
-            <FileDown className="h-3.5 w-3.5 text-[#667085]" />
-            <span>{isExportingJson ? 'Exporting...' : 'Export JSON report'}</span>
+            {isExportingJson ? 'Exporting...' : 'Export JSON Report'}
           </button>
         </div>
       </div>
 
-      {/* Main Printable Document Surface */}
-      <div className="print-surface p-6 sm:p-8 rounded-xl bg-white border border-[#E4E7EC] space-y-6 shadow-xs text-[#202938]">
-        {/* Document Header */}
-        <div className="border-b border-[#E4E7EC] pb-6 space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
+      {/* Main Forensic Document Body */}
+      <div className="print-surface bg-white border border-[#E4E7EC] p-8 sm:p-10 rounded-xl space-y-8">
+        
+        {/* Document Classification & Official Header */}
+        <div className="border-b-2 border-[#202938] pb-5 space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E4E7EC] pb-2 text-[10px] tracking-wider uppercase font-mono text-[#667085]">
+            <span>CONFIDENTIAL // DIGITAL FORENSIC EVIDENCE REPORT</span>
+            <span>NIST SP 800-86 &amp; ISO/IEC 27037 METHODOLOGY</span>
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pt-1">
             <div className="space-y-1">
-              <span className="text-xs font-mono font-semibold text-[#2563EB] uppercase">
-                Case #{detail.caseNumber || 'N/A'}
+              <span className="text-xs font-mono font-bold tracking-widest uppercase text-[#2563EB] block">
+                Digital Forensics &amp; Incident Response Laboratory
               </span>
-              <h1 className="text-2xl font-bold tracking-tight text-[#202938]">
-                Investigation report
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#202938]">
+                Forensic Examination Report
               </h1>
-              <p className="text-xs font-mono text-[#667085]">
-                Evidence ID: {detail.evidenceId || emailId}
+              <p className="text-xs text-[#667085]">
+                Electronic Mail Evidence Attribution, Header Routing &amp; Threat Indicator Analysis
               </p>
             </div>
 
-            <div className="text-right space-y-1 text-xs">
-              <span className="inline-block px-3 py-1 rounded-md text-xs font-semibold bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
-                {reportData?.classificationLevel || 'Forensic investigation'}
-              </span>
-              <span className="text-[#667085] block text-[11px] font-mono">
-                Report ID: {reportData?.reportId || 'RPT-' + (emailId ? emailId.substring(0, 8) : '001')}
-              </span>
+            <div className="sm:text-right space-y-1 text-xs">
+              <div className="font-mono text-[#202938]">
+                <span className="text-[#667085]">Report ID: </span>
+                <span className="font-bold">{reportId}</span>
+              </div>
+              <div className="font-mono text-[#202938]">
+                <span className="text-[#667085]">Date of Report: </span>
+                <span>{reportDate}</span>
+              </div>
+              <div className="font-mono text-[#202938]">
+                <span className="text-[#667085]">Evidence ID: </span>
+                <span className="text-[11px]">{emailId || 'N/A'}</span>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs pt-2">
-            <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Case title</span>
-              <span className="font-semibold text-[#202938] truncate block">
-                {detail.caseTitle || 'Investigation'}
-              </span>
+          {/* Case & Investigation Metadata Table */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#E4E7EC] border border-[#E4E7EC] text-xs pt-0 rounded overflow-hidden">
+            <div className="bg-white p-2.5 space-y-0.5">
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Case Number</span>
+              <span className="font-bold font-mono text-[#202938] block">{caseNumber}</span>
             </div>
-
-            <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Date generated</span>
-              <span className="font-semibold text-[#202938] block text-[11px]">
-                {reportData?.generatedAt ? new Date(reportData.generatedAt).toLocaleString() : new Date().toLocaleString()}
-              </span>
+            <div className="bg-white p-2.5 space-y-0.5">
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Case Title</span>
+              <span className="font-semibold text-[#202938] block truncate">{caseTitle}</span>
             </div>
-
-            <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Investigator</span>
-              <span className="font-semibold text-[#202938] block truncate">
-                {reportData?.analystSignoff?.signoffAnalyst || user?.username || 'analyst'}
-              </span>
+            <div className="bg-white p-2.5 space-y-0.5">
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Lead Examiner</span>
+              <span className="font-semibold text-[#202938] block">{examinerName} ({examinerRole})</span>
             </div>
-
-            <div className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Application version</span>
-              <span className="font-semibold text-[#202938] block">
-                {reportData?.reportVersion || 'v1.0.0'}
-              </span>
+            <div className="bg-white p-2.5 space-y-0.5">
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Analysis Pipeline</span>
+              <span className="font-semibold text-[#202938] block font-mono">{reportData?.pipelineVersion || 'v1.0.0'}</span>
             </div>
           </div>
         </div>
 
-        {/* Section 1: Evidence information & file integrity */}
-        <div className="print-avoid-break space-y-3">
-          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[#E4E7EC] pb-2">
-            <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-              <FileCheck className="h-4 w-4 text-[#2563EB]" />
-              <span>1. Evidence information and file integrity</span>
-            </h3>
+        {/* Section 1: Executive Summary & Objective Findings */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              1. Executive Summary &amp; Threat Classification
+            </h2>
+          </div>
 
-            <div className="no-print flex items-center gap-2">
+          <p className="text-xs text-[#202938] leading-relaxed">
+            This digital forensic report provides findings from technical examination of an email message preserved in digital evidence custody. Analysis was conducted across cryptographic integrity, RFC 5322 header structure, sender authentication protocols (SPF, DKIM, DMARC), sequential transport routing hops, embedded hyperlinks, attached files, visual artifacts, and content behavioral signals.
+          </p>
+
+          <div className="border border-[#E4E7EC] rounded overflow-hidden">
+            <table className="w-full text-left text-xs border-collapse">
+              <tbody className="divide-y divide-[#E4E7EC]">
+                <tr>
+                  <td className="w-1/3 p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Deterministic Risk Score
+                  </td>
+                  <td className="p-2.5 text-[#202938] font-bold font-mono">
+                    {riskScore} / 100 <span className="ml-2 font-sans font-semibold text-xs">({riskLevel} RISK)</span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Evidence Confidence Assessment
+                  </td>
+                  <td className="p-2.5 text-[#202938] font-mono">
+                    {confidenceScore}% confidence ({confidenceLevel} confidence band)
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Classification Verdict
+                  </td>
+                  <td className="p-2.5 text-[#202938] font-semibold">
+                    {predictedLabel === 'PHISHING' ? 'PHISHING EMAIL' : predictedLabel === 'BENIGN' ? 'LEGITIMATE / BENIGN' : predictedLabel}
+                    <span className="ml-2 font-normal text-xs text-[#667085]">
+                      ({(probability * 100).toFixed(1)}% statistical model probability)
+                    </span>
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Primary Threat Attributes
+                  </td>
+                  <td className="p-2.5 text-[#202938]">
+                    {[
+                      urgencyDetected && 'Urgent/coercive timeline',
+                      credentialRequestDetected && 'Credential harvesting attempt',
+                      paymentInstructionDetected && 'Fraudulent payment demand',
+                      impersonationDetected && 'Identity impersonation',
+                      secrecyDetected && 'Secrecy request',
+                      promptInjectionDetected && 'Adversarial prompt injection payload'
+                    ].filter(Boolean).join('; ') || 'No anomalous behavioral heuristics detected.'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Section 2: Evidence Identification & Cryptographic Custody */}
+        <section className="print-avoid-break space-y-3">
+          <div className="flex items-center justify-between border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              2. Evidence Identification &amp; Chain of Custody (NIST SP 800-86)
+            </h2>
+            <div className="no-print">
               <button
                 id="btn-verify-custody"
                 onClick={handleVerifyIntegrity}
                 disabled={isVerifyingIntegrity}
-                className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#F5F6F8] hover:bg-slate-100 text-xs font-medium text-[#202938] border border-[#E4E7EC] cursor-pointer"
+                className="px-2.5 py-1 rounded bg-[#F8FAFC] hover:bg-slate-100 text-[11px] font-medium text-[#202938] border border-[#E4E7EC] cursor-pointer"
               >
-                <span>{isVerifyingIntegrity ? 'Verifying...' : 'Verify integrity'}</span>
+                {isVerifyingIntegrity ? 'Verifying...' : 'Verify Cryptographic Hash'}
               </button>
             </div>
           </div>
 
-          <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] space-y-2 text-xs">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-              <div>
-                <span className="text-[#667085]">Original filename: </span>
-                <span className="font-semibold text-[#202938]">{detail.originalFilename}</span>
-              </div>
-              <div>
-                <span className="text-[#667085]">File size: </span>
-                <span className="text-[#202938]">{formatBytes(detail.fileSizeBytes)}</span>
-              </div>
-              <div className="sm:col-span-2 break-all font-mono text-[11px]">
-                <span className="text-[#667085]">SHA-256 hash: </span>
-                <span className="text-[#202938] select-all">{primaryHash}</span>
-              </div>
-              {calculatedHash && calculatedHash !== 'N/A' && calculatedHash !== primaryHash && (
-                <div className="sm:col-span-2 break-all font-mono text-[11px]">
-                  <span className="text-[#B42318]">Recalculated hash: </span>
-                  <span className="text-[#B42318] select-all">{calculatedHash}</span>
-                </div>
-              )}
-            </div>
-
-            <div className="pt-2 border-t border-[#E4E7EC] flex items-center justify-between text-[11px]">
-              <span className="font-semibold text-[#15803D]">
-                {currentIntegrityStatus === 'VERIFIED'
-                  ? 'File integrity verified: Stored file matches registered SHA-256 digest.'
-                  : `Integrity status: ${currentIntegrityStatus}`}
-              </span>
-              <span className="text-[#667085]">
-                {integrityTimestamp ? new Date(integrityTimestamp).toLocaleString() : ''}
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 2: Executive threat synthesis & deterministic scoring */}
-        <div className="print-avoid-break space-y-3">
-          <div className="border-b border-[#E4E7EC] pb-2">
-            <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-              <ShieldAlert className="h-4 w-4 text-[#2563EB]" />
-              <span>2. Investigation summary and risk score</span>
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-            <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Risk score</span>
-              <span className="text-2xl font-bold font-mono text-[#202938]">
-                {riskBreakdown?.deterministicRiskScore ?? 0} / 100
-              </span>
-              <span className="text-xs text-[#667085] block mt-0.5">
-                Level: {riskBreakdown?.riskLevel || 'LOW'}
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Evidence confidence</span>
-              <span className="text-2xl font-bold font-mono text-[#202938]">
-                {riskBreakdown?.evidenceConfidenceScore ?? riskBreakdown?.confidenceScore ?? 0}%
-              </span>
-              <span className="text-xs text-[#667085] block mt-0.5">
-                Level: {riskBreakdown?.confidenceLevel || 'LOW'}
-              </span>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC]">
-              <span className="text-[#667085] text-[11px] block">Classification</span>
-              <span className="text-lg font-bold text-[#202938] block truncate">
-                {predictedLabel === 'PHISHING' ? 'Phishing' : predictedLabel === 'BENIGN' ? 'Legitimate' : predictedLabel}
-              </span>
-              <span className="text-xs text-[#667085]">
-                {(probability * 100).toFixed(1)}% model probability
-              </span>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 3: Sender authentication */}
-        <div className="print-avoid-break space-y-3">
-          <div className="border-b border-[#E4E7EC] pb-2">
-            <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-              <Mail className="h-4 w-4 text-[#2563EB]" />
-              <span>3. Sender checks and email authentication</span>
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
-            <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] space-y-1.5">
-              <div className="grid grid-cols-3 gap-1">
-                <span className="text-[#667085]">From:</span>
-                <span className="col-span-2 font-mono text-[#202938] font-semibold truncate">{detail.sender || '(None)'}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <span className="text-[#667085]">Domain:</span>
-                <span className="col-span-2 font-mono text-[#2563EB] truncate">{headerAnalysis?.fromDomain || 'N/A'}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <span className="text-[#667085]">Reply-To:</span>
-                <span className="col-span-2 font-mono text-[#202938] truncate">{detail.replyTo || 'None specified'}</span>
-              </div>
-              <div className="grid grid-cols-3 gap-1">
-                <span className="text-[#667085]">Return-Path:</span>
-                <span className="col-span-2 font-mono text-[#202938] truncate">{detail.returnPath || 'None specified'}</span>
-              </div>
-            </div>
-
-            <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] space-y-2">
-              <span className="text-xs font-semibold text-[#202938] block">Authentication results</span>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                <div className="p-2 rounded bg-white border border-[#E4E7EC]">
-                  <span className="text-[10px] text-[#667085] block">SPF</span>
-                  <span className="font-semibold text-[#202938]">
-                    {headerAnalysis?.reportedSpf || headerAnalysis?.spfResult || 'NONE'}
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-white border border-[#E4E7EC]">
-                  <span className="text-[10px] text-[#667085] block">DKIM</span>
-                  <span className="font-semibold text-[#202938]">
-                    {headerAnalysis?.reportedDkim || headerAnalysis?.dkimResult || 'NONE'}
-                  </span>
-                </div>
-                <div className="p-2 rounded bg-white border border-[#E4E7EC]">
-                  <span className="text-[10px] text-[#667085] block">DMARC</span>
-                  <span className="font-semibold text-[#202938]">
-                    {headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult || 'NONE'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 4: Mail route hops */}
-        {hops.length > 0 && (
-          <div className="print-avoid-break space-y-3">
-            <div className="border-b border-[#E4E7EC] pb-2">
-              <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-                <Server className="h-4 w-4 text-[#2563EB]" />
-                <span>4. Mail route hops ({hops.length} hops)</span>
-              </h3>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-[#E4E7EC]">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#F5F6F8] text-[#667085] uppercase text-[10px] border-b border-[#E4E7EC]">
+          <div className="border border-[#E4E7EC] rounded overflow-hidden">
+            <table className="w-full text-left text-xs border-collapse">
+              <tbody className="divide-y divide-[#E4E7EC]">
+                <tr>
+                  <td className="w-1/3 p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Evidence Reference Number
+                  </td>
+                  <td className="p-2.5 font-mono text-[#202938]">
+                    EV-01 (ID: {detail.evidenceId || emailId})
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Original Ingested File Name
+                  </td>
+                  <td className="p-2.5 font-semibold text-[#202938]">
+                    {detail.originalFilename || 'evidence.eml'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Preserved File Size
+                  </td>
+                  <td className="p-2.5 text-[#202938]">
+                    {safeFormatBytes(detail.fileSizeBytes)} ({detail.fileSizeBytes ? Number(detail.fileSizeBytes).toLocaleString() : 0} bytes)
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Intake &amp; Preservation Timestamp
+                  </td>
+                  <td className="p-2.5 text-[#202938] font-mono">
+                    {uploadDateDisplay} (Recorded by: {detail.uploadedByUsername || examinerName})
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Primary SHA-256 Digest
+                  </td>
+                  <td className="p-2.5 font-mono text-[11px] text-[#202938] break-all select-all">
+                    {verifiedHash}
+                  </td>
+                </tr>
+                {calculatedHash && calculatedHash !== 'N/A' && calculatedHash !== verifiedHash && (
                   <tr>
-                    <th className="p-2.5">Hop #</th>
-                    <th className="p-2.5">Sending server</th>
-                    <th className="p-2.5">Receiving server</th>
-                    <th className="p-2.5">IP address</th>
-                    <th className="p-2.5">Delay</th>
+                    <td className="p-2.5 bg-[#FEF2F2] font-medium text-[#B42318] border-r border-[#E4E7EC]">
+                      Recalculated Hash Discrepancy
+                    </td>
+                    <td className="p-2.5 font-mono text-[11px] text-[#B42318] break-all">
+                      {calculatedHash}
+                    </td>
+                  </tr>
+                )}
+                <tr>
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                    Chain of Custody Integrity Status
+                  </td>
+                  <td className="p-2.5 font-semibold text-[#202938]">
+                    {currentIntegrityStatus === 'VERIFIED'
+                      ? 'INTEGRITY VERIFIED — Cryptographic digest matches custody baseline.'
+                      : `STATUS: ${currentIntegrityStatus}`}
+                    {integrityTimestamp && (
+                      <span className="block text-[11px] font-normal text-[#667085] mt-0.5">
+                        Verified at: {formatUtcDate(integrityTimestamp)}
+                      </span>
+                    )}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Section 3: Email Header & Sender Verification */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              3. Email Header &amp; Sender Verification Analysis
+            </h2>
+          </div>
+
+          <div className="border border-[#E4E7EC] rounded overflow-hidden">
+            <table className="w-full text-left text-xs border-collapse">
+              <tbody className="divide-y divide-[#E4E7EC]">
+                <tr>
+                  <td className="w-1/4 p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Subject Line</td>
+                  <td className="p-2 font-semibold text-[#202938] col-span-3">{parsed?.subject || detail?.subject || '(No Subject)'}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Header From</td>
+                  <td className="p-2 font-mono text-[#202938] break-all">
+                    {parsed?.from || detail?.parsedEmail?.from || detail?.sender || '(None specified)'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Sent Date (UTC)</td>
+                  <td className="p-2 font-mono text-[#202938]">{sentDateDisplay}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Envelope Return-Path</td>
+                  <td className="p-2 font-mono text-[#202938] break-all">
+                    {parsed?.returnPath || detail?.returnPath || headerAnalysis?.returnPath || '(None specified)'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Reply-To Address</td>
+                  <td className="p-2 font-mono text-[#202938] break-all">{replyToDisplay}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Message-ID</td>
+                  <td className="p-2 font-mono text-[#202938] break-all">{parsed?.messageId || '(None specified)'}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Sender Domain</td>
+                  <td className="p-2 font-mono text-[#2563EB]">{headerAnalysis?.fromDomain || 'N/A'}</td>
+                </tr>
+                <tr>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Originating Transit IP</td>
+                  <td className="p-2 font-mono text-[#202938]">{parsed?.originatingIp || '(Not detected)'}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          {/* Authentication Protocols Evaluation */}
+          <div className="pt-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#667085] block mb-2">
+              Sender Authentication Protocol Validation
+            </span>
+
+            <div className="border border-[#E4E7EC] rounded overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                  <tr>
+                    <th className="p-2 font-semibold">Protocol</th>
+                    <th className="p-2 font-semibold">Reported Result</th>
+                    <th className="p-2 font-semibold">Active Verification</th>
+                    <th className="p-2 font-semibold">Technical Detail</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E7EC]">
+                  <tr>
+                    <td className="p-2 font-bold text-[#202938]">SPF (Sender Policy Framework)</td>
+                    <td className="p-2 font-mono font-semibold">
+                      {headerAnalysis?.reportedSpf || headerAnalysis?.spfResult || 'NONE'}
+                    </td>
+                    <td className="p-2 font-mono">
+                      {headerAnalysis?.activeSpfResult || 'Not performed'}
+                    </td>
+                    <td className="p-2 text-[#667085] text-[11px]">
+                      Relay: {headerAnalysis?.activeSpfRelayIp || 'N/A'}
+                      {headerAnalysis?.activeSpfRecord ? ` | Record: ${headerAnalysis.activeSpfRecord}` : ''}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-bold text-[#202938]">DKIM (DomainKeys Identified Mail)</td>
+                    <td className="p-2 font-mono font-semibold">
+                      {headerAnalysis?.reportedDkim || headerAnalysis?.dkimResult || 'NONE'}
+                    </td>
+                    <td className="p-2 font-mono">
+                      {headerAnalysis?.activeDkimStatus || 'Not performed'}
+                    </td>
+                    <td className="p-2 text-[#667085] text-[11px]">
+                      Selector: {headerAnalysis?.activeDkimSelector || 'N/A'} | Domain: {headerAnalysis?.dkimDomain || 'N/A'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-bold text-[#202938]">DMARC (Domain-based Message Auth)</td>
+                    <td className="p-2 font-mono font-semibold">
+                      {headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult || 'NONE'}
+                    </td>
+                    <td className="p-2 font-mono">
+                      {headerAnalysis?.activeDmarcStatus || 'Not performed'}
+                    </td>
+                    <td className="p-2 text-[#667085] text-[11px]">
+                      Policy: {headerAnalysis?.activeDmarcPolicy || 'N/A'}
+                    </td>
+                  </tr>
+                  <tr>
+                    <td className="p-2 font-bold text-[#202938]">ARC (Authenticated Received Chain)</td>
+                    <td className="p-2 font-mono font-semibold">
+                      {headerAnalysis?.reportedArc || 'NONE'}
+                    </td>
+                    <td className="p-2 font-mono">N/A</td>
+                    <td className="p-2 text-[#667085] text-[11px]">
+                      {headerAnalysis?.reportedArc ? 'ARC validation sealed' : 'No ARC headers present'}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        {/* Section 4: Mail Route Transport Path */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              4. Mail Transport Route &amp; Server Transmission Hops
+            </h2>
+          </div>
+
+          <p className="text-xs text-[#202938]">
+            Sequential transmission path extracted from Received headers, listed in chronological order from origin MTA to recipient.
+          </p>
+
+          {hops && hops.length > 0 ? (
+            <div className="border border-[#E4E7EC] rounded overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                  <tr>
+                    <th className="p-2 font-semibold">Hop</th>
+                    <th className="p-2 font-semibold">Sending Server (from)</th>
+                    <th className="p-2 font-semibold">Receiving Server (by)</th>
+                    <th className="p-2 font-semibold">Transit IP</th>
+                    <th className="p-2 font-semibold">Delay</th>
+                    <th className="p-2 font-semibold">Timestamp</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E7EC]">
                   {hops.map((hop, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold text-[#2563EB]">{hop.hopOrder}</td>
-                      <td className="p-2.5 max-w-[160px] truncate font-mono text-[11px]">{hop.fromHost || 'Unknown'}</td>
-                      <td className="p-2.5 max-w-[160px] truncate font-mono text-[11px]">{hop.byHost || 'Unknown'}</td>
-                      <td className="p-2.5 font-mono text-[11px]">{hop.byIp || hop.hopIp || 'N/A'}</td>
-                      <td className="p-2.5">{formatSeconds(hop.delaySeconds) || '0s'}</td>
+                      <td className="p-2 font-mono font-bold text-[#2563EB]">{hop.hopOrder || idx + 1}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[150px] truncate" title={hop.fromHost}>
+                        {hop.fromHost || 'Unknown'}
+                      </td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[150px] truncate" title={hop.byHost}>
+                        {hop.byHost || 'Unknown'}
+                      </td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">
+                        {hop.hopIp || hop.byIp || 'N/A'}
+                      </td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">
+                        {safeFormatSeconds(hop.delaySeconds)}
+                      </td>
+                      <td className="p-2 font-mono text-[11px] text-[#667085]">
+                        {formatUtcDate(hop.hopTimestamp || hop.timestamp)}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* Section 5: Links and URLs */}
-        {urls.length > 0 && (
-          <div className="print-avoid-break space-y-3">
-            <div className="border-b border-[#E4E7EC] pb-2">
-              <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-                <Link2 className="h-4 w-4 text-[#2563EB]" />
-                <span>5. Extracted links ({urls.length} links)</span>
-              </h3>
+          ) : (
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+              No Received header transmission hops recorded for this message.
             </div>
+          )}
+        </section>
 
-            <div className="overflow-x-auto rounded-lg border border-[#E4E7EC]">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#F5F6F8] text-[#667085] uppercase text-[10px] border-b border-[#E4E7EC]">
+        {/* Section 5: Extracted Hyperlinks & URL Intelligence */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              5. Extracted Hyperlinks &amp; URL Indicator Intelligence ({urls.length} Links)
+            </h2>
+          </div>
+
+          {urls && urls.length > 0 ? (
+            <div className="border border-[#E4E7EC] rounded overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
                   <tr>
-                    <th className="p-2.5">Domain</th>
-                    <th className="p-2.5">Safe link address</th>
-                    <th className="p-2.5">Anchor mismatch</th>
-                    <th className="p-2.5">Risk score</th>
+                    <th className="p-2 font-semibold">#</th>
+                    <th className="p-2 font-semibold">Destination Domain</th>
+                    <th className="p-2 font-semibold">Target URL Address</th>
+                    <th className="p-2 font-semibold">Anchor Text</th>
+                    <th className="p-2 font-semibold">Discrepancy</th>
+                    <th className="p-2 font-semibold">Risk Score</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E7EC]">
-                  {urls.slice(0, 10).map((u, idx) => (
+                  {urls.map((u, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold font-mono text-[#2563EB]">{u.domain || 'N/A'}</td>
-                      <td className="p-2.5 max-w-[280px] truncate font-mono text-[11px]">{u.normalizedUrl}</td>
-                      <td className="p-2.5">
+                      <td className="p-2 font-mono text-[11px] text-[#667085]">{idx + 1}</td>
+                      <td className="p-2 font-mono font-bold text-[#2563EB]">{u.domain || 'N/A'}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[260px] truncate" title={u.rawUrl || u.normalizedUrl}>
+                        {u.normalizedUrl || u.rawUrl}
+                      </td>
+                      <td className="p-2 text-[11px] text-[#667085] max-w-[120px] truncate" title={u.anchorText}>
+                        {u.anchorText || '(Direct URL)'}
+                      </td>
+                      <td className="p-2 text-[11px]">
                         {u.anchorMismatch ? (
-                          <span className="px-1.5 py-0.5 rounded bg-[#FEF2F2] text-[#B42318] text-[10px] font-semibold">
-                            Mismatch
-                          </span>
+                          <span className="font-semibold text-[#B42318]">ANCHOR MISMATCH</span>
+                        ) : u.isIpUrl ? (
+                          <span className="font-semibold text-[#B45309]">IP LITERAL</span>
                         ) : (
-                          <span className="text-[#667085] text-[10px]">No</span>
+                          <span className="text-[#667085]">None</span>
                         )}
                       </td>
-                      <td className="p-2.5 font-mono font-semibold text-[#202938]">
+                      <td className="p-2 font-mono font-semibold text-[#202938]">
                         {u.urlRiskScore ?? 0} / 100
                       </td>
                     </tr>
@@ -402,42 +596,251 @@ export default function InvestigationReport({
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
-
-        {/* Section 6: Network infrastructure */}
-        {infrastructure.length > 0 && (
-          <div className="print-avoid-break space-y-3">
-            <div className="border-b border-[#E4E7EC] pb-2">
-              <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-                <Network className="h-4 w-4 text-[#2563EB]" />
-                <span>6. IP addresses ({infrastructure.length} IPs)</span>
-              </h3>
+          ) : (
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+              No external hyperlinks or URL indicators extracted from message body.
             </div>
+          )}
+        </section>
 
-            <div className="overflow-x-auto rounded-lg border border-[#E4E7EC]">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#F5F6F8] text-[#667085] uppercase text-[10px] border-b border-[#E4E7EC]">
+        {/* Section 6: Network Infrastructure & Extracted IP Addresses */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              6. Network Infrastructure &amp; Extracted IP Addresses ({infrastructure.length} IPs)
+            </h2>
+          </div>
+
+          {infrastructure && infrastructure.length > 0 ? (
+            <div className="border border-[#E4E7EC] rounded overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
                   <tr>
-                    <th className="p-2.5">IP address</th>
-                    <th className="p-2.5">Context</th>
-                    <th className="p-2.5">Classification</th>
+                    <th className="p-2 font-semibold">#</th>
+                    <th className="p-2 font-semibold">IP Address</th>
+                    <th className="p-2 font-semibold">Header Context</th>
+                    <th className="p-2 font-semibold">Routing Classification</th>
+                    <th className="p-2 font-semibold">Lookup Status</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E7EC]">
                   {infrastructure.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5 font-bold font-mono text-[#2563EB]">{item.ipAddress}</td>
-                      <td className="p-2.5 text-[#667085] text-[11px]">{item.sourceContext}</td>
-                      <td className="p-2.5">
-                        {item.isPrivate ? (
-                          <span className="px-2 py-0.5 rounded bg-[#F5F6F8] text-[#667085] border border-[#E4E7EC] text-[10px]">
-                            Private (RFC 1918)
-                          </span>
+                      <td className="p-2 font-mono text-[11px] text-[#667085]">{idx + 1}</td>
+                      <td className="p-2 font-mono font-bold text-[#202938]">{item.ipAddress}</td>
+                      <td className="p-2 text-[#667085]">{item.sourceContext || 'Email Header'}</td>
+                      <td className="p-2 font-mono text-[11px]">
+                        {item.isPrivate ? 'Private / RFC 1918 Scope' : 'Public Internet Address'}
+                      </td>
+                      <td className="p-2 text-[#667085] font-mono text-[11px]">{item.lookupStatus || 'PROCESSED'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+              No IP addresses cataloged from network headers.
+            </div>
+          )}
+        </section>
+
+        {/* Section 7: Attachment & Visual Artifact Inventory */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              7. Attachment &amp; Visual Artifact Inventory
+            </h2>
+          </div>
+
+          {/* Attachments Table */}
+          {attachments && attachments.length > 0 ? (
+            <div className="border border-[#E4E7EC] rounded overflow-hidden mb-3">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                  <tr>
+                    <th className="p-2 font-semibold">File Name</th>
+                    <th className="p-2 font-semibold">Content Type</th>
+                    <th className="p-2 font-semibold">Size</th>
+                    <th className="p-2 font-semibold">Extension Risk</th>
+                    <th className="p-2 font-semibold">SHA-256 Digest</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E7EC]">
+                  {attachments.map((att, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-2 font-semibold text-[#202938]">{att.filename}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#667085]">{att.mimeType || 'application/octet-stream'}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">{safeFormatBytes(att.sizeBytes)}</td>
+                      <td className="p-2 font-semibold text-xs">
+                        {att.riskyExtension ? (
+                          <span className="text-[#B42318]">HIGH RISK EXTENSION</span>
                         ) : (
-                          <span className="px-2 py-0.5 rounded bg-[#EFF6FF] text-[#2563EB] border border-blue-100 text-[10px]">
-                            Public IP
-                          </span>
+                          <span className="text-[#667085]">Standard</span>
+                        )}
+                      </td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938] break-all select-all">
+                        {att.sha256Hash || 'N/A'}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          ) : (
+            <div className="p-3 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+              No file attachments accompanied this email message.
+            </div>
+          )}
+
+          {/* Visual Artifacts & QR Codes */}
+          {visuals && visuals.length > 0 && (
+            <div className="pt-2 space-y-2">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#667085] block">
+                Visual Artifacts &amp; Decoded QR Payloads ({visuals.length} Visuals)
+              </span>
+
+              <div className="border border-[#E4E7EC] rounded overflow-hidden">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                    <tr>
+                      <th className="p-2 font-semibold">Image File</th>
+                      <th className="p-2 font-semibold">MIME Type</th>
+                      <th className="p-2 font-semibold">Size</th>
+                      <th className="p-2 font-semibold">Decoded QR Code Payload</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#E4E7EC]">
+                    {visuals.map((v, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-2 font-semibold text-[#202938]">{v.filename || `Visual #${idx + 1}`}</td>
+                        <td className="p-2 font-mono text-[11px] text-[#667085]">{v.contentType || 'image/*'}</td>
+                        <td className="p-2 font-mono text-[11px]">{safeFormatBytes(v.fileSizeBytes || v.byteSize || 0)}</td>
+                        <td className="p-2 font-mono text-[11px] text-[#202938] break-all">
+                          {v.qrArtifacts && v.qrArtifacts.length > 0 ? (
+                            v.qrArtifacts.map((qr, qIdx) => (
+                              <div key={qIdx} className="text-[#2563EB] font-bold">
+                                {qr.decodedPayload}
+                              </div>
+                            ))
+                          ) : (
+                            <span className="text-[#667085]">No barcode / QR detected</span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* Section 8: Message Content & Behavioral Signals */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              8. Message Content Analysis &amp; Behavioral Indicators
+            </h2>
+          </div>
+
+          <div className="border border-[#E4E7EC] rounded overflow-hidden">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <tr>
+                  <th className="p-2 font-semibold w-1/3">Behavioral Heuristic Category</th>
+                  <th className="p-2 font-semibold w-1/4">Evaluation Result</th>
+                  <th className="p-2 font-semibold">Forensic Finding Description</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E4E7EC]">
+                <tr>
+                  <td className="p-2 font-semibold text-[#202938]">Urgency &amp; Coercive Timelines</td>
+                  <td className="p-2 font-bold font-mono">
+                    {urgencyDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
+                  </td>
+                  <td className="p-2 text-[#667085]">
+                    {urgencyDetected ? 'Language engineered to induce immediate action or bypass standard verification controls.' : 'No excessive urgency detected.'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-semibold text-[#202938]">Credential Harvesting Indicators</td>
+                  <td className="p-2 font-bold font-mono">
+                    {credentialRequestDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
+                  </td>
+                  <td className="p-2 text-[#667085]">
+                    {credentialRequestDetected ? 'Explicit solicitation of login credentials, account secrets, or MFA verification tokens.' : 'No credential requests detected.'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-semibold text-[#202938]">Financial &amp; Wire Transfer Demands</td>
+                  <td className="p-2 font-bold font-mono">
+                    {paymentInstructionDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
+                  </td>
+                  <td className="p-2 text-[#667085]">
+                    {paymentInstructionDetected ? 'Payment instructions, banking account changes, or invoice redirect demands identified.' : 'No financial transaction requests detected.'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-semibold text-[#202938]">Identity &amp; Executive Impersonation</td>
+                  <td className="p-2 font-bold font-mono">
+                    {impersonationDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
+                  </td>
+                  <td className="p-2 text-[#667085]">
+                    {impersonationDetected ? 'Sender header identity discrepancies matching VIP or executive impersonation patterns.' : 'No executive impersonation patterns flagged.'}
+                  </td>
+                </tr>
+                <tr>
+                  <td className="p-2 font-semibold text-[#202938]">Adversarial Prompt Injection</td>
+                  <td className="p-2 font-bold font-mono">
+                    {promptInjectionDetected ? 'INJECTION DETECTED' : 'CLEAN'}
+                  </td>
+                  <td className="p-2 text-[#667085]">
+                    {promptInjectionDetected ? 'Payload matches heuristic signatures designed to subvert automated LLM/AI parsing pipelines.' : 'No prompt injection signatures discovered.'}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        {/* Section 9: Triggered Deterministic Risk Factors */}
+        <section className="print-avoid-break space-y-3">
+          <div className="border-b border-[#202938] pb-1">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              9. Triggered Deterministic Risk Factors ({factors.length} Factors)
+            </h2>
+          </div>
+
+          {factors && factors.length > 0 ? (
+            <div className="border border-[#E4E7EC] rounded overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                  <tr>
+                    <th className="p-2 font-semibold">Severity</th>
+                    <th className="p-2 font-semibold">Category</th>
+                    <th className="p-2 font-semibold">Code</th>
+                    <th className="p-2 font-semibold">Score Impact</th>
+                    <th className="p-2 font-semibold">Explanation &amp; Evidence Grounding</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#E4E7EC]">
+                  {factors.map((f, idx) => (
+                    <tr key={idx} className="hover:bg-slate-50">
+                      <td className="p-2 font-bold font-mono text-[11px]">
+                        {f.severity || 'LOW'}
+                      </td>
+                      <td className="p-2 text-[#667085] text-[11px]">{f.category || 'GENERAL'}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">{f.factorCode}</td>
+                      <td className="p-2 font-mono font-bold text-[#B42318]">
+                        +{f.scoreImpact != null ? f.scoreImpact : f.weightPoints != null ? f.weightPoints : 0} pts
+                      </td>
+                      <td className="p-2 text-[#202938]">
+                        <div>{f.explanation}</div>
+                        {f.evidenceReference && (
+                          <div className="text-[11px] font-mono text-[#667085] mt-0.5">
+                            Reference: {f.evidenceReference}
+                          </div>
                         )}
                       </td>
                     </tr>
@@ -445,170 +848,124 @@ export default function InvestigationReport({
                 </tbody>
               </table>
             </div>
-          </div>
-        )}
+          ) : (
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+              No deterministic threat factors were triggered during rule evaluation.
+            </div>
+          )}
+        </section>
 
-        {/* Section 7: Visuals and QR codes */}
-        {visuals.length > 0 && (
-          <div className="print-avoid-break space-y-3">
-            <div className="border-b border-[#E4E7EC] pb-2">
-              <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-                <QrCode className="h-4 w-4 text-[#2563EB]" />
-                <span>7. Images and QR codes ({visuals.length} images)</span>
-              </h3>
+        {/* Section 10: Correlated Incident History */}
+        {correlations && correlations.length > 0 && (
+          <section className="print-avoid-break space-y-3">
+            <div className="border-b border-[#202938] pb-1">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+                10. Correlated Incident History &amp; Related Investigations ({correlations.length} Matches)
+              </h2>
             </div>
 
-            <div className="space-y-2">
-              {visuals.map((v, idx) => (
-                <div key={idx} className="p-3 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC] text-xs space-y-1.5">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold text-[#202938]">{v.filename || `Image #${idx + 1}`}</span>
-                    <span className="text-[11px] text-[#667085]">{v.contentType} ({formatBytes(v.byteSize)})</span>
-                  </div>
-
-                  {v.qrArtifacts && v.qrArtifacts.length > 0 && (
-                    <div className="p-2.5 rounded bg-white border border-[#E4E7EC] space-y-1">
-                      <span className="font-semibold text-[#2563EB] block">
-                        QR code payload:
-                      </span>
-                      {v.qrArtifacts.map((qr, qIdx) => (
-                        <div key={qIdx} className="font-mono text-[11px] text-[#202938] break-all">
-                          {qr.decodedPayload}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Section 8: Message content & indicators */}
-        <div className="print-avoid-break space-y-3">
-          <div className="border-b border-[#E4E7EC] pb-2">
-            <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-              <Brain className="h-4 w-4 text-[#2563EB]" />
-              <span>8. Message content analysis</span>
-            </h3>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
-            <div className="p-3.5 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC] space-y-1.5">
-              <span className="font-semibold text-[#202938] block">Suspicious language</span>
-              <div className="space-y-1 text-[#667085]">
-                <div>Urgent language: <strong className="text-[#202938]">{urgencyDetected ? 'Detected' : 'None'}</strong></div>
-                <div>Password requests: <strong className="text-[#202938]">{credentialRequestDetected ? 'Detected' : 'None'}</strong></div>
-                <div>Payment requests: <strong className="text-[#202938]">{paymentInstructionDetected ? 'Detected' : 'None'}</strong></div>
-                <div>Impersonation: <strong className="text-[#202938]">{impersonationDetected ? 'Detected' : 'None'}</strong></div>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC] space-y-1.5">
-              <span className="font-semibold text-[#202938] block">Adversarial prompt injection</span>
-              <p className="text-xs text-[#667085]">
-                {promptInjectionDetected
-                  ? 'Prompt injection attempts detected in message text.'
-                  : 'No adversarial prompt injection indicators found.'}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Section 9: Risk factors */}
-        {riskBreakdown?.factors && riskBreakdown.factors.length > 0 && (
-          <div className="print-avoid-break space-y-3">
-            <div className="border-b border-[#E4E7EC] pb-2">
-              <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-                <AlertOctagon className="h-4 w-4 text-[#2563EB]" />
-                <span>9. Triggered risk factors ({riskBreakdown.factors.length})</span>
-              </h3>
-            </div>
-
-            <div className="overflow-x-auto rounded-lg border border-[#E4E7EC]">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-[#F5F6F8] text-[#667085] uppercase text-[10px] border-b border-[#E4E7EC]">
+            <div className="border border-[#E4E7EC] rounded overflow-hidden">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
                   <tr>
-                    <th className="p-2.5">Severity</th>
-                    <th className="p-2.5">Category</th>
-                    <th className="p-2.5">Score impact</th>
-                    <th className="p-2.5">Explanation</th>
+                    <th className="p-2 font-semibold">Related Case #</th>
+                    <th className="p-2 font-semibold">Matched Artifact</th>
+                    <th className="p-2 font-semibold">Indicator Type</th>
+                    <th className="p-2 font-semibold">Indicator Value</th>
+                    <th className="p-2 font-semibold">Match Strength</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-[#E4E7EC]">
-                  {riskBreakdown.factors.map((f, idx) => (
+                  {correlations.map((c, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2.5">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
-                          {f.severity}
-                        </span>
+                      <td className="p-2 font-bold font-mono text-[#2563EB]">{c.matchedCaseNumber || 'N/A'}</td>
+                      <td className="p-2 text-[#202938]">{c.matchedEmailSubject || 'Untitled'}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#667085]">{c.indicatorType}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[200px] truncate" title={c.normalizedIndicatorValue}>
+                        {c.normalizedIndicatorValue}
                       </td>
-                      <td className="p-2.5 text-[#667085]">{f.category}</td>
-                      <td className="p-2.5 font-mono font-bold text-[#B42318]">+{f.scoreImpact} pts</td>
-                      <td className="p-2.5 text-[#202938]">{f.explanation}</td>
+                      <td className="p-2 font-bold font-mono text-[11px]">{c.matchStrength}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Section 10: Automated assessment narrative */}
+        {/* Section 11: Automated Assessment Narrative */}
         {aiAssessment && (
-          <div className="print-avoid-break space-y-3">
-            <div className="border-b border-[#E4E7EC] pb-2">
-              <h3 className="text-sm font-bold text-[#202938] flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-[#2563EB]" />
-                <span>10. Automated assessment narrative</span>
-              </h3>
+          <section className="print-avoid-break space-y-3">
+            <div className="border-b border-[#202938] pb-1">
+              <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+                11. Automated Forensic Synthesis Narrative
+              </h2>
             </div>
 
-            <div className="p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] space-y-2 text-xs">
-              <p className="text-[#202938] leading-relaxed">
-                {aiAssessment.assessmentSummary || aiAssessment.summaryExplanation}
-              </p>
+            <div className="p-4 rounded border border-[#E4E7EC] bg-[#F8FAFC] space-y-3 text-xs leading-relaxed text-[#202938]">
+              <div>
+                <span className="font-bold block uppercase text-[10px] text-[#667085] tracking-wider mb-1">
+                  Executive Assessment Narrative
+                </span>
+                <p>
+                  {aiAssessment.assessmentSummary || aiAssessment.summaryExplanation || 'Assessment synthesis complete.'}
+                </p>
+              </div>
+
+              {aiAssessment.limitationsAndCaveats && (
+                <div className="pt-2 border-t border-[#E4E7EC]">
+                  <span className="font-bold block uppercase text-[10px] text-[#667085] tracking-wider mb-1">
+                    Limitations &amp; Analytical Caveats
+                  </span>
+                  <p className="text-[#667085]">
+                    {aiAssessment.limitationsAndCaveats}
+                  </p>
+                </div>
+              )}
             </div>
-          </div>
+          </section>
         )}
 
-        {/* Section 11: Sign-off block */}
-        <div id="report-signoff-block" className="print-avoid-break p-6 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] space-y-4">
-          <div className="border-b border-[#E4E7EC] pb-2">
-            <h3 className="text-sm font-bold text-[#202938]">
-              11. Investigation sign-off and verification
-            </h3>
+        {/* Section 12: Examiner Certification, Chain of Custody & Sign-off */}
+        <section id="report-signoff-block" className="print-avoid-break border border-[#202938] p-6 rounded space-y-5 bg-[#F8FAFC]">
+          <div className="border-b border-[#202938] pb-1.5">
+            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
+              12. Examiner Certification &amp; Custody Declaration
+            </h2>
           </div>
 
-          <p className="text-xs text-[#667085] leading-relaxed">
-            This investigation report summarizes digital findings and extracted indicators from the preserved email evidence. Technical hashes and analysis records reflect the current state of the investigation.
+          <p className="text-xs text-[#202938] leading-relaxed">
+            I hereby certify under digital forensics professional standards (NIST SP 800-86 and ISO/IEC 27037) that the evidence cataloged in this report was ingested, hashed, verified, and analyzed in accordance with forensic best practices. Cryptographic integrity checks were performed to ensure no post-acquisition alteration or data degradation occurred. The analytical evaluations and indicator extractions recorded in this dossier reflect the objective state of the evidence.
           </p>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2 text-xs">
-            <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] space-y-0.5">
-              <span className="text-[#667085] text-[10px] block uppercase">Investigator</span>
-              <span className="font-semibold text-[#202938] block">
-                {reportData?.analystSignoff?.signoffAnalyst || user?.username || 'analyst'}
-              </span>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#E4E7EC] text-xs">
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Examining Analyst</span>
+              <span className="font-bold text-[#202938] block">{examinerName}</span>
+              <span className="text-[#667085] text-[11px] block">{examinerRole}</span>
             </div>
 
-            <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] space-y-0.5">
-              <span className="text-[#667085] text-[10px] block uppercase">Role</span>
-              <span className="font-semibold text-[#202938] block">
-                {reportData?.analystSignoff?.signoffRole || user?.role || 'Email Investigator'}
-              </span>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Attribution Facility</span>
+              <span className="font-semibold text-[#202938] block">Email Forensics Laboratory</span>
+              <span className="text-[#667085] text-[11px] block">DFIR Operations Unit</span>
             </div>
 
-            <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] space-y-0.5">
-              <span className="text-[#667085] text-[10px] block uppercase">Date</span>
-              <span className="font-semibold text-[#202938] block">
-                {new Date().toLocaleDateString()}
-              </span>
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Date Certified</span>
+              <span className="font-mono font-semibold text-[#202938] block">{reportDate}</span>
+              <span className="text-[#667085] text-[11px] block">Standard Time</span>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Signature</span>
+              <div className="h-6 border-b border-[#202938] mt-1"></div>
+              <span className="text-[10px] font-mono text-[#667085] block">Authorized Examiner Sign-off</span>
             </div>
           </div>
-        </div>
+        </section>
+
       </div>
     </div>
   )
 }
-

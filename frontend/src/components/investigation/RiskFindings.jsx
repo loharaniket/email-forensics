@@ -15,7 +15,7 @@ export default function RiskFindings({ riskBreakdown }) {
 
   if (!riskBreakdown) {
     return (
-      <div className="p-8 text-center text-xs text-[#667085] bg-white rounded-xl border border-[#E4E7EC] shadow-xs">
+      <div className="p-8 text-center text-xs text-[#667085] bg-white rounded-xl border border-[#E4E7EC]">
         Calculating risk and findings...
       </div>
     )
@@ -46,7 +46,7 @@ export default function RiskFindings({ riskBreakdown }) {
       {/* Top Scores Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Risk Score Card */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldAlert className="h-5 w-5 text-[#2563EB]" />
@@ -120,7 +120,7 @@ export default function RiskFindings({ riskBreakdown }) {
         </div>
 
         {/* Evidence Confidence Card */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <ShieldCheck className="h-5 w-5 text-[#2563EB]" />
@@ -162,7 +162,7 @@ export default function RiskFindings({ riskBreakdown }) {
 
       {/* Category breakdown */}
       {riskBreakdown.categoryScores && riskBreakdown.categoryScores.length > 0 && (
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
             <h3 className="text-sm font-bold text-[#202938]">
               Risk contribution by category
@@ -210,7 +210,7 @@ export default function RiskFindings({ riskBreakdown }) {
       )}
 
       {/* Triggered Risk Factors List */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC]">
           <h3 className="text-sm font-bold text-[#202938]">
             Triggered risk factors ({factors.length})

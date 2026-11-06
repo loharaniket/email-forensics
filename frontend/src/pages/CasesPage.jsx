@@ -198,7 +198,7 @@ export default function CasesPage() {
                 key={c.id}
                 id={`case-card-${c.id}`}
                 onClick={() => navigate(`/cases/${c.id}`)}
-                className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-5 transition-all shadow-xs cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
+                className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-5 transition-all cursor-pointer flex flex-col md:flex-row md:items-center justify-between gap-4"
               >
                 <div className="space-y-1.5 flex-1">
                   <div className="flex items-center gap-3">
@@ -271,7 +271,7 @@ export default function CasesPage() {
 
       {isModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="bg-white border border-[#E4E7EC] rounded-xl max-w-lg w-full p-6 shadow-lg relative">
+          <div className="bg-white border border-[#E4E7EC] rounded-xl max-w-lg w-full p-6 relative">
             <button
               onClick={() => setIsModalOpen(false)}
               className="absolute right-5 top-5 text-[#98A2B3] hover:text-[#202938] cursor-pointer"

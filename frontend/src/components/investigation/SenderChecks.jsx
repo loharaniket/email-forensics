@@ -61,7 +61,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
   return (
     <div className="space-y-6">
       {/* Sender authentication overview */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-5">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
         <div>
           <h2 className="text-sm font-bold text-[#202938]">
             Reported email authentication
@@ -101,16 +101,10 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           })}
         </div>
 
-        {headerAnalysis?.verificationNote && (
-          <div className="p-3.5 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC] text-xs text-[#667085] flex items-start gap-2.5">
-            <Info className="h-4 w-4 text-[#2563EB] shrink-0 mt-0.5" />
-            <span>{headerAnalysis.verificationNote}</span>
-          </div>
-        )}
       </div>
 
       {/* Active DNS verification */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-5">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
           <div>
             <h2 className="text-sm font-bold text-[#202938]">
@@ -128,7 +122,8 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {(() => {
-            const spfBadge = getAuthBadge(headerAnalysis?.activeSpfResult)
+            const spfVal = headerAnalysis?.activeSpfResult || headerAnalysis?.spfResult || headerAnalysis?.reportedSpf
+            const spfBadge = getAuthBadge(spfVal)
             const SpfIcon = spfBadge.icon
             return (
               <div className={`p-4 rounded-xl border ${spfBadge.border} ${spfBadge.bg} space-y-2`}>
@@ -152,7 +147,8 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           })()}
 
           {(() => {
-            const dkimBadge = getAuthBadge(headerAnalysis?.activeDkimStatus)
+            const dkimVal = headerAnalysis?.activeDkimStatus || headerAnalysis?.dkimResult || headerAnalysis?.reportedDkim
+            const dkimBadge = getAuthBadge(dkimVal)
             const DkimIcon = dkimBadge.icon
             return (
               <div className={`p-4 rounded-xl border ${dkimBadge.border} ${dkimBadge.bg} space-y-2`}>
@@ -176,7 +172,8 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           })()}
 
           {(() => {
-            const dmarcBadge = getAuthBadge(headerAnalysis?.activeDmarcStatus)
+            const dmarcVal = headerAnalysis?.activeDmarcStatus || headerAnalysis?.dmarcResult || headerAnalysis?.reportedDmarc
+            const dmarcBadge = getAuthBadge(dmarcVal)
             const DmarcIcon = dmarcBadge.icon
             return (
               <div className={`p-4 rounded-xl border ${dmarcBadge.border} ${dmarcBadge.bg} space-y-2`}>
@@ -209,7 +206,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
       </div>
 
       {/* Sender and recipient headers */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
         <h2 className="text-sm font-bold text-[#202938] pb-3 border-b border-[#E4E7EC]">
           Sender and routing addresses
         </h2>
@@ -279,7 +276,16 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
             <span className="text-[#667085] font-medium">Sent date</span>
             <span className="md:col-span-2 text-[#202938]">
-              {parsed?.sentDate ? new Date(parsed.sentDate).toUTCString() : '(None)'}
+              {(() => {
+                const dVal = parsed?.sentDate || parsed?.messageDate || parsed?.rawDate
+                if (!dVal) return '(None)'
+                try {
+                  const d = new Date(dVal)
+                  return !isNaN(d.getTime()) ? d.toUTCString() : String(dVal)
+                } catch {
+                  return String(dVal)
+                }
+              })()}
             </span>
           </div>
         </div>

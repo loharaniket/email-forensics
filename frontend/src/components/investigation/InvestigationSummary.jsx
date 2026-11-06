@@ -23,7 +23,7 @@ export default function InvestigationSummary({
 }) {
   const riskScore = riskBreakdown?.deterministicRiskScore ?? 0
   const riskLevel = riskBreakdown?.riskLevel || 'LOW'
-  const confidenceScore = riskBreakdown?.confidenceScore ?? 0
+  const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? riskBreakdown?.confidenceScore ?? 0
   const confidenceLevel = riskBreakdown?.confidenceLevel || 'LOW'
 
   const threatClass = aiAssessment?.threatClassification || (
@@ -65,9 +65,24 @@ export default function InvestigationSummary({
     return 'bg-[#F0FDF4] border-green-200 text-[#15803D]'
   }
 
-  const spfStatus = headerAnalysis?.spfStatus || 'NONE'
-  const dkimStatus = headerAnalysis?.dkimStatus || 'NONE'
-  const dmarcStatus = headerAnalysis?.dmarcStatus || 'NONE'
+  const spfStatus =
+    headerAnalysis?.spfResult ||
+    headerAnalysis?.reportedSpf ||
+    headerAnalysis?.activeSpfResult ||
+    headerAnalysis?.spfStatus ||
+    'NONE'
+  const dkimStatus =
+    headerAnalysis?.dkimResult ||
+    headerAnalysis?.reportedDkim ||
+    headerAnalysis?.activeDkimStatus ||
+    headerAnalysis?.dkimStatus ||
+    'NONE'
+  const dmarcStatus =
+    headerAnalysis?.dmarcResult ||
+    headerAnalysis?.reportedDmarc ||
+    headerAnalysis?.activeDmarcStatus ||
+    headerAnalysis?.dmarcStatus ||
+    'NONE'
 
   const getStatusPill = (status) => {
     const s = String(status).toUpperCase()
@@ -83,14 +98,17 @@ export default function InvestigationSummary({
     return <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#667085] border border-[#E4E7EC]">{s.toLowerCase()}</span>
   }
 
-  const topFindings = riskBreakdown?.contributingFactors || []
+  const topFindings =
+    riskBreakdown?.factors ||
+    riskBreakdown?.contributingFactors ||
+    []
 
   return (
     <div className="space-y-6">
       {/* High-level score cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* Card 1: Classification */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-[#667085]">
             <span>Classification</span>
             <ShieldAlert className="h-4 w-4 text-[#98A2B3]" />
@@ -104,7 +122,7 @@ export default function InvestigationSummary({
         </div>
 
         {/* Card 2: Risk Score */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-[#667085]">
             <span>Risk score</span>
             <span className={`text-xs px-2 py-0.5 rounded font-medium ${getRiskCardStyle(riskLevel)}`}>
@@ -123,7 +141,7 @@ export default function InvestigationSummary({
         </div>
 
         {/* Card 3: Evidence Confidence */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-[#667085]">
             <span>Evidence confidence</span>
             <span className="text-xs px-2 py-0.5 rounded font-medium bg-slate-100 text-[#667085]">
@@ -141,7 +159,7 @@ export default function InvestigationSummary({
         </div>
 
         {/* Card 4: Sender Authentication */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 shadow-xs flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
           <div className="text-xs text-[#667085]">
             <span>Sender authentication</span>
           </div>
@@ -169,7 +187,7 @@ export default function InvestigationSummary({
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <button
           onClick={() => onNavigateTab('urls')}
-          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer shadow-xs"
+          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center justify-between text-[#667085]">
             <span className="text-xs">Links</span>
@@ -185,7 +203,7 @@ export default function InvestigationSummary({
 
         <button
           onClick={() => onNavigateTab('attachments')}
-          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer shadow-xs"
+          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center justify-between text-[#667085]">
             <span className="text-xs">Attachments</span>
@@ -201,7 +219,7 @@ export default function InvestigationSummary({
 
         <button
           onClick={() => onNavigateTab('hops')}
-          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer shadow-xs"
+          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center justify-between text-[#667085]">
             <span className="text-xs">Mail route hops</span>
@@ -217,7 +235,7 @@ export default function InvestigationSummary({
 
         <button
           onClick={() => onNavigateTab('infrastructure')}
-          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer shadow-xs"
+          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
           <div className="flex items-center justify-between text-[#667085]">
             <span className="text-xs">IP addresses</span>
@@ -234,7 +252,7 @@ export default function InvestigationSummary({
 
       {/* Automated assessment summary */}
       {aiAssessment && (
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-3">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-3">
           <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[#2563EB]" />
@@ -257,7 +275,7 @@ export default function InvestigationSummary({
       )}
 
       {/* Contributing findings */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-4">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
         <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
           <h2 className="text-sm font-bold text-[#202938]">
             Important findings ({topFindings.length})

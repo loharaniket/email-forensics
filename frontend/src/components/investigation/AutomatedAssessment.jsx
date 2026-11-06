@@ -29,7 +29,7 @@ export default function AutomatedAssessment({
 
   return (
     <div className="space-y-6">
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 shadow-xs space-y-5">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4 pb-4 border-b border-[#E4E7EC]">
           <div className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
