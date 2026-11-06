@@ -6,8 +6,6 @@ import {
   AlertOctagon,
   Sparkles,
   Search,
-  ChevronDown,
-  ChevronRight,
   Info
 } from 'lucide-react'
 
@@ -18,7 +16,6 @@ export default function MessageContent({
   copyValue,
   copiedKey
 }) {
-  const [showMetricsDrawer, setShowMetricsDrawer] = useState(false)
   const [contentCategoryFilter, setContentCategoryFilter] = useState('ALL')
   const [contentChannelFilter, setContentChannelFilter] = useState('ALL')
   const [contentSearch, setContentSearch] = useState('')
@@ -56,8 +53,6 @@ export default function MessageContent({
     contentAnalysis?.promptInjectionMatches ||
     []
   const socialMatches = contentAnalysis?.socialEngineeringMatches || []
-  const metrics =
-    contentAnalysis?.modelMetrics || contentAnalysis?.evaluationMetrics || null
   const promptInjectionDetected = !!(
     contentAnalysis?.promptInjectionDetected || promptMatches.length > 0
   )
@@ -175,20 +170,6 @@ export default function MessageContent({
             <span className="text-xs text-[#667085]">
               Status: <span className="text-[#15803D] font-medium">{contentAnalysis.mlStatus}</span>
             </span>
-            {metrics && (
-              <button
-                id="toggle-metrics-btn"
-                onClick={() => setShowMetricsDrawer(!showMetricsDrawer)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F5F6F8] hover:bg-slate-100 border border-[#E4E7EC] text-xs font-medium text-[#202938] transition-colors cursor-pointer"
-              >
-                <span>Model metrics</span>
-                {showMetricsDrawer ? (
-                  <ChevronDown className="h-3.5 w-3.5 text-[#667085]" />
-                ) : (
-                  <ChevronRight className="h-3.5 w-3.5 text-[#667085]" />
-                )}
-              </button>
-            )}
           </div>
         </div>
 
@@ -255,73 +236,6 @@ export default function MessageContent({
           </div>
         </div>
 
-        {/* Expandable Model Metrics */}
-        {showMetricsDrawer && metrics && (
-          <div
-            id="metrics-drawer"
-            className="mt-4 p-4 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] space-y-4"
-          >
-            <div className="flex items-center justify-between border-b border-[#E4E7EC] pb-2 text-xs">
-              <span className="font-semibold text-[#202938]">
-                Model evaluation metrics
-              </span>
-              <span className="text-[#667085]">
-                Test samples: {metrics.testSampleCount != null ? metrics.testSampleCount : metrics.testSetSize || 0}
-              </span>
-            </div>
-
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] text-center">
-                <span className="text-xs text-[#667085] block">Accuracy</span>
-                <span className="text-base font-bold text-[#202938] font-mono">
-                  {(metrics.accuracy * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] text-center">
-                <span className="text-xs text-[#667085] block">Precision</span>
-                <span className="text-base font-bold text-[#202938] font-mono">
-                  {(metrics.precision * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] text-center">
-                <span className="text-xs text-[#667085] block">Recall</span>
-                <span className="text-base font-bold text-[#202938] font-mono">
-                  {(metrics.recall * 100).toFixed(1)}%
-                </span>
-              </div>
-              <div className="p-3 rounded-lg bg-white border border-[#E4E7EC] text-center">
-                <span className="text-xs text-[#667085] block">F1 Score</span>
-                <span className="text-base font-bold text-[#202938] font-mono">
-                  {((metrics.f1 != null ? metrics.f1 : metrics.f1Score || 0) * 100).toFixed(1)}%
-                </span>
-              </div>
-            </div>
-
-            <div className="p-3.5 rounded-lg bg-white border border-[#E4E7EC] space-y-2">
-              <span className="text-xs font-semibold text-[#202938] block">
-                Confusion matrix
-              </span>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs font-mono">
-                <div className="p-2 rounded bg-[#F0FDF4] border border-green-200 text-[#15803D]">
-                  <span className="text-[10px] block">True Positives</span>
-                  <span className="text-sm font-bold">{metrics.truePositives}</span>
-                </div>
-                <div className="p-2 rounded bg-[#FEF2F2] border border-red-200 text-[#B42318]">
-                  <span className="text-[10px] block">False Positives</span>
-                  <span className="text-sm font-bold">{metrics.falsePositives}</span>
-                </div>
-                <div className="p-2 rounded bg-[#F0FDF4] border border-green-200 text-[#15803D]">
-                  <span className="text-[10px] block">True Negatives</span>
-                  <span className="text-sm font-bold">{metrics.trueNegatives}</span>
-                </div>
-                <div className="p-2 rounded bg-[#FEF2F2] border border-red-200 text-[#B42318]">
-                  <span className="text-[10px] block">False Negatives</span>
-                  <span className="text-sm font-bold">{metrics.falseNegatives}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {/* Prompt Injection Alert / Status */}
