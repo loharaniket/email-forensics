@@ -2,7 +2,6 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Upload,
-  FileCheck,
   ShieldCheck,
   AlertTriangle,
   Download,
@@ -13,8 +12,7 @@ import {
   FileText,
   Eye,
   FolderOpen,
-  ExternalLink,
-  ArrowRight
+  ExternalLink
 } from 'lucide-react'
 import {
   uploadEvidence,

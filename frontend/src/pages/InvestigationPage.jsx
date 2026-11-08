@@ -737,8 +737,6 @@ export default function InvestigationPage() {
           <MessageContent
             mode="content"
             contentAnalysis={contentAnalysis}
-            copyValue={copyValue}
-            copiedKey={copiedKey}
           />
         )}
 
@@ -746,8 +744,6 @@ export default function InvestigationPage() {
           <MessageContent
             mode="body"
             parsed={parsed}
-            copyValue={copyValue}
-            copiedKey={copiedKey}
           />
         )}
 

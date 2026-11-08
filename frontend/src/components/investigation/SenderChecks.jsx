@@ -1,8 +1,5 @@
 import React from 'react'
 import {
-  ShieldCheck,
-  ShieldAlert,
-  Globe,
   Info,
   CheckCircle2,
   XCircle,

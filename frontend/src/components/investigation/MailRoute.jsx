@@ -3,9 +3,7 @@ import {
   Server,
   Clock,
   ChevronDown,
-  ChevronRight,
-  ShieldCheck,
-  Hash
+  ChevronRight
 } from 'lucide-react'
 
 export default function MailRoute({ hops, formatSeconds }) {

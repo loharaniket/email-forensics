@@ -2,10 +2,7 @@ import React, { useState, useMemo } from 'react'
 import {
   ShieldAlert,
   ShieldCheck,
-  Search,
-  Activity,
-  Layers,
-  Info
+  Search
 } from 'lucide-react'
 
 export default function RiskFindings({ riskBreakdown }) {

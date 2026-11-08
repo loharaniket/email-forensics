@@ -4,7 +4,6 @@ import {
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
-  Info,
   Tag,
   ShieldCheck,
   ChevronDown,

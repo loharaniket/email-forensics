@@ -2,19 +2,14 @@ import React, { useState, useMemo } from 'react'
 import {
   Brain,
   ShieldCheck,
-  AlertTriangle,
   AlertOctagon,
-  Sparkles,
-  Search,
   Info
 } from 'lucide-react'
 
 export default function MessageContent({
   mode = 'content', // 'content' or 'body'
   contentAnalysis,
-  parsed = {},
-  copyValue,
-  copiedKey
+  parsed = {}
 }) {
   const [contentCategoryFilter, setContentCategoryFilter] = useState('ALL')
   const [contentChannelFilter, setContentChannelFilter] = useState('ALL')

@@ -1,91 +1,184 @@
-# AI-Powered Email Forensic Investigation & Threat Intelligence Platform
+# Email Forensics Platform
 
-An enterprise-grade, academic-caliber digital forensics and threat intelligence platform designed to ingest raw `.eml` email files, preserve cryptographic evidence integrity (SHA-256 hash verification), extract deep header/transit/content indicators, detect adversarial prompt injection and quishing, correlate threats across historical cases, compute explainable risk scores, and produce court-admissible forensic dossier reports.
-
----
-
-## Key Features & Capabilities
-
-- **Cryptographic Chain of Custody:** Strict SHA-256 evidence hashing upon ingestion with continuous tamper-evident verification.
-- **Deep Header Forensics & Spoofing Defense:** Full RFC 5322/2045/2047 MIME parsing, SPF / DKIM / DMARC authentication alignment, Return-Path / Reply-To mismatch detection, and display name spoofing analysis.
-- **Mail Transit Route & Hop Reconstruction:** Chronological Received header traversal with hop-by-hop latency calculation, TLS cipher inspection, and delay anomaly flags.
-- **URL & Web Infrastructure Intelligence:** Anchor text vs target mismatch detection, IP-based URLs, URL shortener resolution, lookalike/punycode homograph analysis, and defanged URL exports.
-- **Network Infrastructure Telemetry:** Server IP extraction from transit headers and URLs, and private/bogon (RFC 1918) classification.
-- **Visual Artifacts & Quishing Defense:** Embedded image extraction and QR code detection/payload decoding via ZXing.
-- **Content NLP & Prompt Injection Firewall:** Tribuo ML machine learning baseline classification, rule-based social engineering cue detection (urgency, credential harvesting, extortion, impersonation), and proactive prompt injection defense against LLM hijacking.
-- **Explainable Deterministic Risk Scoring:** Rule-based scoring engine (0–100) with confidence calibration, weighted severity multipliers, and clear audit breakdowns.
-- **Historical Threat Correlation Engine:** Multi-dimensional indicator linking (senders, domains, hashes, IPs) across historical investigations with structured, searchable table presentation.
-- **Grounded AI Forensic Intelligence:** Hallucination-shielded LLM synthesis generating grounded technical narratives, Mitre ATT&CK technique mapping, and strict citation validation.
-- **Court-Ready Forensic Dossier & Reporting:** Multi-format report generation (interactive UI, clean JSON API, and high-contrast `@media print` PDF layout with analyst sign-off and chain of custody certification).
+An open-source digital forensic application for analyzing suspicious emails (`.eml` files). It helps security analysts inspect email headers, trace network transit hops, extract and check URLs and IP addresses, decode QR codes, detect social engineering and prompt injections, calculate an explainable risk score, and generate court-ready investigation reports.
 
 ---
 
-## Technology Stack
+## What This Project Does
 
-| Layer | Component | Version / Coordinate | Purpose |
-|---|---|---|---|
-| **Runtime** | OpenJDK | 21 LTS | High-performance backend runtime |
-| **Backend Framework** | Spring Boot | 4.1.x / Spring 7 | Modular monolith architecture |
-| **Security** | Spring Security & JJWT | 0.12.x | Stateless JWT authentication & RBAC |
-| **Database** | PostgreSQL | 16 | Relational data store for cases and forensic telemetry |
-| **Database Migrations** | Flyway | 10.x | Version-controlled database schema migrations (V1–V13) |
-| **Email Parsing** | Jakarta Mail | 2.1.x | Robust RFC 5322 MIME stream parser |
-| **Machine Learning** | Oracle Tribuo | 4.3.x | Embedded Naive Bayes NLP classification |
-| **Visual Decoding** | ZXing | 3.5.x | QR barcode matrix decoding and payload routing |
-| **Frontend Framework** | React | 19.x (JSX, No TS) | Reactive component UI |
-| **Build & Bundler** | Vite | 8.x | Lightning-fast development & production bundling |
-| **Styling** | Tailwind CSS | 4.x & Vanilla CSS | Slate/cyan dark theme & print stylesheets |
-| **Icons & UI** | Lucide React | Latest | Responsive iconography & modern Tailwind DFIR interface |
+When an analyst receives a suspicious or malicious email, they upload the raw `.eml` file into a case. The platform automatically:
+
+1. **Protects Evidence Integrity:** Stores the original file in a local evidence vault and computes a SHA-256 hash immediately to ensure the file has not been tampered with.
+2. **Parses Headers and Authentication:** Extracts sender details (`From`, `Reply-To`, `Return-Path`), checks for display name spoofing, and reads reported SPF, DKIM, DMARC, and ARC authentication results.
+3. **Reconstructs Transit Hops:** Reads all `Received:` headers in chronological order, measures delivery delays between mail servers, and identifies public and private IP addresses.
+4. **Extracts Links and IP Addresses:** Extracts all URLs from HTML and plain text bodies, detects anchor text mismatches (for example, text saying `paypal.com` but linking to an external site), and classifies server IPs.
+5. **Inspects Images and Decodes QR Codes:** Extracts inline images and attachments, and automatically decodes QR codes (quishing detection) using ZXing.
+6. **Analyzes Email Content:** Uses an embedded Tribuo machine learning model to classify spam/phishing text, scans for social engineering cues (urgency, credential harvesting, wire transfers, impersonation), and checks for hidden prompt injection attacks against LLMs.
+7. **Calculates an Explainable Risk Score:** Computes a transparent 0–100 risk score based on weighted forensic rules. Every score comes with a confidence rating and an itemized breakdown of contributing factors.
+8. **Correlates Across Past Cases:** Checks if sender domains, subject patterns, IP addresses, or attachment hashes match evidence from other investigations in the database.
+9. **Generates AI Threat Summaries:** Provides a grounded technical summary and maps findings to MITRE ATT&CK techniques (supports Groq/OpenAI compatible models with an automatic local fallback).
+10. **Produces Multi-Format Reports:** Generates an interactive web dossier, a printer-friendly PDF layout with analyst sign-off blocks, and a structured JSON export.
 
 ---
 
-## System Requirements & Prerequisites
+## Architecture and Pipeline
 
-Ensure the following tools are installed:
-- **Java Development Kit (JDK):** Version 21 or higher (`java -version`)
-- **Node.js:** Current LTS (v20.x or v22.x) (`node -v`, `npm -v`)
-- **PostgreSQL:** Version 16 or compatible running on `localhost:5432` (`psql -version`)
-- **Maven:** Bundled via `./mvnw` / `mvnw.cmd` wrapper (no standalone installation required)
+```
+[ Raw .eml Upload ]
+        │
+        ▼
+[ Evidence Vault ] ──► Compute SHA-256 Checksum
+        │
+        ▼
+[ MIME Parser (Jakarta Mail) ]
+        │
+        ├─► Header Analysis (SPF, DKIM, DMARC, Return-Path alignment)
+        ├─► Transit Analysis (Received hops, delays, IP classification)
+        ├─► URL & Network Intel (Anchor mismatches, suspicious domains)
+        ├─► Visual & QR Engine (Image extraction, ZXing QR decoding)
+        ├─► Content Engine (Tribuo ML, social engineering rules, prompt injection)
+        ├─► Risk Scoring Engine (Deterministic 0-100 score + confidence)
+        └─► Historical Correlation (Matches across existing cases)
+        │
+        ▼
+[ Database Storage ] ──► Stored in 13 PostgreSQL tables
+        │
+        ▼
+[ Real-time Updates ] ──► Server-Sent Events (SSE) stream to React frontend
+        │
+        ▼
+[ Dossier & Reports ] ──► Web UI, Printable PDF, JSON Export
+```
 
 ---
 
-## Installation & Setup Guide
+## Tech Stack
 
-### 1. Database Provisioning
+### Backend
+- **Java 21**
+- **Spring Boot 4.1** (REST APIs, Security, Data JPA)
+- **PostgreSQL 16** (Primary relational database)
+- **Flyway** (Automated database migrations, V1 through V14)
+- **Jakarta Mail & Angus Mail** (RFC 5322 / MIME parsing)
+- **Oracle Tribuo 4.3** (Embedded machine learning for content classification)
+- **ZXing 3.5** (QR code reading and decoding)
+- **JJWT 0.12** (Stateless JWT authentication)
 
-Create the PostgreSQL database and dedicated user:
+### Frontend
+- **React 19**
+- **Vite 8**
+- **Tailwind CSS 4**
+- **Axios** (API communication)
+- **Lucide React** (Icons)
+
+---
+
+## Database Structure
+
+The database uses PostgreSQL with 13 consolidated tables managed through Flyway migrations:
+
+| Table | What It Stores |
+|---|---|
+| `users` | User accounts, credentials, and roles (`ANALYST`, `ADMIN`). |
+| `fore_cases` | Investigation cases (case number, title, description, severity, status). |
+| `email_evidence` | Uploaded email files, file sizes, SHA-256 hashes, and vault paths. |
+| `analysis_runs` | Individual analysis attempts for an evidence file, tracking status and progress. |
+| `analysis_results` | Consolidated results for a run: header checks, ML content analysis, and risk scoring. |
+| `received_hops` | Chronological mail transit hops parsed from `Received:` headers. |
+| `extracted_urls` | Extracted links, anchor text mismatches, and domain flags. |
+| `ip_artifacts` | Extracted IP addresses and private/public classification. |
+| `visual_artifacts` | Images extracted from email bodies and attachments. |
+| `qr_artifacts` | QR codes found in images, along with their decoded target URLs. |
+| `risk_factors` | Individual risk rules triggered during scoring and their weight values. |
+| `historical_matches` | Connections found between the current email and past cases. |
+| `ai_grounded_assessments` | AI-generated technical narratives and MITRE ATT&CK technique tags. |
+
+---
+
+## Project Structure
+
+```
+email-forensics/
+├── backend/
+│   ├── src/main/java/com/emailforensics/backend/
+│   │   ├── aiassessment/     # LLM summaries and MITRE ATT&CK mapping
+│   │   ├── analysis/         # Consolidated analysis results entity and repository
+│   │   ├── auth/             # Authentication endpoints and JWT logic
+│   │   ├── casefile/         # Case management (CRUD operations)
+│   │   ├── content/          # Tribuo ML, social engineering rules, prompt injection
+│   │   ├── correlation/      # Cross-case matching engine
+│   │   ├── email/            # Jakarta Mail MIME parser
+│   │   ├── evidence/         # Upload handling, evidence vault, orchestration, SSE
+│   │   ├── headers/          # Header checks, SPF/DKIM/DMARC, received hops
+│   │   ├── health/           # Health checks and system reset/truncate tool
+│   │   ├── infrastructure/   # IP classification and DNS lookups
+│   │   ├── report/           # Dossier report builder and JSON export
+│   │   ├── risk/             # Deterministic risk scoring and confidence rating
+│   │   ├── security/         # Spring Security filters and UserDetailsService
+│   │   ├── urlintel/         # URL extraction, heuristics, and normalization
+│   │   └── visual/           # Image handling and ZXing QR decoding
+│   └── src/main/resources/
+│       ├── db/migration/     # Flyway SQL migrations (V1 through V14)
+│       └── application.properties
+├── frontend/
+│   ├── src/
+│   │   ├── api/              # Axios client functions organized by domain
+│   │   ├── auth/             # AuthContext and login state handling
+│   │   ├── components/       # Investigation tabs, report view, upload modal, navbar
+│   │   └── pages/            # Login, Cases, Case Detail, Investigation, Health
+│   ├── package.json
+│   └── vite.config.js
+└── test-fixtures/
+    └── eml/                  # Sample .eml files for testing different forensic scenarios
+```
+
+---
+
+## Prerequisites
+
+Before running the application, make sure you have:
+
+- **Java Development Kit (JDK) 21** or higher (`java -version`)
+- **Node.js 20** or higher (`node -v` and `npm -v`)
+- **PostgreSQL 16** running locally on port 5432 (`psql -U postgres`)
+
+---
+
+## Quick Start Guide
+
+### 1. Create the Database
+
+Open your PostgreSQL client (psql, pgAdmin, or DBeaver) and create the database:
 
 ```sql
 CREATE DATABASE email_forensics;
-CREATE USER email_user WITH ENCRYPTED PASSWORD 'email_password';
-GRANT ALL PRIVILEGES ON DATABASE email_forensics TO email_user;
 ```
 
-*(Note: The database configuration defaults to `jdbc:postgresql://localhost:5432/email_forensics` with username `postgres` / password `postgres` or credentials configured in `application.yml` / `.env`)*
+*Note: The backend defaults to connecting with user `postgres` and an empty password on `localhost:5432`. If your local PostgreSQL uses a password, set `DB_PASSWORD` as shown in the configuration section below.*
 
-### 2. Backend Startup
+### 2. Start the Backend
 
-From the project root:
+Open a terminal in the project directory:
 
 ```bash
 # On Windows:
 cd backend
-..\mvnw.cmd spring-boot:run
+.\mvnw.cmd spring-boot:run
 
-# On Linux / macOS:
+# On Linux or macOS:
 cd backend
-../mvnw spring-boot:run
+./mvnw spring-boot:run
 ```
 
-The Spring Boot server will execute Flyway migrations and listen on **port 8080**.
+When started, Flyway automatically runs the database migrations (V1 to V14) and creates default user accounts. The API runs at `http://localhost:8080`.
 
-Default Demo Accounts:
-- **Analyst:** Username `analyst` | Password `analyst123` (Role: `ANALYST`)
-- **Admin:** Username `admin` | Password `admin123` (Role: `ADMIN`)
+**Default Login Credentials:**
+- **Analyst:** `analyst` / `analyst123` (Role: `ANALYST`)
+- **Admin:** `admin` / `admin123` (Role: `ADMIN`)
 
-### 3. Frontend Startup
+### 3. Start the Frontend
 
-In a separate terminal window:
+Open a second terminal window:
 
 ```bash
 cd frontend
@@ -93,93 +186,95 @@ npm install
 npm run dev
 ```
 
-The Vite development server will start on **http://localhost:5173** with proxying to `http://localhost:8080/api/v1`.
+The frontend will run at `http://localhost:5173` and automatically proxies `/api` calls to the backend on port 8080.
 
 ---
 
-## Test Fixture Catalog
+## Using the Application
 
-The repository includes a curated set of test fixtures located in `test-fixtures/eml/`:
+1. **Log In:** Go to `http://localhost:5173` and sign in with `analyst` / `analyst123`.
+2. **Create a Case:** Click **"New Case"**, enter a case number (such as `CASE-2026-001`), add a title and description, choose a severity level, and submit.
+3. **Upload an Evidence File:** Open your case, click **"Upload Evidence"**, and select any `.eml` file (you can pick one from the `test-fixtures/eml/` folder).
+4. **Inspect the Findings:** Click **"Investigate"** on the uploaded email. The tabs provide details on:
+   - **Overview:** SHA-256 checksum, file size, sender summary, and pipeline status.
+   - **Headers:** `From`, `Reply-To`, `Return-Path`, and SPF/DKIM/DMARC alignment.
+   - **Mail Route:** Chronological relay servers, transit latency, and hop IPs.
+   - **URLs & Network:** Extracted links, anchor mismatches, and IP classifications.
+   - **Visuals & QR:** Embedded images and decoded QR code targets.
+   - **Content & ML:** Spam/phishing classification, social engineering cues, and prompt injection defense.
+   - **Risk Scoring:** Transparent 0–100 score with an itemized table of risk reasons and weights.
+   - **Correlations:** Links to any matching indicators found in earlier cases.
+   - **AI Assessment:** High-level narrative summary and MITRE ATT&CK technique tags.
+5. **Generate a Report:** Open the **"Forensic Dossier Report"** tab to view the formatted report, export it as a clean JSON file, or print/save it as a PDF.
 
-| Fixture Filename | Description & Provenance | Expected Forensic Signals |
+---
+
+## Sample Test Fixtures
+
+The `test-fixtures/eml/` directory contains sample emails designed to test specific forensic checks:
+
+| File | Scenario Tested | What to Expect |
 |---|---|---|
-| `01-plain-legitimate.eml` | Standard synthetic RFC 5322 corporate email. | Clean SPF/DKIM/DMARC pass, zero spoofing flags, Low Risk (0–10/100), Benign. |
-| `02-html-anchor-mismatch.eml` | Phishing email with anchor text mismatch. | Visible text displays `https://secure.bank.com` while underlying href links to `http://phish-login.cc`. High Risk factor triggered. |
-| `03-multipart-attachment.eml` | Multi-part MIME message with attachments. | Nested MIME parts, attachment metadata extraction, payload fingerprinting. |
-| `04-unicode-subject.eml` | RFC 2047 encoded internationalized subject line. | Tests character set decoder resiliency (`=?UTF-8?B?...?=`). |
-| `05-malformed-mime.eml` | Intentional header boundary corruption. | Tests parser tolerance and graceful error recovery with warnings recording. |
-| `06-received-chain.eml` | Multi-hop message with 4 transit relays. | Complete route hop traversal, relay IP extraction, transit latency calculation. |
-| `07-inline-qr-code.eml` | Quishing attack with embedded QR barcode image. | Visual artifact extraction, ZXing QR decoding, suspicious QR target URL detection. |
-| `08-prompt-injection.eml` | Adversarial LLM prompt injection attack. | Regex injection engine detects `[SYSTEM INSTRUCTION: IGNORE ALL PREVIOUS INSTRUCTIONS]`, blocks AI override. |
+| `01-plain-legitimate.eml` | Standard corporate email | Clean headers, passing authentication, Low Risk (0–10). |
+| `02-html-anchor-mismatch.eml` | Phishing with spoofed link | Display text shows a trusted bank, but href links to a phishing site. Triggers High Risk factor. |
+| `03-multipart-attachment.eml` | Multipart email with attachments | Extracts attachment metadata and SHA-256 payload hashes. |
+| `04-unicode-subject.eml` | RFC 2047 internationalized subject | Verifies Unicode decoding and header normalization. |
+| `05-malformed-mime.eml` | Corrupted header boundaries | Checks that the parser handles broken structures gracefully without crashing. |
+| `06-received-chain.eml` | Multi-hop email route | Reconstructs 4 relay server hops with transit delay calculations. |
+| `07-inline-qr-code.eml` | Quishing (QR code phishing) | Extracts the embedded image and decodes the QR URL. |
+| `08-prompt-injection.eml` | LLM prompt injection attempt | Detects adversarial instructions designed to hijack LLM behavior and flags the attack. |
 
 ---
 
-## 5-Minute Demo Walkthrough
+## System Maintenance and Testing Tools
 
-Follow these steps for a complete demonstration of the system:
+### Service Status and Database Reset
+When testing locally, you can reset test data at any time:
+1. Open the **"Service Status"** page in the top navigation bar (`/health`).
+2. Review backend services, database connectivity, and pipeline health.
+3. Click the **"Reset All Data"** button to safely clear all uploaded evidence files from disk and truncate test tables while preserving user accounts and database structure.
 
-1. **Sign In:**
-   - Navigate to `http://localhost:5173/login`.
-   - Log in using `analyst` / `analyst123`.
-2. **Review or Create a Case:**
-   - On the Cases Dashboard (`/cases`), click **"New Case"** (`#btn-create-case`).
-   - Enter Case Number (e.g., `CASE-2026-DEMO`), Title, Description, and select Severity `HIGH`. Click **"Create Case"**.
-3. **Ingest Evidence (.eml):**
-   - Inside the case view, click **"Upload Evidence"** (`#btn-upload-evidence`).
-   - Select `test-fixtures/eml/08-prompt-injection.eml` or `test-fixtures/eml/07-inline-qr-code.eml`.
-   - Observe automatic SHA-256 checksum calculation, storage ingestion, and automated multi-stage pipeline processing.
-4. **Deep Forensic Investigation:**
-   - Click **"Investigate"** (`#btn-investigate-{id}`) on the newly uploaded evidence file.
-   - **Overview Tab (`#tab-overview`):** View the executive summary, cryptographic fingerprint, authentication verdict, and stage health.
-   - **Headers Tab (`#tab-headers`):** Inspect sender alignment, SPF/DKIM/DMARC verdicts, and identity alignment warnings.
-   - **Mail Route Tab (`#tab-hops`):** Examine the chronological transit route, relay delays, and server hops.
-   - **URLs Tab (`#tab-urls`):** Inspect extracted links, anchor text mismatches, and domain flags.
-   - **Visuals & QR Tab (`#tab-visuals`):** View extracted visual artifacts and decoded QR payloads.
-   - **Content & ML Tab (`#tab-content`):** Review Tribuo ML classification, social engineering indicators, and Adversarial Injection Defense alerts.
-   - **Risk Scoring Tab (`#tab-risk`):** Audit the explainable deterministic risk factors table with weight contributions.
-   - **Historical Correlations Tab (`#tab-correlations`):** Review cross-case correlations in a structured table filtered by match strength and indicator type.
-   - **AI Grounded Assessment Tab (`#tab-ai`):** View the hallucination-shielded technical narrative and verified Mitre ATT&CK citations.
-5. **Generate & Export Court-Ready Dossier:**
-   - Click the **"Forensic Dossier Report"** tab (`#tab-report`).
-   - Review the complete multi-page document: Cryptographic Chain of Custody, Executive Verdict, Stage Health, All Technical Findings, and Formal Examiner Sign-Off Block.
-   - Click **"Export JSON Dossier"** (`#btn-report-tab-export-json`) to download the machine-readable forensic report.
-   - Click **"Print / PDF Report"** (`#btn-report-tab-print`) to preview the court-ready, high-contrast printable dossier.
+### Running Tests
 
----
-
-## Running Verification Tests
-
-### Backend Unit & Integration Tests (112 Tests)
-
+**Backend Test Suite:**
 ```bash
+# Windows
 cd backend
-..\mvnw.cmd test
-```
+.\mvnw.cmd test
 
-Expected result:
+# Linux / macOS
+cd backend
+./mvnw test
 ```
-[INFO] Results:
-[INFO] Tests run: 115, Failures: 0, Errors: 0, Skipped: 0
-[INFO] BUILD SUCCESS
-```
+All 108 unit and integration tests run against an in-memory/mocked setup without affecting your live database.
 
-### Frontend Production Build
-
+**Frontend Production Build Check:**
 ```bash
 cd frontend
 npm run build
 ```
 
-Expected result:
-```
-✓ built in ~1.0s
-```
+---
+
+## Configuration Reference
+
+The application works out of the box with default settings. You can override properties using environment variables or a `.env` file in the `backend/` directory:
+
+| Environment Variable | Default Value | Description |
+|---|---|---|
+| `DB_HOST` | `localhost` | PostgreSQL host |
+| `DB_PORT` | `5432` | PostgreSQL port |
+| `DB_NAME` | `email_forensics` | PostgreSQL database name |
+| `DB_USER` | `postgres` | Database username |
+| `DB_PASSWORD` | *(empty)* | Database password |
+| `JWT_SECRET` | *(auto-generated)* | 256-bit secret key used to sign JWT tokens |
+| `JWT_EXPIRATION_MS` | `86400000` (24 hours) | JWT token lifespan in milliseconds |
+| `EVIDENCE_VAULT_DIR` | `./evidence_vault` | Directory where uploaded `.eml` files are saved |
+| `GROQ_API_KEY` | *(empty)* | Optional Groq API key for AI summaries (falls back to local mock if empty) |
+| `GROQ_MODEL` | `openai/gpt-oss-20b` | Model name for AI threat assessment |
 
 ---
 
-## Architectural Principles & Compliance
+## Contributing and License
 
-- **ISO/IEC 27037:2012 Evidentiary Standards:** Immutable raw artifact storage and SHA-256 integrity verification across the entire lifecycle.
-- **Explainable Cyber Intelligence:** Zero black-box decisions; all deterministic scores are backed by weighted rules and audit citations.
-- **Adversarial Resilience:** Defenses against prompt injection, Unicode obfuscation, and malformed MIME streams.
-- **Zero-Dependency Export Serialization:** Forensic report JSON export operates with zero external dependencies to prevent parser vulnerabilities.
+This project is licensed under the MIT License. Contributions, bug reports, and suggestions are welcome via GitHub issues and pull requests.

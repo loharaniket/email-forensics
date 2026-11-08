@@ -6,8 +6,7 @@ import {
   Search,
   Hash,
   Copy,
-  Check,
-  AlertTriangle
+  Check
 } from 'lucide-react'
 
 export default function AttachmentsAndImages({

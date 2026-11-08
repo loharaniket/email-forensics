@@ -1,6 +1,6 @@
 import React, { useState, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, ChevronRight, Layers } from 'lucide-react'
+import { Search, ChevronRight } from 'lucide-react'
 
 export default function RelatedCases({ correlations = [] }) {
   const navigate = useNavigate()

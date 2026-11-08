@@ -1,13 +1,9 @@
 import React, { useState, useMemo } from 'react'
 import {
-  Link2,
-  Network,
   Search,
   Copy,
   Check,
-  AlertTriangle,
-  Globe,
-  ShieldAlert
+  AlertTriangle
 } from 'lucide-react'
 
 export default function LinksAndIps({
