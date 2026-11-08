@@ -20,11 +20,11 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class UrlIntelServiceTest {
+class UrlAnalysisServiceTest {
 
-    private UrlIntelService urlIntelService;
+    private UrlAnalysisService UrlAnalysisService;
     private UrlNormalizationService normalizationService;
-    private UrlHeuristicsService heuristicsService;
+    private UrlCheckService heuristicsService;
     private UrlExtractionService extractionService;
     private IpClassifier ipClassifier;
     private DnsLookupService dnsLookupService;
@@ -34,12 +34,12 @@ class UrlIntelServiceTest {
     void setUp() {
         ipClassifier = new IpClassifier();
         normalizationService = new UrlNormalizationService();
-        heuristicsService = new UrlHeuristicsService(ipClassifier, normalizationService);
+        heuristicsService = new UrlCheckService(ipClassifier, normalizationService);
         extractionService = new UrlExtractionService();
         dnsLookupService = new DnsLookupService(1000);
         EmailParserService emailParserService = new EmailParserService();
 
-        urlIntelService = new UrlIntelService(
+        UrlAnalysisService = new UrlAnalysisService(
                 null, null, null, null,
                 emailParserService, extractionService, normalizationService,
                 heuristicsService, dnsLookupService, null
@@ -112,7 +112,7 @@ class UrlIntelServiceTest {
     void shouldExtractAndAnalyzeAnchorMismatchFixture() throws Exception {
         Path emlPath = fixturesDir.resolve("02-html-anchor-mismatch.eml");
         try (InputStream in = Files.newInputStream(emlPath)) {
-            List<ExtractedUrlDto> urls = urlIntelService.extractAndAnalyzeFromStream(in);
+            List<ExtractedUrlDto> urls = UrlAnalysisService.extractAndAnalyzeFromStream(in);
 
             assertNotNull(urls);
             assertEquals(1, urls.size());
@@ -135,7 +135,7 @@ class UrlIntelServiceTest {
         String emailContent = "From: sender@test.com\r\nSubject: Test\r\n\r\n" +
                 "Check this out: https://example.com/page and again https://example.com/page?utm_source=ad";
         InputStream in = new ByteArrayInputStream(emailContent.getBytes(StandardCharsets.UTF_8));
-        List<ExtractedUrlDto> urls = urlIntelService.extractAndAnalyzeFromStream(in);
+        List<ExtractedUrlDto> urls = UrlAnalysisService.extractAndAnalyzeFromStream(in);
 
         assertNotNull(urls);
         assertEquals(1, urls.size());

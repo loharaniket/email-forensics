@@ -45,9 +45,9 @@ public class ContentAnalysisService {
     private final EmailParserService emailParserService;
     private final VisualArtifactRepository visualArtifactRepository;
     private final QrArtifactRepository qrArtifactRepository;
-    private final SocialEngineeringRuleEngine socialEngineeringRuleEngine;
+    private final SocialEngineeringDetector socialEngineeringDetector;
     private final PromptInjectionDetector promptInjectionDetector;
-    private final TribuoBaselineService tribuoBaselineService;
+    private final MlClassifierService mlClassifierService;
 
     public ContentAnalysisService(AnalysisResultRepository analysisResultRepository,
                                   EmailEvidenceRepository emailEvidenceRepository,
@@ -56,9 +56,9 @@ public class ContentAnalysisService {
                                   EmailParserService emailParserService,
                                   VisualArtifactRepository visualArtifactRepository,
                                   QrArtifactRepository qrArtifactRepository,
-                                  SocialEngineeringRuleEngine socialEngineeringRuleEngine,
+                                  SocialEngineeringDetector socialEngineeringDetector,
                                   PromptInjectionDetector promptInjectionDetector,
-                                  TribuoBaselineService tribuoBaselineService) {
+                                  MlClassifierService mlClassifierService) {
         this.analysisResultRepository = analysisResultRepository;
         this.emailEvidenceRepository = emailEvidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
@@ -66,9 +66,9 @@ public class ContentAnalysisService {
         this.emailParserService = emailParserService;
         this.visualArtifactRepository = visualArtifactRepository;
         this.qrArtifactRepository = qrArtifactRepository;
-        this.socialEngineeringRuleEngine = socialEngineeringRuleEngine;
+        this.socialEngineeringDetector = socialEngineeringDetector;
         this.promptInjectionDetector = promptInjectionDetector;
-        this.tribuoBaselineService = tribuoBaselineService;
+        this.mlClassifierService = mlClassifierService;
     }
 
     @Transactional
@@ -115,8 +115,8 @@ public class ContentAnalysisService {
             channelTexts.put("QR_PAYLOAD", qrPayloadAggregator.toString());
         }
 
-        SocialEngineeringRuleEngine.SocialEngineeringFindings seFindings =
-                socialEngineeringRuleEngine.analyze(channelTexts);
+        SocialEngineeringDetector.SocialEngineeringFindings seFindings =
+                socialEngineeringDetector.analyze(channelTexts);
 
         PromptInjectionDetector.PromptInjectionFindings piFindings =
                 promptInjectionDetector.detect(channelTexts);
@@ -129,8 +129,8 @@ public class ContentAnalysisService {
             combinedTextForMl.append(text).append("\n");
         }
 
-        TribuoBaselineService.PredictionResult mlResult =
-                tribuoBaselineService.predict(combinedTextForMl.toString());
+        MlClassifierService.PredictionResult mlResult =
+                mlClassifierService.predict(combinedTextForMl.toString());
 
         String promptMatchesJson = formatPromptMatchesJson(piFindings.getMatches());
         String seMatchesJson = formatSocialEngineeringMatchesJson(seFindings.getMatches());
@@ -145,7 +145,7 @@ public class ContentAnalysisService {
             contentAnalysis.setContentCreatedAt(Instant.now());
         }
         contentAnalysis.setAnalysisRun(run);
-        contentAnalysis.setMlModelVersion(tribuoBaselineService.getModelVersion());
+        contentAnalysis.setMlModelVersion(mlClassifierService.getModelVersion());
         contentAnalysis.setProbability(mlResult.getProbability());
         contentAnalysis.setPredictedLabel(mlResult.getPredictedLabel());
         contentAnalysis.setMlStatus(mlResult.getMlStatus());
@@ -198,7 +198,7 @@ public class ContentAnalysisService {
         dto.setProbability(entity.getProbability());
         dto.setPredictedLabel(entity.getPredictedLabel());
         dto.setMlStatus(entity.getMlStatus());
-        dto.setModelMetrics(tribuoBaselineService.getModelMetrics());
+        dto.setModelMetrics(mlClassifierService.getModelMetrics());
         dto.setUrgency(entity.isUrgency());
         dto.setCredentialRequest(entity.isCredentialRequest());
         dto.setPaymentInstruction(entity.isPaymentInstruction());

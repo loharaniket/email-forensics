@@ -18,9 +18,9 @@ import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
-import com.emailforensics.backend.headers.HeaderForensicService;
-import com.emailforensics.backend.infrastructure.InfrastructureService;
-import com.emailforensics.backend.urlintel.UrlIntelService;
+import com.emailforensics.backend.headers.HeaderAnalysisService;
+import com.emailforensics.backend.infrastructure.IpArtifactService;
+import com.emailforensics.backend.urlintel.UrlAnalysisService;
 import com.emailforensics.backend.visual.VisualAnalysisService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,9 +60,9 @@ public class RiskScoringService {
     private final AnalysisResultRepository analysisResultRepository;
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
-    private final HeaderForensicService headerForensicService;
-    private final UrlIntelService urlIntelService;
-    private final InfrastructureService infrastructureService;
+    private final HeaderAnalysisService HeaderAnalysisService;
+    private final UrlAnalysisService UrlAnalysisService;
+    private final IpArtifactService IpArtifactService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
 
@@ -70,18 +70,18 @@ public class RiskScoringService {
                               AnalysisResultRepository analysisResultRepository,
                               EmailEvidenceRepository evidenceRepository,
                               AnalysisRunRepository analysisRunRepository,
-                              HeaderForensicService headerForensicService,
-                              UrlIntelService urlIntelService,
-                              InfrastructureService infrastructureService,
+                              HeaderAnalysisService HeaderAnalysisService,
+                              UrlAnalysisService UrlAnalysisService,
+                              IpArtifactService IpArtifactService,
                               VisualAnalysisService visualAnalysisService,
                               ContentAnalysisService contentAnalysisService) {
         this.riskFactorRepository = riskFactorRepository;
         this.analysisResultRepository = analysisResultRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
-        this.headerForensicService = headerForensicService;
-        this.urlIntelService = urlIntelService;
-        this.infrastructureService = infrastructureService;
+        this.HeaderAnalysisService = HeaderAnalysisService;
+        this.UrlAnalysisService = UrlAnalysisService;
+        this.IpArtifactService = IpArtifactService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
     }
@@ -96,25 +96,25 @@ public class RiskScoringService {
 
         HeaderAnalysisDto headerAnalysis = null;
         try {
-            headerAnalysis = headerForensicService.getHeaderAnalysis(emailId);
+            headerAnalysis = HeaderAnalysisService.getHeaderAnalysis(emailId);
         } catch (Throwable ignored) {
         }
 
         List<ReceivedHopDto> hops = Collections.emptyList();
         try {
-            hops = headerForensicService.getReceivedHops(emailId);
+            hops = HeaderAnalysisService.getReceivedHops(emailId);
         } catch (Throwable ignored) {
         }
 
         List<ExtractedUrlDto> urls = Collections.emptyList();
         try {
-            urls = urlIntelService.getExtractedUrls(emailId);
+            urls = UrlAnalysisService.getExtractedUrls(emailId);
         } catch (Throwable ignored) {
         }
 
         List<IpArtifactDto> ips = Collections.emptyList();
         try {
-            ips = infrastructureService.getInfrastructure(emailId);
+            ips = IpArtifactService.getInfrastructure(emailId);
         } catch (Throwable ignored) {
         }
 

@@ -23,7 +23,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class ActiveEmailAuthService {
+public class EmailAuthService {
 
     private final DnsLookupService dnsLookupService;
     private final IpClassifier ipClassifier;
@@ -271,7 +271,7 @@ public class ActiveEmailAuthService {
         }
     }
 
-    public ActiveEmailAuthService(DnsLookupService dnsLookupService, IpClassifier ipClassifier) {
+    public EmailAuthService(DnsLookupService dnsLookupService, IpClassifier ipClassifier) {
         this.dnsLookupService = dnsLookupService;
         this.ipClassifier = ipClassifier;
     }

@@ -4,8 +4,6 @@ import com.emailforensics.backend.infrastructure.fixtures.DefaultDnsFixtureProvi
 import com.emailforensics.backend.infrastructure.fixtures.DnsFixtureProvider;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.stereotype.Service;
 
 import javax.naming.directory.Attribute;
@@ -29,30 +27,19 @@ public class DnsLookupService {
 
     private final long timeoutMs;
     private final DnsFixtureProvider fixtureProvider;
-    private final Environment environment;
     private final Map<String, DnsResult> cache = new ConcurrentHashMap<>();
     private final Map<String, List<String>> txtCache = new ConcurrentHashMap<>();
 
     @Autowired
     public DnsLookupService(
             @Value("${emailforensics.dns.timeout-ms:2000}") long timeoutMs,
-            @Autowired(required = false) DnsFixtureProvider fixtureProvider,
-            @Autowired(required = false) Environment environment) {
+            @Autowired(required = false) DnsFixtureProvider fixtureProvider) {
         this.timeoutMs = timeoutMs;
         this.fixtureProvider = fixtureProvider;
-        this.environment = environment;
     }
 
     public DnsLookupService(long timeoutMs) {
-        this(timeoutMs, new DefaultDnsFixtureProvider(), null);
-    }
-
-    public DnsLookupService(long timeoutMs, DnsFixtureProvider fixtureProvider) {
-        this(timeoutMs, fixtureProvider, null);
-    }
-
-    private boolean isProduction() {
-        return environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"));
+        this(timeoutMs, new DefaultDnsFixtureProvider());
     }
 
     public void putCache(String domain, DnsResult result) {
@@ -77,7 +64,7 @@ public class DnsLookupService {
             return cache.get(normalized);
         }
 
-        if (!isProduction() && fixtureProvider != null && fixtureProvider.supports(normalized)) {
+        if (fixtureProvider != null && fixtureProvider.supports(normalized)) {
             DnsResult simulated = fixtureProvider.getSimulatedDnsResult(normalized);
             cache.put(normalized, simulated);
             return simulated;
@@ -152,7 +139,7 @@ public class DnsLookupService {
             return txtCache.get(normalized);
         }
 
-        if (!isProduction() && fixtureProvider != null && fixtureProvider.supportsTxt(normalized)) {
+        if (fixtureProvider != null && fixtureProvider.supportsTxt(normalized)) {
             List<String> simulated = fixtureProvider.getSimulatedTxtRecords(normalized);
             txtCache.put(normalized, simulated);
             return simulated;

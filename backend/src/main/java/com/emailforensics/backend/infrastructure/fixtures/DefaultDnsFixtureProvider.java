@@ -2,10 +2,12 @@ package com.emailforensics.backend.infrastructure.fixtures;
 
 import com.emailforensics.backend.infrastructure.DataProvenance;
 import com.emailforensics.backend.infrastructure.DnsResult;
+import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
 import java.util.List;
 
+@Component
 public class DefaultDnsFixtureProvider implements DnsFixtureProvider {
 
     @Override

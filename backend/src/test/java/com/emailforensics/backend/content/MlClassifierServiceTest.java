@@ -8,18 +8,18 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class TribuoBaselineServiceTest {
+class MlClassifierServiceTest {
 
-    private TribuoBaselineService service;
+    private MlClassifierService service;
 
     @BeforeEach
     void setUp() {
-        service = new TribuoBaselineService();
+        service = new MlClassifierService();
     }
 
     @Test
     void shouldInitializeAndEvaluateModelSuccessfully() {
-        assertEquals(TribuoBaselineService.MODEL_VERSION, service.getModelVersion());
+        assertEquals(MlClassifierService.MODEL_VERSION, service.getModelVersion());
 
         MlEvaluationMetricsDto metrics = service.getModelMetrics();
         assertNotNull(metrics);
@@ -35,7 +35,7 @@ class TribuoBaselineServiceTest {
     @Test
     void shouldPredictPhishingForUrgentCredentialHarvesting() {
         String phish = "Urgent: your corporate credentials have expired. Verify your account password and restore access.";
-        TribuoBaselineService.PredictionResult result = service.predict(phish);
+        MlClassifierService.PredictionResult result = service.predict(phish);
 
         assertNotNull(result);
         assertEquals("PHISHING", result.getPredictedLabel());
@@ -47,7 +47,7 @@ class TribuoBaselineServiceTest {
     @Test
     void shouldPredictBenignForStandardInternalAnnouncement() {
         String benign = "Engineering sprint planning notes and weekly holiday schedule updates for the development team.";
-        TribuoBaselineService.PredictionResult result = service.predict(benign);
+        MlClassifierService.PredictionResult result = service.predict(benign);
 
         assertNotNull(result);
         assertEquals("BENIGN", result.getPredictedLabel());
@@ -57,12 +57,13 @@ class TribuoBaselineServiceTest {
 
     @Test
     void shouldHandleEmptyAndBlankTextGracefully() {
-        TribuoBaselineService.PredictionResult nullResult = service.predict(null);
+        MlClassifierService.PredictionResult nullResult = service.predict(null);
         assertNotNull(nullResult);
         assertEquals("SKIPPED_EMPTY_TEXT", nullResult.getMlStatus());
 
-        TribuoBaselineService.PredictionResult blankResult = service.predict("   ");
+        MlClassifierService.PredictionResult blankResult = service.predict("   ");
         assertNotNull(blankResult);
         assertEquals("SKIPPED_EMPTY_TEXT", blankResult.getMlStatus());
     }
 }
+

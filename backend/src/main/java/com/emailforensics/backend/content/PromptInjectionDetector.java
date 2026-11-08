@@ -115,7 +115,7 @@ public class PromptInjectionDetector {
 
         boolean detected = !matches.isEmpty();
         String warning = detected
-                ? "Warning: Potential prompt injection or adversarial steering patterns detected in untrusted email content. Detection raises an investigative alert; it is not a guarantee of total prevention. Downstream LLMs must isolate raw message text."
+                ? "Warning: Potential prompt injection patterns detected in email content."
                 : null;
 
         return new PromptInjectionFindings(detected, matches, warning);

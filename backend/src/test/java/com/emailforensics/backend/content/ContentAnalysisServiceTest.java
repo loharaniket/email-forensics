@@ -53,9 +53,9 @@ class ContentAnalysisServiceTest {
         visualArtifactRepo = Mockito.mock(VisualArtifactRepository.class);
         qrArtifactRepo = Mockito.mock(QrArtifactRepository.class);
 
-        SocialEngineeringRuleEngine seEngine = new SocialEngineeringRuleEngine();
+        SocialEngineeringDetector seEngine = new SocialEngineeringDetector();
         PromptInjectionDetector piDetector = new PromptInjectionDetector();
-        TribuoBaselineService tribuoService = new TribuoBaselineService();
+        MlClassifierService mlClassifierService = new MlClassifierService();
 
         service = new ContentAnalysisService(
                 analysisResultRepo,
@@ -67,7 +67,7 @@ class ContentAnalysisServiceTest {
                 qrArtifactRepo,
                 seEngine,
                 piDetector,
-                tribuoService
+                mlClassifierService
         );
     }
 
@@ -110,7 +110,7 @@ class ContentAnalysisServiceTest {
         assertTrue(result.isCredentialRequest());
         assertTrue(result.isPromptInjectionDetected());
         assertEquals("PHISHING", result.getPredictedLabel());
-        assertEquals(TribuoBaselineService.MODEL_VERSION, result.getMlModelVersion());
+        assertEquals(MlClassifierService.MODEL_VERSION, result.getMlModelVersion());
         assertNotNull(result.getModelMetrics());
         assertTrue(!result.getPromptMatches().isEmpty());
         assertTrue(!result.getSocialEngineeringMatches().isEmpty());

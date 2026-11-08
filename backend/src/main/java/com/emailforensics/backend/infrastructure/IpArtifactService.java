@@ -19,7 +19,7 @@ import java.util.Set;
 import java.util.UUID;
 
 @Service
-public class InfrastructureService {
+public class IpArtifactService {
 
     private final IpArtifactRepository ipArtifactRepository;
     private final EmailEvidenceRepository evidenceRepository;
@@ -27,7 +27,7 @@ public class InfrastructureService {
     private final ReceivedHopRepository receivedHopRepository;
     private final IpClassifier ipClassifier;
 
-    public InfrastructureService(IpArtifactRepository ipArtifactRepository,
+    public IpArtifactService(IpArtifactRepository ipArtifactRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  ReceivedHopRepository receivedHopRepository,

@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class SocialEngineeringRuleEngine {
+public class SocialEngineeringDetector {
 
     public static class SocialEngineeringFindings {
         private final boolean urgency;
@@ -148,3 +148,4 @@ public class SocialEngineeringRuleEngine {
         return new SocialEngineeringFindings(urgency, credentialRequest, paymentInstruction, impersonation, secrecy, matches);
     }
 }
+

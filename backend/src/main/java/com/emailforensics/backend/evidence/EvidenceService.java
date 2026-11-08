@@ -42,7 +42,7 @@ public class EvidenceService {
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
     private final com.emailforensics.backend.analysis.AnalysisResultRepository analysisResultRepository;
-    private final AnalysisOrchestratorService orchestrator;
+    private final AnalysisPipelineService analysisPipelineService;
     private final String pipelineVersion;
 
     public EvidenceService(EmailEvidenceRepository evidenceRepository,
@@ -52,7 +52,7 @@ public class EvidenceService {
                            EvidenceStorageService storageService,
                            EmailParserService emailParserService,
                            com.emailforensics.backend.analysis.AnalysisResultRepository analysisResultRepository,
-                           AnalysisOrchestratorService orchestrator,
+                           AnalysisPipelineService analysisPipelineService,
                            @Value("${emailforensics.pipeline.version:1.0.0}") String pipelineVersion) {
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
@@ -61,7 +61,7 @@ public class EvidenceService {
         this.storageService = storageService;
         this.emailParserService = emailParserService;
         this.analysisResultRepository = analysisResultRepository;
-        this.orchestrator = orchestrator;
+        this.analysisPipelineService = analysisPipelineService;
         this.pipelineVersion = pipelineVersion;
     }
 
@@ -111,8 +111,8 @@ public class EvidenceService {
                         .findTopByEmailEvidenceIdOrderByCreatedAtDesc(existing.getId())
                         .orElse(null);
 
-                if (existingRun != null && existingRun.getStatus() == AnalysisStatus.QUEUED && !orchestrator.isPipelineActive(existing.getId())) {
-                    orchestrator.startAnalysisAsync(existing.getId(), existingRun.getId());
+                if (existingRun != null && existingRun.getStatus() == AnalysisStatus.QUEUED && !analysisPipelineService.isPipelineActive(existing.getId())) {
+                    analysisPipelineService.startAnalysisAsync(existing.getId(), existingRun.getId());
                 }
 
                 String status = existingRun != null ? existingRun.getStatus().name() : AnalysisStatus.COMPLETED.name();
@@ -179,12 +179,12 @@ public class EvidenceService {
                         new org.springframework.transaction.support.TransactionSynchronization() {
                             @Override
                             public void afterCommit() {
-                                orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+                                analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
                             }
                         }
                 );
             } else {
-                orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+                analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
             }
 
             String statusUrl = "/api/v1/evidence/" + evidence.getId() + "/status";
@@ -215,8 +215,8 @@ public class EvidenceService {
         AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("No analysis run found for evidence: " + emailId));
 
-        if (run.getStatus() == AnalysisStatus.QUEUED && !orchestrator.isPipelineActive(emailId)) {
-            orchestrator.startAnalysisAsync(emailId, run.getId());
+        if (run.getStatus() == AnalysisStatus.QUEUED && !analysisPipelineService.isPipelineActive(emailId)) {
+            analysisPipelineService.startAnalysisAsync(emailId, run.getId());
         }
 
         return new EvidenceStatusResponse(
@@ -371,12 +371,12 @@ public class EvidenceService {
                     new org.springframework.transaction.support.TransactionSynchronization() {
                         @Override
                         public void afterCommit() {
-                            orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+                            analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
                         }
                     }
             );
         } else {
-            orchestrator.startAnalysisAsync(finalEvidenceId, finalRunId);
+            analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
         }
 
         return getEvidenceStatus(emailId);

@@ -17,11 +17,11 @@ import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.risk.RiskBreakdownDto;
 import com.emailforensics.backend.dto.urlintel.ExtractedUrlDto;
 import com.emailforensics.backend.dto.visual.VisualArtifactDto;
-import com.emailforensics.backend.headers.HeaderForensicService;
-import com.emailforensics.backend.infrastructure.InfrastructureService;
+import com.emailforensics.backend.headers.HeaderAnalysisService;
+import com.emailforensics.backend.infrastructure.IpArtifactService;
 import com.emailforensics.backend.risk.RiskScoringService;
 import com.emailforensics.backend.security.UserPrincipal;
-import com.emailforensics.backend.urlintel.UrlIntelService;
+import com.emailforensics.backend.urlintel.UrlAnalysisService;
 import com.emailforensics.backend.visual.VisualAnalysisService;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.PageRequest;
@@ -47,26 +47,26 @@ import java.util.UUID;
 public class EvidenceController {
 
     private final EvidenceService evidenceService;
-    private final HeaderForensicService headerForensicService;
-    private final UrlIntelService urlIntelService;
-    private final InfrastructureService infrastructureService;
+    private final HeaderAnalysisService HeaderAnalysisService;
+    private final UrlAnalysisService UrlAnalysisService;
+    private final IpArtifactService IpArtifactService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
     private final RiskScoringService riskScoringService;
     private final CorrelationService correlationService;
 
     public EvidenceController(EvidenceService evidenceService,
-                              HeaderForensicService headerForensicService,
-                              UrlIntelService urlIntelService,
-                              InfrastructureService infrastructureService,
+                              HeaderAnalysisService HeaderAnalysisService,
+                              UrlAnalysisService UrlAnalysisService,
+                              IpArtifactService IpArtifactService,
                               VisualAnalysisService visualAnalysisService,
                               ContentAnalysisService contentAnalysisService,
                               RiskScoringService riskScoringService,
                               CorrelationService correlationService) {
         this.evidenceService = evidenceService;
-        this.headerForensicService = headerForensicService;
-        this.urlIntelService = urlIntelService;
-        this.infrastructureService = infrastructureService;
+        this.HeaderAnalysisService = HeaderAnalysisService;
+        this.UrlAnalysisService = UrlAnalysisService;
+        this.IpArtifactService = IpArtifactService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
         this.riskScoringService = riskScoringService;
@@ -128,25 +128,25 @@ public class EvidenceController {
 
     @GetMapping("/evidence/{emailId}/headers")
     public ResponseEntity<HeaderAnalysisDto> getHeaderAnalysis(@PathVariable UUID emailId) {
-        HeaderAnalysisDto response = headerForensicService.getHeaderAnalysis(emailId);
+        HeaderAnalysisDto response = HeaderAnalysisService.getHeaderAnalysis(emailId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/evidence/{emailId}/hops")
     public ResponseEntity<List<ReceivedHopDto>> getReceivedHops(@PathVariable UUID emailId) {
-        List<ReceivedHopDto> response = headerForensicService.getReceivedHops(emailId);
+        List<ReceivedHopDto> response = HeaderAnalysisService.getReceivedHops(emailId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/evidence/{emailId}/urls")
     public ResponseEntity<List<ExtractedUrlDto>> getExtractedUrls(@PathVariable UUID emailId) {
-        List<ExtractedUrlDto> response = urlIntelService.getExtractedUrls(emailId);
+        List<ExtractedUrlDto> response = UrlAnalysisService.getExtractedUrls(emailId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/evidence/{emailId}/infrastructure")
     public ResponseEntity<List<IpArtifactDto>> getInfrastructure(@PathVariable UUID emailId) {
-        List<IpArtifactDto> response = infrastructureService.getInfrastructure(emailId);
+        List<IpArtifactDto> response = IpArtifactService.getInfrastructure(emailId);
         return ResponseEntity.ok(response);
     }
 

@@ -11,7 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class UrlHeuristicsService {
+public class UrlCheckService {
 
     private final IpClassifier ipClassifier;
     private final UrlNormalizationService normalizationService;
@@ -33,7 +33,7 @@ public class UrlHeuristicsService {
             "\\b(?i:(https?://)?)([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})\\b"
     );
 
-    public UrlHeuristicsService(IpClassifier ipClassifier, UrlNormalizationService normalizationService) {
+    public UrlCheckService(IpClassifier ipClassifier, UrlNormalizationService normalizationService) {
         this.ipClassifier = ipClassifier;
         this.normalizationService = normalizationService;
     }

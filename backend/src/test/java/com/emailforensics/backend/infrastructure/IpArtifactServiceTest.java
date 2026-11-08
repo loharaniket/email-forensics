@@ -8,17 +8,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class InfrastructureServiceTest {
+class IpArtifactServiceTest {
 
     private IpClassifier ipClassifier;
     private DnsLookupService dnsLookupService;
-    private InfrastructureService infrastructureService;
+    private IpArtifactService IpArtifactService;
 
     @BeforeEach
     void setUp() {
         ipClassifier = new IpClassifier();
         dnsLookupService = new DnsLookupService(1000);
-        infrastructureService = new InfrastructureService(null, null, null, null, ipClassifier);
+        IpArtifactService = new IpArtifactService(null, null, null, null, ipClassifier);
     }
 
     @Test
@@ -51,7 +51,7 @@ class InfrastructureServiceTest {
 
     @Test
     void shouldClassifyPrivateAndPublicIpArtifacts() {
-        IpArtifact privateArt = infrastructureService.createIpArtifact(null, "192.168.1.50", "TEST_CONTEXT");
+        IpArtifact privateArt = IpArtifactService.createIpArtifact(null, "192.168.1.50", "TEST_CONTEXT");
         assertNotNull(privateArt);
         assertEquals("192.168.1.50", privateArt.getIpAddress());
         assertTrue(privateArt.getIsPrivate());
@@ -59,7 +59,7 @@ class InfrastructureServiceTest {
         assertEquals("NOT_CHECKED", privateArt.getDataMode());
         assertEquals("TEST_CONTEXT", privateArt.getSourceContext());
 
-        IpArtifact publicArt = infrastructureService.createIpArtifact(null, "140.82.121.3", "HOP_IP");
+        IpArtifact publicArt = IpArtifactService.createIpArtifact(null, "140.82.121.3", "HOP_IP");
         assertNotNull(publicArt);
         assertEquals("140.82.121.3", publicArt.getIpAddress());
         assertFalse(publicArt.getIsPrivate());
@@ -80,5 +80,13 @@ class InfrastructureServiceTest {
         assertNotNull(nxRes);
         assertEquals("NXDOMAIN", nxRes.getStatus());
         assertEquals("SIMULATED", nxRes.getDataMode());
+    }
+
+    @Test
+    void shouldExposeAllFourDataModesAcrossSystem() {
+        assertEquals("REAL", DataProvenance.REAL.name());
+        assertEquals("SIMULATED", DataProvenance.SIMULATED.name());
+        assertEquals("UNAVAILABLE", DataProvenance.UNAVAILABLE.name());
+        assertEquals("NOT_CHECKED", DataProvenance.NOT_CHECKED.name());
     }
 }

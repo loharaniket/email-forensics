@@ -8,6 +8,8 @@ import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -29,6 +31,7 @@ public class AiAssessmentService {
     private final EvidenceContextAssembler contextAssembler;
     private final AiClientService aiClientService;
     private final AiAssessmentValidator validator;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AiAssessmentService(AiGroundedAssessmentRepository assessmentRepository,
                                EmailEvidenceRepository evidenceRepository,
@@ -173,22 +176,19 @@ public class AiAssessmentService {
 
     private String serializeStringList(List<String> list) {
         if (list == null || list.isEmpty()) return "[]";
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < list.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append("\"").append(list.get(i).replace("\"", "\\\"")).append("\"");
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return "[]";
         }
-        sb.append("]");
-        return sb.toString();
     }
 
     private List<String> deserializeStringList(String json) {
         if (json == null || json.isBlank() || json.equals("[]")) return new ArrayList<>();
-        List<String> list = new ArrayList<>();
-        Matcher m = Pattern.compile("\"((?:\\\\\"|[^\"])*)\"").matcher(json);
-        while (m.find()) {
-            list.add(m.group(1).replace("\\\"", "\""));
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
-        return list;
     }
 }

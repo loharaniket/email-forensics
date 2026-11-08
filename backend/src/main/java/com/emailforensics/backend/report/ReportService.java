@@ -31,6 +31,9 @@ import com.emailforensics.backend.visual.QrArtifact;
 import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifact;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,7 +48,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class ForensicReportService {
+public class ReportService {
 
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository runRepository;
@@ -61,8 +64,9 @@ public class ForensicReportService {
     private final AiGroundedAssessmentRepository aiRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
-    public ForensicReportService(EmailEvidenceRepository evidenceRepository,
+    public ReportService(EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository runRepository,
                                  CaseRepository caseRepository,
                                  AnalysisResultRepository analysisResultRepository,
@@ -197,7 +201,7 @@ public class ForensicReportService {
         report.setGeneratedAt(Instant.now());
         report.setReportVersion("v1.0.0");
         report.setGeneratedBy(certifyingUser);
-        report.setClassificationLevel("CONFIDENTIAL - FORENSIC EVIDENCE DOSSIER");
+        report.setClassificationLevel("CONFIDENTIAL - FORENSIC REPORT");
 
         ForensicReportDto.CaseContextDto caseContext = new ForensicReportDto.CaseContextDto();
         if (evidence.getCaseFile() != null) {
@@ -499,7 +503,7 @@ public class ForensicReportService {
         ForensicReportDto.AnalystSignoffDto signoff = new ForensicReportDto.AnalystSignoffDto();
         signoff.setCertifyingAnalyst(certifyingUser);
         signoff.setSignoffTimestamp(Instant.now());
-        signoff.setCertificationStatement("I hereby certify that the evidence analyzed in this forensic dossier has been cryptographically verified against its preserved SHA-256 digest, and that all findings were extracted using deterministic forensic parsing engines and grounded threat intelligence.");
+        signoff.setCertificationStatement("I hereby certify that the evidence analyzed in this report has been verified against its preserved SHA-256 hash, and that all findings were extracted using automated forensic analysis.");
         if (evidence.getCaseFile() != null && evidence.getCaseFile().getAnalystNotes() != null) {
             signoff.setNotes(evidence.getCaseFile().getAnalystNotes());
         }
@@ -519,26 +523,26 @@ public class ForensicReportService {
 
     private List<String> parseStringList(String json) {
         if (json == null || json.isBlank() || json.equals("[]")) return Collections.emptyList();
-        List<String> list = new ArrayList<>();
-        Matcher m = Pattern.compile("\"((?:\\\\\"|[^\"])*)\"").matcher(json);
-        while (m.find()) {
-            list.add(m.group(1).replace("\\\"", "\""));
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return Collections.emptyList();
         }
-        return list;
     }
 
     private String extractSimpleJson(String json, String parentKey, String childKey) {
         if (json == null || parentKey == null || childKey == null) {
             return null;
         }
-        Pattern pattern = Pattern.compile("\"" + Pattern.quote(parentKey) + "\"\\s*:\\s*\\{[^}]*?\"" + Pattern.quote(childKey) + "\"\\s*:\\s*(?:\"([^\"]*)\"|(null))");
-        Matcher m = pattern.matcher(json);
-        if (m.find()) {
-            if ("null".equals(m.group(2))) {
-                return null;
-            }
-            return m.group(1);
+        try {
+            JsonNode root = objectMapper.readTree(json);
+            JsonNode parent = root.get(parentKey);
+            if (parent == null || parent.isNull()) return null;
+            JsonNode child = parent.get(childKey);
+            if (child == null || child.isNull()) return null;
+            return child.asText();
+        } catch (Exception e) {
+            return null;
         }
-        return null;
     }
 }

@@ -7,7 +7,7 @@ import com.emailforensics.backend.evidence.EvidenceStorageService;
 import com.emailforensics.backend.infrastructure.DnsLookupService;
 import com.emailforensics.backend.infrastructure.IpClassifier;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
-import com.emailforensics.backend.urlintel.UrlHeuristicsService;
+import com.emailforensics.backend.urlintel.UrlCheckService;
 import com.emailforensics.backend.urlintel.UrlNormalizationService;
 import com.google.zxing.BarcodeFormat;
 import com.google.zxing.client.j2se.MatrixToImageWriter;
@@ -46,7 +46,7 @@ class VisualAnalysisServiceTest {
 
         IpClassifier ipClassifier = new IpClassifier();
         UrlNormalizationService urlNormalizationService = new UrlNormalizationService();
-        UrlHeuristicsService urlHeuristicsService = new UrlHeuristicsService(ipClassifier, urlNormalizationService);
+        UrlCheckService UrlCheckService = new UrlCheckService(ipClassifier, urlNormalizationService);
         qrDecodingService = new QrDecodingService(urlNormalizationService);
 
         visualAnalysisService = new VisualAnalysisService(
@@ -57,7 +57,7 @@ class VisualAnalysisServiceTest {
                 storageService,
                 qrDecodingService,
                 urlNormalizationService,
-                urlHeuristicsService,
+                UrlCheckService,
                 dnsLookupService,
                 extractedUrlRepo
         );

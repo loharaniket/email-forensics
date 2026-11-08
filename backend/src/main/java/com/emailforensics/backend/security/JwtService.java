@@ -23,7 +23,7 @@ public class JwtService {
             @Value("${app.jwt.expiration-ms:86400000}") long expirationMs) {
         String effectiveSecret = (secret != null && !secret.isBlank())
                 ? secret
-                : "dev-ephemeral-jwt-key-not-for-production-at-least-32-chars!";
+                : "email-forensics-default-jwt-secret-key-32chars!";
         byte[] keyBytes = effectiveSecret.getBytes(StandardCharsets.UTF_8);
         if (keyBytes.length < 32) {
             byte[] padded = new byte[32];

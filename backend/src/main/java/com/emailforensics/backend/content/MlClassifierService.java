@@ -30,7 +30,7 @@ import java.util.Set;
 import java.util.regex.Pattern;
 
 @Service
-public class TribuoBaselineService {
+public class MlClassifierService {
 
     public static final String MODEL_VERSION = "tribuo-logreg-tfidf-v1.0.0";
     private static final String LABEL_PHISHING = "PHISHING";
@@ -92,7 +92,7 @@ public class TribuoBaselineService {
     private Model<Label> model;
     private MlEvaluationMetricsDto modelMetrics;
 
-    public TribuoBaselineService() {
+    public MlClassifierService() {
         trainAndEvaluate();
     }
 
@@ -408,3 +408,4 @@ public class TribuoBaselineService {
         );
     }
 }
+

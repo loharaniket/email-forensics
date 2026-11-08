@@ -17,9 +17,9 @@ import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
-import com.emailforensics.backend.headers.HeaderForensicService;
-import com.emailforensics.backend.infrastructure.InfrastructureService;
-import com.emailforensics.backend.urlintel.UrlIntelService;
+import com.emailforensics.backend.headers.HeaderAnalysisService;
+import com.emailforensics.backend.infrastructure.IpArtifactService;
+import com.emailforensics.backend.urlintel.UrlAnalysisService;
 import com.emailforensics.backend.visual.VisualAnalysisService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,9 +46,9 @@ class RiskScoringServiceTest {
     private AnalysisResultRepository analysisResultRepo;
     private EmailEvidenceRepository evidenceRepo;
     private AnalysisRunRepository analysisRunRepo;
-    private HeaderForensicService headerForensicService;
-    private UrlIntelService urlIntelService;
-    private InfrastructureService infrastructureService;
+    private HeaderAnalysisService HeaderAnalysisService;
+    private UrlAnalysisService UrlAnalysisService;
+    private IpArtifactService IpArtifactService;
     private VisualAnalysisService visualAnalysisService;
     private ContentAnalysisService contentAnalysisService;
 
@@ -63,9 +63,9 @@ class RiskScoringServiceTest {
         analysisResultRepo = Mockito.mock(AnalysisResultRepository.class);
         evidenceRepo = Mockito.mock(EmailEvidenceRepository.class);
         analysisRunRepo = Mockito.mock(AnalysisRunRepository.class);
-        headerForensicService = Mockito.mock(HeaderForensicService.class);
-        urlIntelService = Mockito.mock(UrlIntelService.class);
-        infrastructureService = Mockito.mock(InfrastructureService.class);
+        HeaderAnalysisService = Mockito.mock(HeaderAnalysisService.class);
+        UrlAnalysisService = Mockito.mock(UrlAnalysisService.class);
+        IpArtifactService = Mockito.mock(IpArtifactService.class);
         visualAnalysisService = Mockito.mock(VisualAnalysisService.class);
         contentAnalysisService = Mockito.mock(ContentAnalysisService.class);
 
@@ -74,9 +74,9 @@ class RiskScoringServiceTest {
                 analysisResultRepo,
                 evidenceRepo,
                 analysisRunRepo,
-                headerForensicService,
-                urlIntelService,
-                infrastructureService,
+                HeaderAnalysisService,
+                UrlAnalysisService,
+                IpArtifactService,
                 visualAnalysisService,
                 contentAnalysisService
         );
@@ -106,12 +106,12 @@ class RiskScoringServiceTest {
         headers.setReportedDkim("pass");
         headers.setReportedDmarc("pass");
         headers.setIdentityMismatchFlags(Collections.emptyList());
-        when(headerForensicService.getHeaderAnalysis(emailId)).thenReturn(headers);
+        when(HeaderAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
 
         ReceivedHopDto hop = new ReceivedHopDto();
         hop.setHopOrder(1);
         hop.setDelaySeconds(5L);
-        when(headerForensicService.getReceivedHops(emailId)).thenReturn(List.of(hop));
+        when(HeaderAnalysisService.getReceivedHops(emailId)).thenReturn(List.of(hop));
 
         ExtractedUrlDto url = new ExtractedUrlDto();
         url.setDomain("example.com");
@@ -123,7 +123,7 @@ class RiskScoringServiceTest {
         url.setUnusualPort(false);
         url.setSubdomainExcess(false);
         url.setDnsStatus("NOERROR");
-        when(urlIntelService.getExtractedUrls(emailId)).thenReturn(List.of(url));
+        when(UrlAnalysisService.getExtractedUrls(emailId)).thenReturn(List.of(url));
 
         ContentAnalysisDto content = new ContentAnalysisDto();
         content.setPredictedLabel("BENIGN");
@@ -154,10 +154,10 @@ class RiskScoringServiceTest {
         headers.setReplyTo("attacker@external.org");
         headers.setIdentityMismatchFlags(List.of("FROM_REPLYTO_MISMATCH"));
         headers.setReportedSpf("pass");
-        when(headerForensicService.getHeaderAnalysis(emailId)).thenReturn(headers);
+        when(HeaderAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
 
-        when(headerForensicService.getReceivedHops(emailId)).thenReturn(Collections.emptyList());
-        when(urlIntelService.getExtractedUrls(emailId)).thenReturn(Collections.emptyList());
+        when(HeaderAnalysisService.getReceivedHops(emailId)).thenReturn(Collections.emptyList());
+        when(UrlAnalysisService.getExtractedUrls(emailId)).thenReturn(Collections.emptyList());
         when(contentAnalysisService.getContentAnalysis(emailId)).thenReturn(Optional.empty());
 
         RiskBreakdownDto result = service.evaluateAndSaveRisk(emailId);
@@ -174,7 +174,7 @@ class RiskScoringServiceTest {
     void testRepeatedIndicatorsDeduplication() {
         HeaderAnalysisDto headers = new HeaderAnalysisDto();
         headers.setIdentityMismatchFlags(Collections.emptyList());
-        when(headerForensicService.getHeaderAnalysis(emailId)).thenReturn(headers);
+        when(HeaderAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
 
         List<ExtractedUrlDto> urls = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -185,9 +185,9 @@ class RiskScoringServiceTest {
             u.setIsShortened(true);
             urls.add(u);
         }
-        when(urlIntelService.getExtractedUrls(emailId)).thenReturn(urls);
+        when(UrlAnalysisService.getExtractedUrls(emailId)).thenReturn(urls);
 
-        when(headerForensicService.getReceivedHops(emailId)).thenReturn(Collections.emptyList());
+        when(HeaderAnalysisService.getReceivedHops(emailId)).thenReturn(Collections.emptyList());
         when(contentAnalysisService.getContentAnalysis(emailId)).thenReturn(Optional.empty());
 
         RiskBreakdownDto result = service.evaluateAndSaveRisk(emailId);
@@ -201,12 +201,12 @@ class RiskScoringServiceTest {
     void testMultipleCategoriesTriggered() {
         HeaderAnalysisDto headers = new HeaderAnalysisDto();
         headers.setReportedDmarc("fail");
-        when(headerForensicService.getHeaderAnalysis(emailId)).thenReturn(headers);
+        when(HeaderAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
 
         ExtractedUrlDto url = new ExtractedUrlDto();
         url.setDomain("login-bank.com");
         url.setLookalike(true);
-        when(urlIntelService.getExtractedUrls(emailId)).thenReturn(List.of(url));
+        when(UrlAnalysisService.getExtractedUrls(emailId)).thenReturn(List.of(url));
 
         ContentAnalysisDto content = new ContentAnalysisDto();
         content.setCredentialRequest(true);
@@ -239,7 +239,7 @@ class RiskScoringServiceTest {
         headers.setReportedSpf("fail");
         headers.setReportedDkim("fail");
         headers.setIdentityMismatchFlags(List.of("FROM_REPLYTO_MISMATCH", "DISPLAY_NAME_EMAIL_MISMATCH"));
-        when(headerForensicService.getHeaderAnalysis(emailId)).thenReturn(headers);
+        when(HeaderAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
 
         ExtractedUrlDto url = new ExtractedUrlDto();
         url.setDomain("phish.com");
@@ -247,7 +247,7 @@ class RiskScoringServiceTest {
         url.setLookalike(true);
         url.setAnchorMismatch(true);
         url.setDnsStatus("NXDOMAIN");
-        when(urlIntelService.getExtractedUrls(emailId)).thenReturn(List.of(url));
+        when(UrlAnalysisService.getExtractedUrls(emailId)).thenReturn(List.of(url));
 
         ContentAnalysisDto content = new ContentAnalysisDto();
         content.setPromptInjectionDetected(true);
@@ -269,7 +269,7 @@ class RiskScoringServiceTest {
     void testReproducibility() {
         HeaderAnalysisDto headers = new HeaderAnalysisDto();
         headers.setReportedDmarc("fail");
-        when(headerForensicService.getHeaderAnalysis(emailId)).thenReturn(headers);
+        when(HeaderAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
 
         RiskBreakdownDto first = service.evaluateAndSaveRisk(emailId);
         RiskBreakdownDto second = service.evaluateAndSaveRisk(emailId);

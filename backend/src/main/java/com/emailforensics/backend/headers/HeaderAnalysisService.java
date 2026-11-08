@@ -10,6 +10,9 @@ import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.mail.Header;
 import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
@@ -36,14 +39,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 @Service
-public class HeaderForensicService {
+public class HeaderAnalysisService {
 
     private final AnalysisResultRepository analysisResultRepository;
     private final ReceivedHopRepository receivedHopRepository;
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
-    private final ActiveEmailAuthService activeEmailAuthService;
+    private final EmailAuthService EmailAuthService;
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Pattern IP_PATTERN = Pattern.compile("(?:\\[|\\()([0-9]{1,3}(?:\\.[0-9]{1,3}){3}|[a-fA-F0-9:]+)(?:\\]|\\))");
     private static final Pattern FROM_HOST_PATTERN = Pattern.compile("(?i)\\bfrom\\s+([^\\s;]+)");
@@ -57,21 +61,21 @@ public class HeaderForensicService {
     private static final Pattern EMAIL_IN_TEXT_PATTERN = Pattern.compile("([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})");
 
     @org.springframework.beans.factory.annotation.Autowired
-    public HeaderForensicService(AnalysisResultRepository analysisResultRepository,
+    public HeaderAnalysisService(AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository receivedHopRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  EvidenceStorageService storageService,
-                                 ActiveEmailAuthService activeEmailAuthService) {
+                                 EmailAuthService EmailAuthService) {
         this.analysisResultRepository = analysisResultRepository;
         this.receivedHopRepository = receivedHopRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
-        this.activeEmailAuthService = activeEmailAuthService;
+        this.EmailAuthService = EmailAuthService;
     }
 
-    public HeaderForensicService(AnalysisResultRepository analysisResultRepository,
+    public HeaderAnalysisService(AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository receivedHopRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
@@ -160,7 +164,7 @@ public class HeaderForensicService {
             }
         }
 
-        if (activeEmailAuthService != null) {
+        if (EmailAuthService != null) {
             String dkimHeader = null;
             if (dto.getRawHeaders() != null && dto.getRawHeaders().containsKey("DKIM-Signature")) {
                 List<String> dkimVals = dto.getRawHeaders().get("DKIM-Signature");
@@ -170,7 +174,7 @@ public class HeaderForensicService {
             }
             try {
                 String returnPathDomain = extractDomain(dto.getReturnPath());
-                ActiveEmailAuthService.ActiveAuthResult activeResult = activeEmailAuthService.performActiveAuthentication(
+                EmailAuthService.ActiveAuthResult activeResult = EmailAuthService.performActiveAuthentication(
                         dto.getFromDomain(), returnPathDomain, dkimHeader, hopDtos
                 );
                 dto.setActiveSpfResult(activeResult.getActiveSpfResult());
@@ -385,9 +389,9 @@ public class HeaderForensicService {
                     0
             );
 
-            if (activeEmailAuthService != null) {
+            if (EmailAuthService != null) {
                 String returnPathDomain = extractDomain(returnPathAddress);
-                ActiveEmailAuthService.ActiveAuthResult activeRes = activeEmailAuthService.performActiveAuthentication(
+                EmailAuthService.ActiveAuthResult activeRes = EmailAuthService.performActiveAuthentication(
                         fromDomain, returnPathDomain, dkimSigRaw, Collections.emptyList()
                 );
                 dto.setActiveSpfResult(activeRes.getActiveSpfResult());
@@ -556,134 +560,70 @@ public class HeaderForensicService {
         return null;
     }
 
-    private static final Pattern JSON_STRING_PATTERN = Pattern.compile("\"((?:\\\\\"|[^\"])*)\"");
-    private static final Pattern HEADER_ENTRY_PATTERN = Pattern.compile("\"((?:\\\\\"|[^\"])*)\"\\s*:\\s*\\[(.*?)\\]");
-
     private String formatFlagsJson(List<String> flags) {
         if (flags == null || flags.isEmpty()) return "[]";
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < flags.size(); i++) {
-            if (i > 0) sb.append(",");
-            sb.append("\"").append(escapeJson(flags.get(i))).append("\"");
+        try {
+            return objectMapper.writeValueAsString(flags);
+        } catch (Exception e) {
+            return "[]";
         }
-        sb.append("]");
-        return sb.toString();
     }
 
     private List<String> parseFlagsJson(String json) {
-        List<String> list = new ArrayList<>();
-        if (json == null || json.trim().isEmpty() || json.equals("[]")) return list;
-        String content = json.trim();
-        if (content.startsWith("[") && content.endsWith("]")) {
-            content = content.substring(1, content.length() - 1).trim();
+        if (json == null || json.isBlank() || json.equals("[]")) return new ArrayList<>();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<String>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
-        if (content.isEmpty()) return list;
-        Matcher m = JSON_STRING_PATTERN.matcher(content);
-        while (m.find()) {
-            list.add(unescapeJson(m.group(1)));
-        }
-        return list;
     }
 
     private String formatRawHeadersJson(Map<String, List<String>> map) {
         if (map == null || map.isEmpty()) return "{}";
-        StringBuilder sb = new StringBuilder("{");
-        boolean firstKey = true;
-        for (Map.Entry<String, List<String>> entry : map.entrySet()) {
-            if (!firstKey) sb.append(",");
-            firstKey = false;
-            sb.append("\"").append(escapeJson(entry.getKey())).append("\":[");
-            List<String> vals = entry.getValue();
-            for (int i = 0; i < vals.size(); i++) {
-                if (i > 0) sb.append(",");
-                sb.append("\"").append(escapeJson(vals.get(i))).append("\"");
-            }
-            sb.append("]");
+        try {
+            return objectMapper.writeValueAsString(map);
+        } catch (Exception e) {
+            return "{}";
         }
-        sb.append("}");
-        return sb.toString();
     }
 
     private Map<String, List<String>> parseRawHeadersJson(String json) {
-        Map<String, List<String>> map = new LinkedHashMap<>();
-        if (json == null || json.trim().isEmpty() || json.equals("{}")) return map;
-        Matcher m = HEADER_ENTRY_PATTERN.matcher(json);
-        while (m.find()) {
-            String key = unescapeJson(m.group(1));
-            String arrayContent = m.group(2);
-            List<String> values = new ArrayList<>();
-            Matcher vm = JSON_STRING_PATTERN.matcher(arrayContent);
-            while (vm.find()) {
-                values.add(unescapeJson(vm.group(1)));
-            }
-            map.put(key, values);
+        if (json == null || json.isBlank() || json.equals("{}")) return new LinkedHashMap<>();
+        try {
+            return objectMapper.readValue(json, new TypeReference<LinkedHashMap<String, List<String>>>() {});
+        } catch (Exception e) {
+            return new LinkedHashMap<>();
         }
-        return map;
-    }
-
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
-
-    private String unescapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\\"", "\"")
-                .replace("\\n", "\n")
-                .replace("\\r", "\r")
-                .replace("\\t", "\t")
-                .replace("\\\\", "\\");
     }
 
     private void populateActiveAuthFromObservation(HeaderAnalysisDto dto, String obsJson, String summary) {
-        dto.setActiveSpfResult(extractJsonField(obsJson, "activeSpf", "status"));
-        dto.setActiveSpfRecord(extractJsonField(obsJson, "activeSpf", "record"));
-        dto.setActiveSpfRelayIp(extractJsonField(obsJson, "activeSpf", "evaluatedIp"));
-        dto.setActiveDkimStatus(extractJsonField(obsJson, "activeDkim", "status"));
-        dto.setActiveDkimRecord(extractJsonField(obsJson, "activeDkim", "record"));
-        dto.setActiveDkimSelector(extractJsonField(obsJson, "activeDkim", "selector"));
-        dto.setActiveDmarcStatus(extractJsonField(obsJson, "activeDmarc", "status"));
-        dto.setActiveDmarcPolicy(extractJsonField(obsJson, "activeDmarc", "record"));
+        if (obsJson != null && !obsJson.isBlank()) {
+            try {
+                JsonNode root = objectMapper.readTree(obsJson);
+                dto.setActiveSpfResult(getNestedJsonText(root, "activeSpf", "status"));
+                dto.setActiveSpfRecord(getNestedJsonText(root, "activeSpf", "record"));
+                dto.setActiveSpfRelayIp(getNestedJsonText(root, "activeSpf", "evaluatedIp"));
+                dto.setActiveDkimStatus(getNestedJsonText(root, "activeDkim", "status"));
+                dto.setActiveDkimRecord(getNestedJsonText(root, "activeDkim", "record"));
+                dto.setActiveDkimSelector(getNestedJsonText(root, "activeDkim", "selector"));
+                dto.setActiveDmarcStatus(getNestedJsonText(root, "activeDmarc", "status"));
+                dto.setActiveDmarcPolicy(getNestedJsonText(root, "activeDmarc", "record"));
+                JsonNode topMode = root.get("dataMode");
+                if (topMode != null && !topMode.isNull() && !topMode.asText().isBlank()) {
+                    dto.setDataMode(topMode.asText());
+                }
+            } catch (Exception ignored) {
+            }
+        }
         dto.setActiveVerificationSummary(summary != null ? summary : "Active DNS authentication observations persistent.");
-        String topMode = extractTopLevelJsonField(obsJson, "dataMode");
-        if (topMode != null && !topMode.isBlank()) {
-            dto.setDataMode(topMode);
-        }
     }
 
-    private String extractTopLevelJsonField(String json, String key) {
-        if (json == null || key == null) {
-            return null;
-        }
-        Pattern pattern = Pattern.compile("\"" + Pattern.quote(key) + "\"\\s*:\\s*(?:\"([^\"]*)\"|(null))");
-        Matcher m = pattern.matcher(json);
-        if (m.find()) {
-            if ("null".equals(m.group(2))) {
-                return null;
-            }
-            return m.group(1);
-        }
-        return null;
-    }
-
-    private String extractJsonField(String json, String parentKey, String childKey) {
-        if (json == null || parentKey == null || childKey == null) {
-            return null;
-        }
-        Pattern pattern = Pattern.compile("\"" + Pattern.quote(parentKey) + "\"\\s*:\\s*\\{[^}]*?\"" + Pattern.quote(childKey) + "\"\\s*:\\s*(?:\"([^\"]*)\"|(null))");
-        Matcher m = pattern.matcher(json);
-        if (m.find()) {
-            if ("null".equals(m.group(2))) {
-                return null;
-            }
-            return m.group(1);
-        }
-        return null;
+    private String getNestedJsonText(JsonNode root, String parentKey, String childKey) {
+        if (root == null) return null;
+        JsonNode parent = root.get(parentKey);
+        if (parent == null || parent.isNull()) return null;
+        JsonNode child = parent.get(childKey);
+        if (child == null || child.isNull()) return null;
+        return child.asText();
     }
 }

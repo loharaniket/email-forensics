@@ -5,10 +5,10 @@ import com.emailforensics.backend.content.ContentAnalysisService;
 import com.emailforensics.backend.correlation.CorrelationService;
 import com.emailforensics.backend.dto.email.ParsedEmailDto;
 import com.emailforensics.backend.email.EmailParserService;
-import com.emailforensics.backend.headers.HeaderForensicService;
-import com.emailforensics.backend.infrastructure.InfrastructureService;
+import com.emailforensics.backend.headers.HeaderAnalysisService;
+import com.emailforensics.backend.infrastructure.IpArtifactService;
 import com.emailforensics.backend.risk.RiskScoringService;
-import com.emailforensics.backend.urlintel.UrlIntelService;
+import com.emailforensics.backend.urlintel.UrlAnalysisService;
 import com.emailforensics.backend.visual.VisualAnalysisService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -25,18 +25,18 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
 @Service
-public class AnalysisOrchestratorService {
+public class AnalysisPipelineService {
 
-    private static final Logger log = LoggerFactory.getLogger(AnalysisOrchestratorService.class);
+    private static final Logger log = LoggerFactory.getLogger(AnalysisPipelineService.class);
 
     private final AnalysisProgressService progressService;
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
-    private final HeaderForensicService headerForensicService;
-    private final UrlIntelService urlIntelService;
-    private final InfrastructureService infrastructureService;
+    private final HeaderAnalysisService HeaderAnalysisService;
+    private final UrlAnalysisService UrlAnalysisService;
+    private final IpArtifactService IpArtifactService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
     private final CorrelationService correlationService;
@@ -45,14 +45,14 @@ public class AnalysisOrchestratorService {
 
     private final Set<UUID> activeExecutions = Collections.newSetFromMap(new ConcurrentHashMap<>());
 
-    public AnalysisOrchestratorService(AnalysisProgressService progressService,
+    public AnalysisPipelineService(AnalysisProgressService progressService,
                                        EmailEvidenceRepository evidenceRepository,
                                        AnalysisRunRepository analysisRunRepository,
                                        EvidenceStorageService storageService,
                                        EmailParserService emailParserService,
-                                       HeaderForensicService headerForensicService,
-                                       UrlIntelService urlIntelService,
-                                       InfrastructureService infrastructureService,
+                                       HeaderAnalysisService HeaderAnalysisService,
+                                       UrlAnalysisService UrlAnalysisService,
+                                       IpArtifactService IpArtifactService,
                                        VisualAnalysisService visualAnalysisService,
                                        ContentAnalysisService contentAnalysisService,
                                        CorrelationService correlationService,
@@ -63,9 +63,9 @@ public class AnalysisOrchestratorService {
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
         this.emailParserService = emailParserService;
-        this.headerForensicService = headerForensicService;
-        this.urlIntelService = urlIntelService;
-        this.infrastructureService = infrastructureService;
+        this.HeaderAnalysisService = HeaderAnalysisService;
+        this.UrlAnalysisService = UrlAnalysisService;
+        this.IpArtifactService = IpArtifactService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
         this.correlationService = correlationService;
@@ -133,7 +133,7 @@ public class AnalysisOrchestratorService {
             // STAGE 2: ANALYZING_HEADERS
             try {
                 progressService.updateStage(runId, "ANALYZING_HEADERS");
-                headerForensicService.analyzeAndSaveHeaders(emailId);
+                HeaderAnalysisService.analyzeAndSaveHeaders(emailId);
             } catch (Exception e) {
                 log.error("Stage ANALYZING_HEADERS failed critically for evidence {}", emailId, e);
                 return progressService.markFailed(runId, "ANALYZING_HEADERS", "HEADER_ANALYSIS_FAILED",
@@ -143,8 +143,8 @@ public class AnalysisOrchestratorService {
             // STAGE 3: EXTRACTING_INDICATORS
             try {
                 progressService.updateStage(runId, "EXTRACTING_INDICATORS");
-                urlIntelService.analyzeAndSaveUrls(emailId);
-                infrastructureService.analyzeAndSaveInfrastructure(emailId, null);
+                UrlAnalysisService.analyzeAndSaveUrls(emailId);
+                IpArtifactService.analyzeAndSaveInfrastructure(emailId, null);
             } catch (Exception e) {
                 log.warn("Stage EXTRACTING_INDICATORS encountered non-fatal error for evidence {}", emailId, e);
                 partialWarnings.add("Indicator extraction warning: " + e.getMessage());

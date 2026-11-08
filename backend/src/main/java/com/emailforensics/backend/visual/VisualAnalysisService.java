@@ -11,7 +11,7 @@ import com.emailforensics.backend.infrastructure.DataProvenance;
 import com.emailforensics.backend.infrastructure.DnsLookupService;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
-import com.emailforensics.backend.urlintel.UrlHeuristicsService;
+import com.emailforensics.backend.urlintel.UrlCheckService;
 import com.emailforensics.backend.urlintel.UrlNormalizationService;
 import jakarta.mail.Multipart;
 import jakarta.mail.Part;
@@ -42,7 +42,7 @@ public class VisualAnalysisService {
     private final EvidenceStorageService storageService;
     private final QrDecodingService qrDecodingService;
     private final UrlNormalizationService urlNormalizationService;
-    private final UrlHeuristicsService urlHeuristicsService;
+    private final UrlCheckService UrlCheckService;
     private final DnsLookupService dnsLookupService;
     private final ExtractedUrlRepository extractedUrlRepository;
 
@@ -53,7 +53,7 @@ public class VisualAnalysisService {
                                  EvidenceStorageService storageService,
                                  QrDecodingService qrDecodingService,
                                  UrlNormalizationService urlNormalizationService,
-                                 UrlHeuristicsService urlHeuristicsService,
+                                 UrlCheckService UrlCheckService,
                                  DnsLookupService dnsLookupService,
                                  ExtractedUrlRepository extractedUrlRepository) {
         this.visualArtifactRepository = visualArtifactRepository;
@@ -63,7 +63,7 @@ public class VisualAnalysisService {
         this.storageService = storageService;
         this.qrDecodingService = qrDecodingService;
         this.urlNormalizationService = urlNormalizationService;
-        this.urlHeuristicsService = urlHeuristicsService;
+        this.UrlCheckService = UrlCheckService;
         this.dnsLookupService = dnsLookupService;
         this.extractedUrlRepository = extractedUrlRepository;
     }
@@ -299,12 +299,12 @@ public class VisualAnalysisService {
             }
 
             UrlNormalizationService.NormalizedUrlResult norm = urlNormalizationService.normalize(rawUrl);
-            boolean isIp = urlHeuristicsService.isIpUrl(norm.getDomain());
-            boolean unusualPort = urlHeuristicsService.isUnusualPort(norm.getPort());
-            boolean isShortened = urlHeuristicsService.isShortened(norm.getDomain());
-            boolean subdomainExcess = urlHeuristicsService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = urlHeuristicsService.isLookalike(norm.getDomain());
-            int riskScore = urlHeuristicsService.calculateRiskScore(false, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+            boolean isIp = UrlCheckService.isIpUrl(norm.getDomain());
+            boolean unusualPort = UrlCheckService.isUnusualPort(norm.getPort());
+            boolean isShortened = UrlCheckService.isShortened(norm.getDomain());
+            boolean subdomainExcess = UrlCheckService.isSubdomainExcess(norm.getDomain());
+            boolean lookalike = UrlCheckService.isLookalike(norm.getDomain());
+            int riskScore = UrlCheckService.calculateRiskScore(false, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
             String dnsStatus = isIp ? "SKIPPED_IP" : dnsLookupService.lookupDomain(norm.getDomain()).getStatus();
 
             ExtractedUrl entity = new ExtractedUrl(

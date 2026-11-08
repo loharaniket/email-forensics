@@ -18,9 +18,9 @@ import java.util.UUID;
 @RequestMapping("/api/v1")
 public class ReportController {
 
-    private final ForensicReportService reportService;
+    private final ReportService reportService;
 
-    public ReportController(ForensicReportService reportService) {
+    public ReportController(ReportService reportService) {
         this.reportService = reportService;
     }
 

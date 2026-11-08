@@ -1,7 +1,11 @@
 package com.emailforensics.backend.headers;
 
+import com.emailforensics.backend.analysis.AnalysisResult;
+import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
+import com.emailforensics.backend.evidence.AnalysisRun;
+import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,6 +16,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,14 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-class HeaderForensicServiceTest {
+class HeaderAnalysisServiceTest {
 
-    private HeaderForensicService service;
+    private HeaderAnalysisService service;
     private final Path fixturesDir = Paths.get("..", "test-fixtures", "eml");
 
     @BeforeEach
     void setUp() {
-        service = new HeaderForensicService(null, null, null, null, null);
+        service = new HeaderAnalysisService(null, null, null, null, null);
     }
 
     @Test
@@ -123,5 +128,45 @@ class HeaderForensicServiceTest {
         boolean hasDkimMismatch = dto.getIdentityMismatchFlags().stream()
                 .anyMatch(f -> f.startsWith("DKIM_DOMAIN_MISMATCH"));
         assertTrue(hasDkimMismatch);
+    }
+
+    @Test
+    void shouldHandleLargeHeaderJsonWithoutStackOverflow() {
+        AnalysisRunRepository mockRunRepo = org.mockito.Mockito.mock(AnalysisRunRepository.class);
+        AnalysisResultRepository mockResultRepo = org.mockito.Mockito.mock(AnalysisResultRepository.class);
+        ReceivedHopRepository mockHopRepo = org.mockito.Mockito.mock(ReceivedHopRepository.class);
+
+        HeaderAnalysisService headerService = new HeaderAnalysisService(
+                mockResultRepo, mockHopRepo, null, mockRunRepo, null
+        );
+
+        java.util.UUID emailId = java.util.UUID.randomUUID();
+        java.util.UUID runId = java.util.UUID.randomUUID();
+        com.emailforensics.backend.evidence.AnalysisRun run = new com.emailforensics.backend.evidence.AnalysisRun();
+        run.setId(runId);
+
+        StringBuilder sb = new StringBuilder("{");
+        for (int i = 0; i < 200; i++) {
+            if (i > 0) sb.append(",");
+            sb.append("\"Header-").append(i).append("\":[\"").append("A".repeat(150)).append("\"]");
+        }
+        sb.append("}");
+
+        com.emailforensics.backend.analysis.AnalysisResult result = new com.emailforensics.backend.analysis.AnalysisResult();
+        result.setHeaderResultId(UUID.randomUUID());
+        result.setAnalysisRun(run);
+        result.setRawHeadersJson(sb.toString());
+        result.setFromAddress("sender@example.com");
+
+        org.mockito.Mockito.when(mockRunRepo.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId))
+                .thenReturn(java.util.Optional.of(run));
+        org.mockito.Mockito.when(mockResultRepo.findByAnalysisRunId(runId))
+                .thenReturn(java.util.Optional.of(result));
+        org.mockito.Mockito.when(mockHopRepo.findByAnalysisRunIdOrderByHopOrderAsc(runId))
+                .thenReturn(java.util.Collections.emptyList());
+
+        HeaderAnalysisDto dto = headerService.getHeaderAnalysis(emailId);
+        assertNotNull(dto);
+        assertEquals(200, dto.getRawHeaders().size());
     }
 }

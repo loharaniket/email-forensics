@@ -55,7 +55,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class ForensicReportServiceTest {
+class ReportServiceTest {
 
     @Mock
     private EmailEvidenceRepository evidenceRepository;
@@ -99,7 +99,7 @@ class ForensicReportServiceTest {
     @Mock
     private EmailParserService emailParserService;
 
-    private ForensicReportService service;
+    private ReportService service;
 
     private User analyst;
     private CaseFile caseFile;
@@ -108,7 +108,7 @@ class ForensicReportServiceTest {
 
     @BeforeEach
     void setUp() {
-        service = new ForensicReportService(
+        service = new ReportService(
                 evidenceRepository,
                 runRepository,
                 caseRepository,

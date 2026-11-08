@@ -6,8 +6,6 @@ import com.emailforensics.backend.user.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.core.env.Environment;
-import org.springframework.core.env.Profiles;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -23,7 +21,6 @@ public class DataSeeder implements CommandLineRunner {
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    private final Environment environment;
     private final String analystUsername;
     private final String analystEmail;
     private final String analystPassword;
@@ -35,7 +32,6 @@ public class DataSeeder implements CommandLineRunner {
     public DataSeeder(
             UserRepository userRepository,
             PasswordEncoder passwordEncoder,
-            @Autowired(required = false) Environment environment,
             @Value("${app.seed.analyst-username:analyst}") String analystUsername,
             @Value("${app.seed.analyst-email:analyst@emailforensics.local}") String analystEmail,
             @Value("${app.seed.analyst-password:analyst123}") String analystPassword,
@@ -44,7 +40,6 @@ public class DataSeeder implements CommandLineRunner {
             @Value("${app.seed.admin-password:admin123}") String adminPassword) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
-        this.environment = environment;
         this.analystUsername = analystUsername;
         this.analystEmail = analystEmail;
         this.analystPassword = analystPassword;
@@ -55,10 +50,6 @@ public class DataSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        if (environment != null && environment.acceptsProfiles(Profiles.of("prod", "production"))) {
-            return;
-        }
-
         reseedDefaultUsers();
     }
 
