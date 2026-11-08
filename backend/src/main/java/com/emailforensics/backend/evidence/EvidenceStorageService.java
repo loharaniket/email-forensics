@@ -130,6 +130,30 @@ public class EvidenceStorageService {
         }
     }
 
+    public int clearAllStoredFiles() {
+        int deletedCount = 0;
+        try {
+            if (Files.exists(vaultPath)) {
+                try (var stream = Files.walk(vaultPath)) {
+                    var fileList = stream.filter(Files::isRegularFile).toList();
+                    for (Path file : fileList) {
+                        try {
+                            if (Files.deleteIfExists(file)) {
+                                deletedCount++;
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+                }
+            }
+            Files.createDirectories(vaultPath);
+            Files.createDirectories(tempPath);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to clear evidence vault directory", e);
+        }
+        return deletedCount;
+    }
+
     public String sanitizeFilename(String untrustedFilename) {
         if (untrustedFilename == null || untrustedFilename.trim().isEmpty()) {
             return "evidence.eml";

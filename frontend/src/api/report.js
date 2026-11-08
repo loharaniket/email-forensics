@@ -19,8 +19,3 @@ export const downloadEvidenceReportJson = async (emailId) => {
   link.parentNode.removeChild(link)
   window.URL.revokeObjectURL(url)
 }
-
-export const getCaseReport = async (caseId) => {
-  const response = await apiClient.get(`/cases/${caseId}/report`)
-  return response.data
-}

@@ -18,6 +18,9 @@ import java.util.UUID;
 @Component
 public class DataSeeder implements CommandLineRunner {
 
+    public static final UUID ANALYST_ID = UUID.fromString("3d0658fa-dead-47ea-b7d3-2d82e9918a95");
+    public static final UUID ADMIN_ID = UUID.fromString("6c8eec53-5430-475f-91e1-a08faa3bae52");
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final Environment environment;
@@ -56,11 +59,15 @@ public class DataSeeder implements CommandLineRunner {
             return;
         }
 
-        seedUser(analystUsername, analystEmail, analystPassword, Role.ANALYST);
-        seedUser(adminUsername, adminEmail, adminPassword, Role.ADMIN);
+        reseedDefaultUsers();
     }
 
-    private void seedUser(String username, String email, String password, Role role) {
+    public void reseedDefaultUsers() {
+        seedUser(ANALYST_ID, analystUsername, analystEmail, analystPassword, Role.ANALYST);
+        seedUser(ADMIN_ID, adminUsername, adminEmail, adminPassword, Role.ADMIN);
+    }
+
+    private void seedUser(UUID id, String username, String email, String password, Role role) {
         Optional<User> existing = userRepository.findByUsername(username);
         if (existing.isPresent()) {
             User user = existing.get();
@@ -69,7 +76,7 @@ public class DataSeeder implements CommandLineRunner {
             userRepository.save(user);
         } else {
             User user = new User(
-                    UUID.randomUUID(),
+                    id != null ? id : UUID.randomUUID(),
                     username,
                     email,
                     passwordEncoder.encode(password),

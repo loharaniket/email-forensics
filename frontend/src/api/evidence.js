@@ -24,11 +24,6 @@ export const getEvidenceStatus = async (emailId) => {
   return response.data;
 };
 
-export const getEvidenceOverview = async (emailId) => {
-  const response = await client.get(`/evidence/${emailId}/overview`);
-  return response.data;
-};
-
 export const checkEvidenceIntegrity = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/integrity`);
   return response.data;
@@ -50,11 +45,6 @@ export const downloadOriginalEvidence = async (emailId, originalFilename) => {
 
 export const getInvestigationDetail = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/investigation`);
-  return response.data;
-};
-
-export const getEvidenceAttachments = async (emailId) => {
-  const response = await client.get(`/evidence/${emailId}/attachments`);
   return response.data;
 };
 

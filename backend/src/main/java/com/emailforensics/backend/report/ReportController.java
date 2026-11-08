@@ -1,6 +1,5 @@
 package com.emailforensics.backend.report;
 
-import com.emailforensics.backend.dto.report.CaseReportDto;
 import com.emailforensics.backend.dto.report.ForensicReportDto;
 import com.emailforensics.backend.security.UserPrincipal;
 import org.springframework.http.HttpHeaders;
@@ -46,13 +45,5 @@ public class ReportController {
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
                 .contentType(MediaType.APPLICATION_JSON)
                 .body(bytes);
-    }
-
-    @GetMapping("/cases/{caseId}/report")
-    public ResponseEntity<CaseReportDto> getCaseReport(
-            @PathVariable UUID caseId,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
-        CaseReportDto report = reportService.generateCaseReport(caseId, currentUser);
-        return ResponseEntity.ok(report);
     }
 }

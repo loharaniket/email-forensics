@@ -127,13 +127,6 @@ class EvidenceControllerTest {
                 .andExpect(jsonPath("$.savedSha256").isNotEmpty())
                 .andExpect(jsonPath("$.recalculatedSha256").isNotEmpty());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/overview")
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.emailId").value(emailId))
-                .andExpect(jsonPath("$.originalFilename").value("sample-evidence.eml"))
-                .andExpect(jsonPath("$.processingStatus").value("COMPLETED"));
-
         mockMvc.perform(get("/api/v1/cases/" + caseId + "/evidence")
                         .header("Authorization", "Bearer " + authToken))
                 .andExpect(status().isOk())
@@ -153,11 +146,6 @@ class EvidenceControllerTest {
                 .andExpect(jsonPath("$.parsedEmail.subject").value("Test Evidence Email"))
                 .andExpect(jsonPath("$.parsedEmail.from").value("alice@test.org"))
                 .andExpect(jsonPath("$.parsedEmail.extractedText").value("This is the raw content of evidence."));
-
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/attachments")
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
 
         mockMvc.perform(get("/api/v1/evidence/" + emailId + "/headers")
                         .header("Authorization", "Bearer " + authToken))

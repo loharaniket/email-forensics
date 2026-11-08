@@ -11,7 +11,6 @@ import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.ParsedEmailDto;
-import com.emailforensics.backend.dto.report.CaseReportDto;
 import com.emailforensics.backend.dto.report.ForensicReportDto;
 import com.emailforensics.backend.email.EmailParserService;
 import com.emailforensics.backend.evidence.AnalysisRun;
@@ -103,52 +102,6 @@ public class ForensicReportService {
 
         String username = currentUser != null ? currentUser.getUsername() : "analyst";
         return buildForensicReport(evidence, run, username);
-    }
-
-    @Transactional(readOnly = true)
-    public CaseReportDto generateCaseReport(UUID caseId, UserPrincipal currentUser) {
-        CaseFile caseFile = caseRepository.findById(caseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Case not found with ID: " + caseId));
-
-        String username = currentUser != null ? currentUser.getUsername() : "analyst";
-        CaseReportDto caseReport = new CaseReportDto();
-        caseReport.setReportId("CASE-REP-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase());
-        caseReport.setCaseId(caseFile.getId());
-        caseReport.setCaseNumber(caseFile.getCaseNumber());
-        caseReport.setTitle(caseFile.getTitle());
-        caseReport.setDescription(caseFile.getDescription());
-        caseReport.setStatus(caseFile.getStatus() != null ? caseFile.getStatus().name() : "OPEN");
-        caseReport.setAnalystNotes(caseFile.getAnalystNotes());
-        caseReport.setGeneratedBy(username);
-        caseReport.setGeneratedAt(Instant.now());
-
-        List<EmailEvidence> evidences = evidenceRepository.findByCaseFileIdOrderByUploadedAtDesc(caseId);
-        caseReport.setTotalEvidenceCount(evidences.size());
-
-        int highCount = 0;
-        int criticalCount = 0;
-        List<ForensicReportDto> reports = new ArrayList<>();
-
-        for (EmailEvidence ev : evidences) {
-            Optional<AnalysisRun> runOpt = runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(ev.getId());
-            if (runOpt.isPresent()) {
-                ForensicReportDto report = buildForensicReport(ev, runOpt.get(), username);
-                reports.add(report);
-                if (report.getRiskSummary() != null) {
-                    if ("CRITICAL".equalsIgnoreCase(report.getRiskSummary().getRiskLevel())) {
-                        criticalCount++;
-                    } else if ("HIGH".equalsIgnoreCase(report.getRiskSummary().getRiskLevel())) {
-                        highCount++;
-                    }
-                }
-            }
-        }
-
-        caseReport.setHighRiskCount(highCount);
-        caseReport.setCriticalRiskCount(criticalCount);
-        caseReport.setEvidenceReports(reports);
-
-        return caseReport;
     }
 
     public String exportReportJson(ForensicReportDto report) {

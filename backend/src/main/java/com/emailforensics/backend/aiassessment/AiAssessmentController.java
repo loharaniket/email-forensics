@@ -30,7 +30,7 @@ public class AiAssessmentController {
 
     @PostMapping("/{emailId}/ai-assessment/generate")
     public ResponseEntity<AiAssessmentDto> generateAssessment(@PathVariable UUID emailId,
-                                                              @RequestBody(required = false) AiGenerationRequestDto request) {
+            @RequestBody(required = false) AiGenerationRequestDto request) {
         boolean force = request != null && request.isForceRegenerate();
         String modelOverride = request != null ? request.getModelOverride() : null;
         AiAssessmentDto dto = aiAssessmentService.generateAssessment(emailId, force, modelOverride);

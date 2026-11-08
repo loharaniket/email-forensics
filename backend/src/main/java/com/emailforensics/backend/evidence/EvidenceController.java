@@ -6,7 +6,6 @@ import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.InvestigationDetailDto;
 import com.emailforensics.backend.dto.common.PageResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceIntegrityResponse;
-import com.emailforensics.backend.dto.evidence.EvidenceOverviewDto;
 import com.emailforensics.backend.dto.evidence.EvidenceStatusResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceSummaryDto;
 import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
@@ -104,12 +103,6 @@ public class EvidenceController {
         return ResponseEntity.ok(response);
     }
 
-    @GetMapping("/evidence/{emailId}/overview")
-    public ResponseEntity<EvidenceOverviewDto> getEvidenceOverview(@PathVariable UUID emailId) {
-        EvidenceOverviewDto response = evidenceService.getEvidenceOverview(emailId);
-        return ResponseEntity.ok(response);
-    }
-
     @GetMapping("/evidence/{emailId}/integrity")
     public ResponseEntity<EvidenceIntegrityResponse> checkIntegrity(@PathVariable UUID emailId) {
         EvidenceIntegrityResponse response = evidenceService.checkIntegrity(emailId);
@@ -130,12 +123,6 @@ public class EvidenceController {
     @GetMapping("/evidence/{emailId}/investigation")
     public ResponseEntity<InvestigationDetailDto> getInvestigationDetail(@PathVariable UUID emailId) {
         InvestigationDetailDto response = evidenceService.getInvestigationDetail(emailId);
-        return ResponseEntity.ok(response);
-    }
-
-    @GetMapping("/evidence/{emailId}/attachments")
-    public ResponseEntity<List<AttachmentMetaDto>> getEvidenceAttachments(@PathVariable UUID emailId) {
-        List<AttachmentMetaDto> response = evidenceService.getEvidenceAttachments(emailId);
         return ResponseEntity.ok(response);
     }
 

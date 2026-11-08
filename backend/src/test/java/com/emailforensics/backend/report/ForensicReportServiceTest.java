@@ -11,7 +11,6 @@ import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.ParsedEmailDto;
-import com.emailforensics.backend.dto.report.CaseReportDto;
 import com.emailforensics.backend.dto.report.ForensicReportDto;
 import com.emailforensics.backend.email.EmailParserService;
 import com.emailforensics.backend.evidence.AnalysisRun;
@@ -269,35 +268,5 @@ class ForensicReportServiceTest {
         assertTrue(json.contains("\"recalculatedHash\""));
         assertTrue(json.contains("\"integrityStatus\""));
         assertTrue(json.contains("\"riskSummary\""));
-    }
-
-    @Test
-    void generateCaseReport_aggregatesEvidenceReports() throws Exception {
-        UUID caseId = caseFile.getId();
-        when(caseRepository.findById(caseId)).thenReturn(Optional.of(caseFile));
-        when(evidenceRepository.findByCaseFileIdOrderByUploadedAtDesc(caseId)).thenReturn(Collections.singletonList(evidence));
-        when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(evidence.getId())).thenReturn(Optional.of(run));
-        when(storageService.loadAsResource(anyString())).thenReturn(new ByteArrayResource("Subject: Clean".getBytes()));
-
-        AnalysisResult ar = new AnalysisResult(run);
-        ar.setRiskResultId(UUID.randomUUID());
-        ar.setDeterministicRiskScore(80);
-        ar.setRiskLevel("HIGH");
-        ar.setEvidenceConfidenceScore(85);
-        ar.setConfidenceLevel("HIGH");
-        ar.setConfidenceExplanation("High Confidence");
-        ar.setCategoryScoresJson("{}");
-        ar.setTotalUncappedScore(80);
-        ar.setEngineVersion("v1.0.0");
-        when(analysisResultRepository.findByAnalysisRunId(run.getId())).thenReturn(Optional.of(ar));
-
-        CaseReportDto caseReport = service.generateCaseReport(caseId, null);
-
-        assertNotNull(caseReport);
-        assertEquals("CASE-2026-TEST", caseReport.getCaseNumber());
-        assertEquals(1, caseReport.getTotalEvidenceCount());
-        assertEquals(1, caseReport.getHighRiskCount());
-        assertEquals(0, caseReport.getCriticalRiskCount());
-        assertEquals(1, caseReport.getEvidenceReports().size());
     }
 }

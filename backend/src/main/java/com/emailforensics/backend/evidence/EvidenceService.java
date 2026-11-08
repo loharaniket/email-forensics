@@ -6,7 +6,6 @@ import com.emailforensics.backend.common.BadRequestException;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.dto.common.PageResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceIntegrityResponse;
-import com.emailforensics.backend.dto.evidence.EvidenceOverviewDto;
 import com.emailforensics.backend.dto.evidence.EvidenceStatusResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceSummaryDto;
 import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
@@ -272,49 +271,6 @@ public class EvidenceService {
                 page.getTotalElements(),
                 page.getTotalPages(),
                 page.isLast()
-        );
-    }
-
-    @Transactional(readOnly = true)
-    public EvidenceOverviewDto getEvidenceOverview(UUID emailId) {
-        EmailEvidence evidence = evidenceRepository.findById(emailId)
-                .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
-
-        Optional<AnalysisRun> latestRun = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId);
-        AnalysisStatus status = latestRun.map(AnalysisRun::getStatus).orElse(AnalysisStatus.QUEUED);
-        String currentStage = latestRun.map(AnalysisRun::getCurrentStage).orElse("QUEUED");
-
-        Integer riskScore = null;
-        String riskLevel = null;
-        Integer confidenceScore = null;
-        if (latestRun.isPresent()) {
-            Optional<com.emailforensics.backend.analysis.AnalysisResult> assessmentOpt =
-                    analysisResultRepository.findByAnalysisRunId(latestRun.get().getId());
-            if (assessmentOpt.isPresent() && assessmentOpt.get().hasRiskAssessment()) {
-                com.emailforensics.backend.analysis.AnalysisResult ra = assessmentOpt.get();
-                riskScore = ra.getDeterministicRiskScore();
-                riskLevel = ra.getRiskLevel();
-                confidenceScore = ra.getEvidenceConfidenceScore();
-            }
-        }
-
-        return new EvidenceOverviewDto(
-                evidence.getId(),
-                evidence.getCaseFile().getId(),
-                evidence.getCaseFile().getCaseNumber(),
-                evidence.getOriginalFilename(),
-                evidence.getFileSizeBytes(),
-                evidence.getSha256Hash(),
-                evidence.getSubject(),
-                evidence.getMessageId(),
-                evidence.getSentDate(),
-                evidence.getUploadedAt(),
-                evidence.getUploadedBy().getUsername(),
-                status,
-                currentStage,
-                riskScore,
-                riskLevel,
-                confidenceScore
         );
     }
 

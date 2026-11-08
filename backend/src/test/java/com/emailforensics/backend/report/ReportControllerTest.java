@@ -46,12 +46,6 @@ class ReportControllerTest {
     }
 
     @Test
-    void getCaseReport_unauthenticatedReturns401() throws Exception {
-        mockMvc.perform(get("/api/v1/cases/00000000-0000-0000-0000-000000000000/report"))
-                .andExpect(status().isUnauthorized());
-    }
-
-    @Test
     void getEvidenceReport_notFoundReturns404() throws Exception {
         mockMvc.perform(get("/api/v1/evidence/00000000-0000-0000-0000-000000000000/report")
                         .header("Authorization", "Bearer " + authToken))
