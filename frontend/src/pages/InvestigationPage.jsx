@@ -85,7 +85,6 @@ function normalizeParsedEmail(detail, hops, reportData, infrastructure) {
     replyTo: parsed.replyTo || [],
     messageId: parsed.messageId || '—',
     sentDate: emailDate,
-    messageDate: emailDate,
     rawDate: parsed.rawDate || emailDate,
     originatingIp,
     to: parsed.to || [],
@@ -445,7 +444,7 @@ export default function InvestigationPage() {
     integrityCheckResult?.verifiedAt ||
     reportData?.evidenceIntegrity?.integrityCheckTimestamp
 
-  const flags = headerAnalysis?.securityFlags || []
+  const flags = headerAnalysis?.identityMismatchFlags || []
 
   return (
     <div className="min-h-screen bg-[#F5F6F8] text-[#202938] flex flex-col">

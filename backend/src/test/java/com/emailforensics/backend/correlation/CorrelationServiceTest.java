@@ -3,6 +3,8 @@ package com.emailforensics.backend.correlation;
 import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
+import com.emailforensics.backend.dto.email.ParsedEmailDto;
+import com.emailforensics.backend.email.EmailParserService;
 import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.AnalysisStatus;
@@ -10,7 +12,7 @@ import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
-import com.emailforensics.backend.evidence.EvidenceService;
+import com.emailforensics.backend.evidence.EvidenceStorageService;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
@@ -24,7 +26,9 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.core.io.ByteArrayResource;
 
+import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,7 +73,10 @@ public class CorrelationServiceTest {
     private QrArtifactRepository qrRepository;
 
     @Mock
-    private EvidenceService evidenceService;
+    private EvidenceStorageService storageService;
+
+    @Mock
+    private EmailParserService emailParserService;
 
 
     private CorrelationService correlationService;
@@ -93,7 +100,8 @@ public class CorrelationServiceTest {
                 analysisResultRepository,
                 visualRepository,
                 qrRepository,
-                evidenceService
+                storageService,
+                emailParserService
         );
 
         analyst = new User(UUID.randomUUID(), "analyst", "analyst@test.local", "hashed", Role.ANALYST, true, Instant.now());
@@ -125,7 +133,8 @@ public class CorrelationServiceTest {
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
-        when(evidenceService.getEvidenceAttachments(email1.getId())).thenReturn(Collections.emptyList());
+        when(storageService.loadAsResource(any())).thenReturn(new ByteArrayResource(new byte[0]));
+        when(emailParserService.parse(any(InputStream.class))).thenReturn(new ParsedEmailDto());
         when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));
 
         ExtractedUrl matchedUrl = new ExtractedUrl(UUID.randomUUID(), run2, "http://malicious-login.com/login",
@@ -169,11 +178,17 @@ public class CorrelationServiceTest {
 
         String attachmentHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
         AttachmentMetaDto att1 = new AttachmentMetaDto("invoice.pdf", "application/pdf", 1024L, attachmentHash, false, null, false);
-        when(evidenceService.getEvidenceAttachments(email1.getId())).thenReturn(List.of(att1));
+        AttachmentMetaDto att2 = new AttachmentMetaDto("invoice_copy.pdf", "application/pdf", 1024L, attachmentHash, false, null, false);
+
+        ParsedEmailDto parsed1 = new ParsedEmailDto();
+        parsed1.setAttachments(List.of(att1));
+        ParsedEmailDto parsed2 = new ParsedEmailDto();
+        parsed2.setAttachments(List.of(att2));
+
+        when(storageService.loadAsResource(any())).thenReturn(new ByteArrayResource(new byte[0]));
+        when(emailParserService.parse(any(InputStream.class))).thenReturn(parsed1, parsed2);
 
         when(evidenceRepository.findAll()).thenReturn(List.of(email1, email2));
-        AttachmentMetaDto att2 = new AttachmentMetaDto("invoice_copy.pdf", "application/pdf", 1024L, attachmentHash, false, null, false);
-        when(evidenceService.getEvidenceAttachments(email2.getId())).thenReturn(List.of(att2));
 
         HistoricalMatch attMatch = new HistoricalMatch(
                 UUID.randomUUID(), run1, email2, "ATTACHMENT_HASH", attachmentHash, "EXACT", "Identical attachment"
@@ -197,7 +212,8 @@ public class CorrelationServiceTest {
         when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
         when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
         when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
-        when(evidenceService.getEvidenceAttachments(email1.getId())).thenReturn(Collections.emptyList());
+        when(storageService.loadAsResource(any())).thenReturn(new ByteArrayResource(new byte[0]));
+        when(emailParserService.parse(any(InputStream.class))).thenReturn(new ParsedEmailDto());
         when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));
 
         when(matchRepository.findBySourceEmailId(email1.getId())).thenReturn(Collections.emptyList());

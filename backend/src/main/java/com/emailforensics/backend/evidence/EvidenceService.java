@@ -22,6 +22,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -177,20 +179,7 @@ public class EvidenceService {
             );
             run = analysisRunRepository.save(run);
 
-            final UUID finalEvidenceId = evidence.getId();
-            final UUID finalRunId = run.getId();
-            if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
-                org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                        new org.springframework.transaction.support.TransactionSynchronization() {
-                            @Override
-                            public void afterCommit() {
-                                analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
-                            }
-                        }
-                );
-            } else {
-                analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
-            }
+            triggerAnalysisAfterCommit(evidence.getId(), run.getId());
 
             String statusUrl = "/api/v1/evidence/" + evidence.getId() + "/status";
 
@@ -369,22 +358,22 @@ public class EvidenceService {
         newRun.setAttemptNumber(nextAttempt);
         newRun = analysisRunRepository.save(newRun);
 
-        final UUID finalEvidenceId = evidence.getId();
-        final UUID finalRunId = newRun.getId();
-        if (org.springframework.transaction.support.TransactionSynchronizationManager.isActualTransactionActive()) {
-            org.springframework.transaction.support.TransactionSynchronizationManager.registerSynchronization(
-                    new org.springframework.transaction.support.TransactionSynchronization() {
-                        @Override
-                        public void afterCommit() {
-                            analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
-                        }
-                    }
-            );
-        } else {
-            analysisPipelineService.startAnalysisAsync(finalEvidenceId, finalRunId);
-        }
+        triggerAnalysisAfterCommit(evidence.getId(), newRun.getId());
 
         return getEvidenceStatus(emailId);
+    }
+
+    private void triggerAnalysisAfterCommit(UUID evidenceId, UUID runId) {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    analysisPipelineService.startAnalysisAsync(evidenceId, runId);
+                }
+            });
+        } else {
+            analysisPipelineService.startAnalysisAsync(evidenceId, runId);
+        }
     }
 
     @Transactional(readOnly = true)

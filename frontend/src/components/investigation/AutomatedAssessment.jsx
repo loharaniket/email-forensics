@@ -94,7 +94,7 @@ export default function AutomatedAssessment({
             Assessment summary
           </h3>
           <p className="text-sm text-[#202938] leading-relaxed bg-[#F5F6F8] p-4 rounded-lg border border-[#E4E7EC]">
-            {aiAssessment?.assessmentSummary || aiAssessment?.summaryExplanation || 'No assessment narrative available.'}
+            {aiAssessment?.summaryExplanation || 'No assessment narrative available.'}
           </p>
         </div>
 

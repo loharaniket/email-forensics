@@ -150,4 +150,30 @@ class AiClientServiceTest {
         assertTrue(payload.contains("\"reasoning_effort\":\"low\""));
         assertTrue(payload.contains("\"response_format\":{\"type\":\"json_object\"}"));
     }
+
+    @Test
+    void testStructuredOutputParsingRegexFallbackOnMalformedJson() throws Exception {
+        java.lang.reflect.Method method = AiClientService.class.getDeclaredMethod("parseStructuredOutput", String.class, EvidenceContextSummaryDto.class);
+        method.setAccessible(true);
+
+        // Malformed JSON with trailing commas and trailing tokens that Jackson's strict parser rejects
+        String malformedJson = "{\n" +
+                "  \"threatClassification\": \"SUSPICIOUS_CREDENTIAL_HARVESTING\",\n" +
+                "  \"confidenceAssessment\": \"MEDIUM\",\n" +
+                "  \"summaryExplanation\": \"Suspicious login page detected.\",\n" +
+                "  \"keyIndicators\": [\"Fake login\", \"IP URL\"],\n" +
+                "  \"evidenceReferences\": [\"URL:login.phish.test\"],\n" +
+                "  \"limitations\": \"Partial DNS data\",\n" +
+                "} trailing unparsed tokens";
+
+        AiStructuredOutput output = (AiStructuredOutput) method.invoke(clientService, malformedJson, null);
+
+        assertNotNull(output);
+        assertEquals("SUSPICIOUS_CREDENTIAL_HARVESTING", output.getThreatClassification());
+        assertEquals("MEDIUM", output.getConfidenceAssessment());
+        assertEquals("Suspicious login page detected.", output.getSummaryExplanation());
+        assertEquals(2, output.getKeyIndicators().size());
+        assertEquals(1, output.getEvidenceReferences().size());
+        assertEquals("Partial DNS data", output.getLimitations());
+    }
 }

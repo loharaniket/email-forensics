@@ -16,37 +16,14 @@ export default function MessageContent({
   const [contentSearch, setContentSearch] = useState('')
   const [bodyMode, setBodyMode] = useState('extracted')
 
-  const predictedLabel =
-    contentAnalysis?.predictedLabel ||
-    contentAnalysis?.mlPredictedLabel ||
-    'INSUFFICIENT_DATA'
-  const probability =
-    contentAnalysis?.probability != null
-      ? contentAnalysis.probability
-      : contentAnalysis?.mlProbability != null
-      ? contentAnalysis.mlProbability
-      : 0
-  const urgencyDetected = !!(
-    contentAnalysis?.urgency || contentAnalysis?.urgencyDetected
-  )
-  const credentialRequestDetected = !!(
-    contentAnalysis?.credentialRequest ||
-    contentAnalysis?.credentialRequestDetected
-  )
-  const paymentInstructionDetected = !!(
-    contentAnalysis?.paymentInstruction ||
-    contentAnalysis?.paymentInstructionDetected
-  )
-  const impersonationDetected = !!(
-    contentAnalysis?.impersonation || contentAnalysis?.impersonationDetected
-  )
-  const secrecyDetected = !!(
-    contentAnalysis?.secrecy || contentAnalysis?.secrecyDetected
-  )
-  const promptMatches =
-    contentAnalysis?.promptMatches ||
-    contentAnalysis?.promptInjectionMatches ||
-    []
+  const predictedLabel = contentAnalysis?.predictedLabel || 'INSUFFICIENT_DATA'
+  const probability = contentAnalysis?.probability ?? 0
+  const urgencyDetected = !!contentAnalysis?.urgency
+  const credentialRequestDetected = !!contentAnalysis?.credentialRequest
+  const paymentInstructionDetected = !!contentAnalysis?.paymentInstruction
+  const impersonationDetected = !!contentAnalysis?.impersonation
+  const secrecyDetected = !!contentAnalysis?.secrecy
+  const promptMatches = contentAnalysis?.promptMatches || []
   const socialMatches = contentAnalysis?.socialEngineeringMatches || []
   const promptInjectionDetected = !!(
     contentAnalysis?.promptInjectionDetected || promptMatches.length > 0
@@ -58,7 +35,7 @@ export default function MessageContent({
         contentCategoryFilter === 'ALL' || m.category === contentCategoryFilter
       const matchChannel =
         contentChannelFilter === 'ALL' ||
-        (m.sourceChannel || m.channel) === contentChannelFilter
+        m.sourceChannel === contentChannelFilter
       const matchText =
         !contentSearch.trim() ||
         (m.matchedText &&
@@ -255,9 +232,9 @@ export default function MessageContent({
                   className="p-3 rounded-lg bg-white border border-red-200 space-y-1.5 text-xs"
                 >
                   <div className="flex items-center justify-between">
-                    <span className="font-semibold text-[#B42318]">{m.category || m.patternName}</span>
+                    <span className="font-semibold text-[#B42318]">{m.category}</span>
                     <span className="px-2 py-0.5 rounded text-[11px] bg-[#FEF2F2] text-[#B42318] border border-red-200">
-                      Channel: {m.sourceChannel || m.channel}
+                      Channel: {m.sourceChannel}
                     </span>
                   </div>
                   <div className="p-2 rounded bg-[#F5F6F8] font-mono text-[11px] text-[#202938] select-all break-all">
@@ -492,7 +469,7 @@ export default function MessageContent({
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-[#202938]">{m.category}</span>
                       <span className="text-[11px] text-[#667085] bg-white px-2 py-0.5 rounded border border-[#E4E7EC]">
-                        {m.sourceChannel || m.channel}
+                        {m.sourceChannel}
                       </span>
                     </div>
                     <p className="font-mono text-[#B42318] break-all">

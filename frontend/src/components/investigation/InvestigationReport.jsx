@@ -94,11 +94,11 @@ export default function InvestigationReport({
   const examinerName = reportData?.analystSignoff?.signoffAnalyst || user?.username || 'analyst'
   const examinerRole = reportData?.analystSignoff?.signoffRole || user?.role || 'Digital Forensics Analyst'
   const reportDate = formatLocalDate(reportData?.generatedAt || new Date())
-  const sentDateDisplay = formatUtcDate(parsed?.sentDate || parsed?.messageDate || parsed?.rawDate || detail?.sentDate)
+  const sentDateDisplay = formatUtcDate(parsed?.sentDate || parsed?.rawDate)
   const uploadDateDisplay = formatUtcDate(detail?.uploadedAt)
   const replyToDisplay = Array.isArray(parsed?.replyTo)
     ? (parsed.replyTo.length > 0 ? parsed.replyTo.join(', ') : 'None specified')
-    : (parsed?.replyTo || detail?.replyTo || 'None specified')
+    : (parsed?.replyTo || 'None specified')
 
   const verifiedHash = primaryHash || detail.sha256Hash || 'N/A'
 
@@ -360,12 +360,12 @@ export default function InvestigationReport({
               <tbody className="divide-y divide-[#E4E7EC]">
                 <tr>
                   <td className="w-1/4 p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Subject Line</td>
-                  <td className="p-2 font-semibold text-[#202938] col-span-3">{parsed?.subject || detail?.subject || '(No Subject)'}</td>
+                  <td className="p-2 font-semibold text-[#202938] col-span-3">{parsed?.subject || '(No Subject)'}</td>
                 </tr>
                 <tr>
                   <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Header From</td>
                   <td className="p-2 font-mono text-[#202938] break-all">
-                    {parsed?.from || detail?.parsedEmail?.from || detail?.sender || '(None specified)'}
+                    {parsed?.from || '(None specified)'}
                   </td>
                 </tr>
                 <tr>
@@ -375,7 +375,7 @@ export default function InvestigationReport({
                 <tr>
                   <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Envelope Return-Path</td>
                   <td className="p-2 font-mono text-[#202938] break-all">
-                    {parsed?.returnPath || detail?.returnPath || headerAnalysis?.returnPath || '(None specified)'}
+                    {parsed?.returnPath || headerAnalysis?.returnPath || '(None specified)'}
                   </td>
                 </tr>
                 <tr>
@@ -885,7 +885,7 @@ export default function InvestigationReport({
                   Executive Assessment Narrative
                 </span>
                 <p>
-                  {aiAssessment.assessmentSummary || aiAssessment.summaryExplanation || 'Assessment synthesis complete.'}
+                  {aiAssessment.summaryExplanation || 'Assessment synthesis complete.'}
                 </p>
               </div>
 

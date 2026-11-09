@@ -3,13 +3,15 @@ package com.emailforensics.backend.correlation;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
+import com.emailforensics.backend.dto.email.ParsedEmailDto;
+import com.emailforensics.backend.email.EmailParserService;
 import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
-import com.emailforensics.backend.evidence.EvidenceService;
+import com.emailforensics.backend.evidence.EvidenceStorageService;
 import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
@@ -18,11 +20,12 @@ import com.emailforensics.backend.visual.QrArtifact;
 import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifact;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
-import org.springframework.context.annotation.Lazy;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Optional;
@@ -40,7 +43,8 @@ public class CorrelationService {
     private final AnalysisResultRepository analysisResultRepository;
     private final VisualArtifactRepository visualRepository;
     private final QrArtifactRepository qrRepository;
-    private final EvidenceService evidenceService;
+    private final EvidenceStorageService storageService;
+    private final EmailParserService emailParserService;
 
     public CorrelationService(HistoricalMatchRepository matchRepository,
                               EmailEvidenceRepository evidenceRepository,
@@ -50,7 +54,8 @@ public class CorrelationService {
                               AnalysisResultRepository analysisResultRepository,
                               VisualArtifactRepository visualRepository,
                               QrArtifactRepository qrRepository,
-                              @Lazy EvidenceService evidenceService) {
+                              EvidenceStorageService storageService,
+                              EmailParserService emailParserService) {
         this.matchRepository = matchRepository;
         this.evidenceRepository = evidenceRepository;
         this.runRepository = runRepository;
@@ -59,7 +64,8 @@ public class CorrelationService {
         this.analysisResultRepository = analysisResultRepository;
         this.visualRepository = visualRepository;
         this.qrRepository = qrRepository;
-        this.evidenceService = evidenceService;
+        this.storageService = storageService;
+        this.emailParserService = emailParserService;
     }
 
     @Transactional(readOnly = true)
@@ -82,7 +88,7 @@ public class CorrelationService {
         List<IpArtifact> sourceIps = ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
         Optional<AnalysisResult> sourceHeader = analysisResultRepository.findByAnalysisRunId(sourceRun.getId());
         List<VisualArtifact> sourceVisuals = visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
-        List<AttachmentMetaDto> sourceAttachments = evidenceService.getEvidenceAttachments(emailId);
+        List<AttachmentMetaDto> sourceAttachments = getEvidenceAttachments(sourceEvidence);
 
         List<HistoricalMatch> newMatches = new ArrayList<>();
         Set<String> matchDeduplicationKeys = new HashSet<>();
@@ -101,7 +107,7 @@ public class CorrelationService {
             for (EmailEvidence other : allOtherEmails) {
                 if (other.getId().equals(sourceEvidence.getId())) continue;
                 try {
-                    List<AttachmentMetaDto> otherAtts = evidenceService.getEvidenceAttachments(other.getId());
+                    List<AttachmentMetaDto> otherAtts = getEvidenceAttachments(other);
                     if (otherAtts != null) {
                         for (AttachmentMetaDto sAtt : sourceAttachments) {
                             if (sAtt.getSha256Hash() == null || sAtt.getSha256Hash().isBlank()) continue;
@@ -252,5 +258,17 @@ public class CorrelationService {
             dtos.add(dto);
         }
         return dtos;
+    }
+
+    private List<AttachmentMetaDto> getEvidenceAttachments(EmailEvidence evidence) {
+        if (evidence == null || evidence.getStorageKey() == null) {
+            return Collections.emptyList();
+        }
+        try (InputStream inputStream = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
+            ParsedEmailDto parsed = emailParserService.parse(inputStream);
+            return parsed != null && parsed.getAttachments() != null ? parsed.getAttachments() : Collections.emptyList();
+        } catch (Exception e) {
+            return Collections.emptyList();
+        }
     }
 }

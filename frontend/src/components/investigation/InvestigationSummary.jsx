@@ -23,7 +23,7 @@ export default function InvestigationSummary({
 }) {
   const riskScore = riskBreakdown?.deterministicRiskScore ?? 0
   const riskLevel = riskBreakdown?.riskLevel || 'LOW'
-  const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? riskBreakdown?.confidenceScore ?? 0
+  const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? 0
   const confidenceLevel = riskBreakdown?.confidenceLevel || 'LOW'
 
   const threatClass = aiAssessment?.threatClassification || (
@@ -69,19 +69,16 @@ export default function InvestigationSummary({
     headerAnalysis?.spfResult ||
     headerAnalysis?.reportedSpf ||
     headerAnalysis?.activeSpfResult ||
-    headerAnalysis?.spfStatus ||
     'NONE'
   const dkimStatus =
     headerAnalysis?.dkimResult ||
     headerAnalysis?.reportedDkim ||
     headerAnalysis?.activeDkimStatus ||
-    headerAnalysis?.dkimStatus ||
     'NONE'
   const dmarcStatus =
     headerAnalysis?.dmarcResult ||
     headerAnalysis?.reportedDmarc ||
     headerAnalysis?.activeDmarcStatus ||
-    headerAnalysis?.dmarcStatus ||
     'NONE'
 
   const getStatusPill = (status) => {

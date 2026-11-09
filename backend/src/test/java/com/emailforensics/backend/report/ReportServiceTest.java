@@ -5,7 +5,6 @@ import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
 import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.casefile.CaseFile;
-import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.casefile.CaseStatus;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
@@ -64,9 +63,6 @@ class ReportServiceTest {
     private AnalysisRunRepository runRepository;
 
     @Mock
-    private CaseRepository caseRepository;
-
-    @Mock
     private AnalysisResultRepository analysisResultRepository;
 
     @Mock
@@ -111,7 +107,6 @@ class ReportServiceTest {
         service = new ReportService(
                 evidenceRepository,
                 runRepository,
-                caseRepository,
                 analysisResultRepository,
                 hopRepository,
                 urlRepository,

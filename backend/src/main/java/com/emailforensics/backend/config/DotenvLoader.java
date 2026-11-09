@@ -14,10 +14,6 @@ public class DotenvLoader {
 
     private static boolean loaded = false;
 
-    static {
-        load();
-    }
-
     public static synchronized void load() {
         if (loaded) {
             return;
@@ -27,10 +23,7 @@ public class DotenvLoader {
         String[] searchPaths = new String[]{
                 ".env",
                 "../.env",
-                "backend/.env",
-                System.getProperty("user.dir") + File.separator + ".env",
-                System.getProperty("user.dir") + File.separator + ".." + File.separator + ".env",
-                System.getProperty("user.dir") + File.separator + "backend" + File.separator + ".env"
+                "backend/.env"
         };
 
         File envFile = null;

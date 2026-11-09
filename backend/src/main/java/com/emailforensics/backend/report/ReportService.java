@@ -5,7 +5,6 @@ import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
 import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.casefile.CaseFile;
-import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
@@ -54,7 +53,6 @@ public class ReportService {
 
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository runRepository;
-    private final CaseRepository caseRepository;
     private final AnalysisResultRepository analysisResultRepository;
     private final ReceivedHopRepository hopRepository;
     private final ExtractedUrlRepository urlRepository;
@@ -70,7 +68,6 @@ public class ReportService {
 
     public ReportService(EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository runRepository,
-                                 CaseRepository caseRepository,
                                  AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository hopRepository,
                                  ExtractedUrlRepository urlRepository,
@@ -84,7 +81,6 @@ public class ReportService {
                                  EmailParserService emailParserService) {
         this.evidenceRepository = evidenceRepository;
         this.runRepository = runRepository;
-        this.caseRepository = caseRepository;
         this.analysisResultRepository = analysisResultRepository;
         this.hopRepository = hopRepository;
         this.urlRepository = urlRepository;

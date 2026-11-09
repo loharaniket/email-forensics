@@ -4,6 +4,8 @@ import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.infrastructure.DnsLookupService;
 import com.emailforensics.backend.infrastructure.DnsResult;
 import com.emailforensics.backend.infrastructure.IpClassifier;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 
 import java.net.InetAddress;
@@ -16,6 +18,7 @@ import java.security.spec.X509EncodedKeySpec;
 import java.util.ArrayList;
 import java.util.Base64;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -27,6 +30,7 @@ public class EmailAuthService {
 
     private final DnsLookupService dnsLookupService;
     private final IpClassifier ipClassifier;
+    private final ObjectMapper objectMapper;
 
     private static final Pattern DKIM_SELECTOR_PATTERN = Pattern.compile("(?i)\\bs=([a-zA-Z0-9._-]+)");
     private static final Pattern DKIM_DOMAIN_PATTERN = Pattern.compile("(?i)\\bd=([a-zA-Z0-9.-]+)");
@@ -274,6 +278,7 @@ public class EmailAuthService {
     public EmailAuthService(DnsLookupService dnsLookupService, IpClassifier ipClassifier) {
         this.dnsLookupService = dnsLookupService;
         this.ipClassifier = ipClassifier;
+        this.objectMapper = new ObjectMapper();
     }
 
     public ActiveAuthResult performActiveAuthentication(String fromDomain, String returnPathDomain,
@@ -1045,41 +1050,39 @@ public class EmailAuthService {
     }
 
     private String buildObservationsJson(SpfEvaluationResult spf, DkimEvaluationResult dkim, DmarcEvaluationResult dmarc, String dataMode) {
-        StringBuilder sb = new StringBuilder("{");
-        sb.append("\"activeSpf\":{");
-        sb.append("\"status\":\"").append(spf != null ? spf.getStatus() : "NONE").append("\",");
-        sb.append("\"identity\":\"").append(spf != null && spf.getEvaluatedIdentity() != null ? spf.getEvaluatedIdentity() : "MAIL_FROM").append("\",");
-        sb.append("\"record\":").append(spf != null && spf.getSpfRecord() != null ? "\"" + escapeJson(spf.getSpfRecord()) + "\"" : "null").append(",");
-        sb.append("\"mechanism\":").append(spf != null && spf.getMatchedMechanism() != null ? "\"" + escapeJson(spf.getMatchedMechanism()) + "\"" : "null").append(",");
-        sb.append("\"evaluatedIp\":").append(spf != null && spf.getEvaluatedIp() != null ? "\"" + escapeJson(spf.getEvaluatedIp()) + "\"" : "null");
-        sb.append("},");
+        Map<String, Object> root = new LinkedHashMap<>();
 
-        sb.append("\"activeDkim\":{");
-        sb.append("\"status\":\"").append(dkim != null ? dkim.getStatus() : "SIGNATURE_ABSENT").append("\",");
-        sb.append("\"record\":").append(dkim != null && dkim.getDkimRecord() != null ? "\"" + escapeJson(dkim.getDkimRecord()) + "\"" : "null").append(",");
-        sb.append("\"selector\":").append(dkim != null && dkim.getSelector() != null ? "\"" + escapeJson(dkim.getSelector()) + "\"" : "null").append(",");
-        sb.append("\"signingDomain\":").append(dkim != null && dkim.getSigningDomain() != null ? "\"" + escapeJson(dkim.getSigningDomain()) + "\"" : "null").append(",");
-        sb.append("\"cryptographicVerified\":").append(dkim != null && dkim.isCryptographicVerified()).append(",");
-        sb.append("\"verificationNote\":").append(dkim != null && dkim.getVerificationNote() != null ? "\"" + escapeJson(dkim.getVerificationNote()) + "\"" : "null");
-        sb.append("},");
+        Map<String, Object> activeSpf = new LinkedHashMap<>();
+        activeSpf.put("status", spf != null ? spf.getStatus() : "NONE");
+        activeSpf.put("identity", spf != null && spf.getEvaluatedIdentity() != null ? spf.getEvaluatedIdentity() : "MAIL_FROM");
+        activeSpf.put("record", spf != null ? spf.getSpfRecord() : null);
+        activeSpf.put("mechanism", spf != null ? spf.getMatchedMechanism() : null);
+        activeSpf.put("evaluatedIp", spf != null ? spf.getEvaluatedIp() : null);
+        root.put("activeSpf", activeSpf);
 
-        sb.append("\"activeDmarc\":{");
-        sb.append("\"status\":\"").append(dmarc != null ? dmarc.getStatus() : "RECORD_ABSENT").append("\",");
-        sb.append("\"record\":").append(dmarc != null && dmarc.getDmarcRecord() != null ? "\"" + escapeJson(dmarc.getDmarcRecord()) + "\"" : "null").append(",");
-        sb.append("\"policy\":\"").append(dmarc != null ? dmarc.getPolicy() : "none").append("\",");
-        sb.append("\"spfAligned\":").append(dmarc != null && dmarc.isSpfAligned()).append(",");
-        sb.append("\"dkimAligned\":").append(dmarc != null && dmarc.isDkimAligned());
-        sb.append("},");
-        sb.append("\"dataMode\":\"").append(dataMode != null ? dataMode : "REAL").append("\"");
+        Map<String, Object> activeDkim = new LinkedHashMap<>();
+        activeDkim.put("status", dkim != null ? dkim.getStatus() : "SIGNATURE_ABSENT");
+        activeDkim.put("record", dkim != null ? dkim.getDkimRecord() : null);
+        activeDkim.put("selector", dkim != null ? dkim.getSelector() : null);
+        activeDkim.put("signingDomain", dkim != null ? dkim.getSigningDomain() : null);
+        activeDkim.put("cryptographicVerified", dkim != null && dkim.isCryptographicVerified());
+        activeDkim.put("verificationNote", dkim != null ? dkim.getVerificationNote() : null);
+        root.put("activeDkim", activeDkim);
 
-        sb.append("}");
-        return sb.toString();
-    }
+        Map<String, Object> activeDmarc = new LinkedHashMap<>();
+        activeDmarc.put("status", dmarc != null ? dmarc.getStatus() : "RECORD_ABSENT");
+        activeDmarc.put("record", dmarc != null ? dmarc.getDmarcRecord() : null);
+        activeDmarc.put("policy", dmarc != null ? dmarc.getPolicy() : "none");
+        activeDmarc.put("spfAligned", dmarc != null && dmarc.isSpfAligned());
+        activeDmarc.put("dkimAligned", dmarc != null && dmarc.isDkimAligned());
+        root.put("activeDmarc", activeDmarc);
 
-    private String escapeJson(String s) {
-        if (s == null) {
-            return "";
+        root.put("dataMode", dataMode != null ? dataMode : "REAL");
+
+        try {
+            return objectMapper.writeValueAsString(root);
+        } catch (JsonProcessingException e) {
+            return "{}";
         }
-        return s.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

@@ -12,13 +12,13 @@ class IpArtifactServiceTest {
 
     private IpClassifier ipClassifier;
     private DnsLookupService dnsLookupService;
-    private IpArtifactService IpArtifactService;
+    private IpArtifactService ipArtifactService;
 
     @BeforeEach
     void setUp() {
         ipClassifier = new IpClassifier();
         dnsLookupService = new DnsLookupService(1000);
-        IpArtifactService = new IpArtifactService(null, null, null, null, ipClassifier);
+        ipArtifactService = new IpArtifactService(null, null, null, null, ipClassifier);
     }
 
     @Test
@@ -51,7 +51,7 @@ class IpArtifactServiceTest {
 
     @Test
     void shouldClassifyPrivateAndPublicIpArtifacts() {
-        IpArtifact privateArt = IpArtifactService.createIpArtifact(null, "192.168.1.50", "TEST_CONTEXT");
+        IpArtifact privateArt = ipArtifactService.createIpArtifact(null, "192.168.1.50", "TEST_CONTEXT");
         assertNotNull(privateArt);
         assertEquals("192.168.1.50", privateArt.getIpAddress());
         assertTrue(privateArt.getIsPrivate());
@@ -59,7 +59,7 @@ class IpArtifactServiceTest {
         assertEquals("NOT_CHECKED", privateArt.getDataMode());
         assertEquals("TEST_CONTEXT", privateArt.getSourceContext());
 
-        IpArtifact publicArt = IpArtifactService.createIpArtifact(null, "140.82.121.3", "HOP_IP");
+        IpArtifact publicArt = ipArtifactService.createIpArtifact(null, "140.82.121.3", "HOP_IP");
         assertNotNull(publicArt);
         assertEquals("140.82.121.3", publicArt.getIpAddress());
         assertFalse(publicArt.getIsPrivate());

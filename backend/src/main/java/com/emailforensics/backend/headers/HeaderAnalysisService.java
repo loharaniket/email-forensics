@@ -18,6 +18,8 @@ import jakarta.mail.Session;
 import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MailDateFormat;
 import jakarta.mail.internet.MimeMessage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,6 +42,8 @@ import java.util.regex.Pattern;
 
 @Service
 public class HeaderAnalysisService {
+
+    private static final Logger log = LoggerFactory.getLogger(HeaderAnalysisService.class);
 
     private final AnalysisResultRepository analysisResultRepository;
     private final ReceivedHopRepository receivedHopRepository;
@@ -191,13 +195,11 @@ public class HeaderAnalysisService {
                 entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
                 analysisResultRepository.save(entity);
                 analysisResultRepository.flush();
-            } catch (Throwable ignored) {
+            } catch (Exception e) {
+                log.warn("Active email authentication failed for evidence ID: {}", emailId, e);
             }
         }
 
-        dto.setSpfResult(dto.getSpfResult());
-        dto.setDkimResult(dto.getDkimResult());
-        dto.setDmarcResult(dto.getDmarcResult());
         return dto;
         }
     }
