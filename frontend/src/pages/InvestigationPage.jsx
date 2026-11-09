@@ -66,6 +66,38 @@ const STAGE_LABELS = {
   COMPLETED: { label: 'Analysis complete', step: 10, desc: 'All investigation steps completed successfully.' }
 }
 
+// Helper to extract clean parsed email fields from backend response
+function normalizeParsedEmail(detail, hops, reportData, infrastructure) {
+  const parsed = detail?.parsedEmail || {}
+  const emailDate = parsed.sentDate || parsed.rawDate || reportData?.messageMetadata?.sentDate || null
+  const originatingIp =
+    hops?.[0]?.hopIp ||
+    hops?.[0]?.ip ||
+    reportData?.headers?.firstOriginatingIp ||
+    infrastructure?.[0]?.ipAddress ||
+    null
+
+  return {
+    ...parsed,
+    subject: parsed.subject || '(No subject)',
+    from: parsed.from || '—',
+    returnPath: parsed.returnPath || '—',
+    replyTo: parsed.replyTo || [],
+    messageId: parsed.messageId || '—',
+    sentDate: emailDate,
+    messageDate: emailDate,
+    rawDate: parsed.rawDate || emailDate,
+    originatingIp,
+    to: parsed.to || [],
+    cc: parsed.cc || [],
+    extractedText: parsed.extractedText || '',
+    plainTextBody: parsed.plainTextBody || '',
+    htmlBody: parsed.htmlBody || '',
+    attachments: parsed.attachments || [],
+    inlineImages: parsed.inlineImages || []
+  }
+}
+
 export default function InvestigationPage() {
   const { caseId, emailId } = useParams()
   const navigate = useNavigate()
@@ -390,51 +422,9 @@ export default function InvestigationPage() {
     )
   }
 
-  const emailDate =
-    detail?.parsedEmail?.sentDate ||
-    detail?.parsedEmail?.rawDate ||
-    detail?.parsedEmail?.messageDate ||
-    detail?.sentDate ||
-    detail?.rawDate ||
-    detail?.messageDate ||
-    reportData?.messageMetadata?.sentDate ||
-    null
-
-  const originatingIp =
-    (hops && hops.length > 0 && (hops[0].hopIp || hops[0].ip)) ||
-    reportData?.headers?.firstOriginatingIp ||
-    (infrastructure && infrastructure.length > 0 && infrastructure[0].ipAddress) ||
-    detail?.parsedEmail?.originatingIp ||
-    detail?.originatingIp ||
-    null
-
-  const rawParsed = detail?.parsedEmail || {}
-  const parsed = {
-    ...rawParsed,
-    subject: rawParsed.subject || detail?.subject || '(No subject)',
-    from: rawParsed.from || detail?.sender || detail?.from || '—',
-    returnPath: rawParsed.returnPath || detail?.returnPath || '—',
-    replyTo: rawParsed.replyTo && rawParsed.replyTo.length > 0
-      ? rawParsed.replyTo
-      : detail?.replyTo
-      ? (Array.isArray(detail.replyTo) ? detail.replyTo : [detail.replyTo])
-      : [],
-    messageId: rawParsed.messageId || detail?.messageId || '—',
-    sentDate: emailDate,
-    messageDate: emailDate,
-    rawDate: rawParsed.rawDate || emailDate,
-    originatingIp: originatingIp,
-    to: rawParsed.to && rawParsed.to.length > 0
-      ? rawParsed.to
-      : detail?.recipients || detail?.to || [],
-    cc: rawParsed.cc || detail?.cc || [],
-    extractedText: rawParsed.extractedText || detail?.extractedText || '',
-    plainTextBody: rawParsed.plainTextBody || detail?.plainTextBody || '',
-    htmlBody: rawParsed.htmlBody || detail?.htmlBody || ''
-  }
-
-  const attachments = detail?.parsedEmail?.attachments || detail?.attachments || []
-  const inlineImages = detail?.parsedEmail?.inlineImages || detail?.inlineImages || []
+  const parsed = normalizeParsedEmail(detail, hops, reportData, infrastructure)
+  const attachments = parsed.attachments
+  const inlineImages = parsed.inlineImages
 
   const currentIntegrityStatus = integrityCheckResult
     ? integrityCheckResult.intact ? 'VERIFIED' : 'MISMATCH'

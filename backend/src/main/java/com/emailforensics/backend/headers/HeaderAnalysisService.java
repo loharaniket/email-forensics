@@ -46,7 +46,7 @@ public class HeaderAnalysisService {
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
-    private final EmailAuthService EmailAuthService;
+    private final EmailAuthService emailAuthService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Pattern IP_PATTERN = Pattern.compile("(?:\\[|\\()([0-9]{1,3}(?:\\.[0-9]{1,3}){3}|[a-fA-F0-9:]+)(?:\\]|\\))");
@@ -66,13 +66,13 @@ public class HeaderAnalysisService {
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  EvidenceStorageService storageService,
-                                 EmailAuthService EmailAuthService) {
+                                 EmailAuthService emailAuthService) {
         this.analysisResultRepository = analysisResultRepository;
         this.receivedHopRepository = receivedHopRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
-        this.EmailAuthService = EmailAuthService;
+        this.emailAuthService = emailAuthService;
     }
 
     public HeaderAnalysisService(AnalysisResultRepository analysisResultRepository,
@@ -164,7 +164,7 @@ public class HeaderAnalysisService {
             }
         }
 
-        if (EmailAuthService != null) {
+        if (emailAuthService != null) {
             String dkimHeader = null;
             if (dto.getRawHeaders() != null && dto.getRawHeaders().containsKey("DKIM-Signature")) {
                 List<String> dkimVals = dto.getRawHeaders().get("DKIM-Signature");
@@ -174,7 +174,7 @@ public class HeaderAnalysisService {
             }
             try {
                 String returnPathDomain = extractDomain(dto.getReturnPath());
-                EmailAuthService.ActiveAuthResult activeResult = EmailAuthService.performActiveAuthentication(
+                EmailAuthService.ActiveAuthResult activeResult = emailAuthService.performActiveAuthentication(
                         dto.getFromDomain(), returnPathDomain, dkimHeader, hopDtos
                 );
                 dto.setActiveSpfResult(activeResult.getActiveSpfResult());
@@ -389,9 +389,9 @@ public class HeaderAnalysisService {
                     0
             );
 
-            if (EmailAuthService != null) {
+            if (emailAuthService != null) {
                 String returnPathDomain = extractDomain(returnPathAddress);
-                EmailAuthService.ActiveAuthResult activeRes = EmailAuthService.performActiveAuthentication(
+                EmailAuthService.ActiveAuthResult activeRes = emailAuthService.performActiveAuthentication(
                         fromDomain, returnPathDomain, dkimSigRaw, Collections.emptyList()
                 );
                 dto.setActiveSpfResult(activeRes.getActiveSpfResult());

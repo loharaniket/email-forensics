@@ -70,44 +70,21 @@ export default function InvestigationReport({
     }
   }
 
-  const predictedLabel =
-    contentAnalysis?.predictedLabel ||
-    contentAnalysis?.mlPredictedLabel ||
-    'INSUFFICIENT_DATA'
-  const probability =
-    contentAnalysis?.probability != null
-      ? contentAnalysis.probability
-      : contentAnalysis?.mlProbability != null
-      ? contentAnalysis.mlProbability
-      : 0
-  const urgencyDetected = !!(
-    contentAnalysis?.urgency || contentAnalysis?.urgencyDetected
-  )
-  const credentialRequestDetected = !!(
-    contentAnalysis?.credentialRequest ||
-    contentAnalysis?.credentialRequestDetected
-  )
-  const paymentInstructionDetected = !!(
-    contentAnalysis?.paymentInstruction ||
-    contentAnalysis?.paymentInstructionDetected
-  )
-  const impersonationDetected = !!(
-    contentAnalysis?.impersonation || contentAnalysis?.impersonationDetected
-  )
-  const secrecyDetected = !!(
-    contentAnalysis?.secrecy || contentAnalysis?.secrecyDetected
-  )
-  const promptMatches =
-    contentAnalysis?.promptMatches ||
-    contentAnalysis?.promptInjectionMatches ||
-    []
+  const predictedLabel = contentAnalysis?.predictedLabel || 'INSUFFICIENT_DATA'
+  const probability = contentAnalysis?.probability ?? 0
+  const urgencyDetected = !!contentAnalysis?.urgency
+  const credentialRequestDetected = !!contentAnalysis?.credentialRequest
+  const paymentInstructionDetected = !!contentAnalysis?.paymentInstruction
+  const impersonationDetected = !!contentAnalysis?.impersonation
+  const secrecyDetected = !!contentAnalysis?.secrecy
+  const promptMatches = contentAnalysis?.promptMatches || []
   const promptInjectionDetected = !!(
     contentAnalysis?.promptInjectionDetected || promptMatches.length > 0
   )
 
   const riskScore = riskBreakdown?.deterministicRiskScore ?? 0
   const riskLevel = riskBreakdown?.riskLevel || 'LOW'
-  const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? riskBreakdown?.confidenceScore ?? 0
+  const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? 0
   const confidenceLevel = riskBreakdown?.confidenceLevel || 'LOW'
   const factors = riskBreakdown?.factors || []
 

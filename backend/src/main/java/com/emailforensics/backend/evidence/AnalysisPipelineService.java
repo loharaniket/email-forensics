@@ -34,9 +34,9 @@ public class AnalysisPipelineService {
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
-    private final HeaderAnalysisService HeaderAnalysisService;
-    private final UrlAnalysisService UrlAnalysisService;
-    private final IpArtifactService IpArtifactService;
+    private final HeaderAnalysisService headerAnalysisService;
+    private final UrlAnalysisService urlAnalysisService;
+    private final IpArtifactService ipArtifactService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
     private final CorrelationService correlationService;
@@ -50,9 +50,9 @@ public class AnalysisPipelineService {
                                        AnalysisRunRepository analysisRunRepository,
                                        EvidenceStorageService storageService,
                                        EmailParserService emailParserService,
-                                       HeaderAnalysisService HeaderAnalysisService,
-                                       UrlAnalysisService UrlAnalysisService,
-                                       IpArtifactService IpArtifactService,
+                                       HeaderAnalysisService headerAnalysisService,
+                                       UrlAnalysisService urlAnalysisService,
+                                       IpArtifactService ipArtifactService,
                                        VisualAnalysisService visualAnalysisService,
                                        ContentAnalysisService contentAnalysisService,
                                        CorrelationService correlationService,
@@ -63,9 +63,9 @@ public class AnalysisPipelineService {
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
         this.emailParserService = emailParserService;
-        this.HeaderAnalysisService = HeaderAnalysisService;
-        this.UrlAnalysisService = UrlAnalysisService;
-        this.IpArtifactService = IpArtifactService;
+        this.headerAnalysisService = headerAnalysisService;
+        this.urlAnalysisService = urlAnalysisService;
+        this.ipArtifactService = ipArtifactService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
         this.correlationService = correlationService;
@@ -133,7 +133,7 @@ public class AnalysisPipelineService {
             // STAGE 2: ANALYZING_HEADERS
             try {
                 progressService.updateStage(runId, "ANALYZING_HEADERS");
-                HeaderAnalysisService.analyzeAndSaveHeaders(emailId);
+                headerAnalysisService.analyzeAndSaveHeaders(emailId);
             } catch (Exception e) {
                 log.error("Stage ANALYZING_HEADERS failed critically for evidence {}", emailId, e);
                 return progressService.markFailed(runId, "ANALYZING_HEADERS", "HEADER_ANALYSIS_FAILED",
@@ -143,8 +143,8 @@ public class AnalysisPipelineService {
             // STAGE 3: EXTRACTING_INDICATORS
             try {
                 progressService.updateStage(runId, "EXTRACTING_INDICATORS");
-                UrlAnalysisService.analyzeAndSaveUrls(emailId);
-                IpArtifactService.analyzeAndSaveInfrastructure(emailId, null);
+                urlAnalysisService.analyzeAndSaveUrls(emailId);
+                ipArtifactService.analyzeAndSaveInfrastructure(emailId, null);
             } catch (Exception e) {
                 log.warn("Stage EXTRACTING_INDICATORS encountered non-fatal error for evidence {}", emailId, e);
                 partialWarnings.add("Indicator extraction warning: " + e.getMessage());

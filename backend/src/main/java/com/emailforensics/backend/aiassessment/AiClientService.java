@@ -279,24 +279,26 @@ public class AiClientService {
     }
 
     private String buildChatCompletionPayload(String model, String systemPrompt, String userPrompt, boolean includeJsonObjectFormat) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{");
-        sb.append("\"model\":\"").append(escapeJson(model)).append("\",");
-        sb.append("\"temperature\":0.1,");
-        sb.append("\"max_tokens\":4096,");
-        if (model != null && (model.contains("oss-20b") || model.contains("oss-120b"))) {
-            sb.append("\"reasoning_format\":\"parsed\",");
-            sb.append("\"reasoning_effort\":\"low\",");
+        try {
+            Map<String, Object> payload = new java.util.LinkedHashMap<>();
+            payload.put("model", model);
+            payload.put("temperature", 0.1);
+            payload.put("max_tokens", 4096);
+            if (model != null && (model.contains("oss-20b") || model.contains("oss-120b"))) {
+                payload.put("reasoning_format", "parsed");
+                payload.put("reasoning_effort", "low");
+            }
+            if (includeJsonObjectFormat) {
+                payload.put("response_format", Map.of("type", "json_object"));
+            }
+            List<Map<String, String>> messages = new ArrayList<>();
+            messages.add(Map.of("role", "system", "content", systemPrompt != null ? systemPrompt : ""));
+            messages.add(Map.of("role", "user", "content", userPrompt != null ? userPrompt : ""));
+            payload.put("messages", messages);
+            return objectMapper.writeValueAsString(payload);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to serialize AI chat completion payload", e);
         }
-        if (includeJsonObjectFormat) {
-            sb.append("\"response_format\":{\"type\":\"json_object\"},");
-        }
-        sb.append("\"messages\":[");
-        sb.append("{\"role\":\"system\",\"content\":\"").append(escapeJson(systemPrompt)).append("\"},");
-        sb.append("{\"role\":\"user\",\"content\":\"").append(escapeJson(userPrompt)).append("\"}");
-        sb.append("]");
-        sb.append("}");
-        return sb.toString();
     }
 
     private ParsedChatResponse parseChatResponse(String responseJson) {
@@ -552,17 +554,7 @@ public class AiClientService {
         return body.length() > 100 ? body.substring(0, 100) : body;
     }
 
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
-
+    // Helper to unescape JSON strings when the emergency regex fallback parses malformed LLM responses
     private String unescapeJson(String s) {
         if (s == null) return "";
         return s.replace("\\\"", "\"")

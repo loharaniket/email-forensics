@@ -41,7 +41,9 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.regex.Matcher;
@@ -109,89 +111,92 @@ public class ReportService {
     }
 
     public String exportReportJson(ForensicReportDto report) {
-        StringBuilder sb = new StringBuilder();
-        sb.append("{\n");
-        sb.append("  \"reportId\": \"").append(escapeJson(report.getReportId())).append("\",\n");
-        sb.append("  \"generatedAt\": \"").append(report.getGeneratedAt() != null ? report.getGeneratedAt().toString() : "").append("\",\n");
-        sb.append("  \"reportVersion\": \"").append(escapeJson(report.getReportVersion())).append("\",\n");
-        sb.append("  \"generatedBy\": \"").append(escapeJson(report.getGeneratedBy())).append("\",\n");
-        sb.append("  \"classificationLevel\": \"").append(escapeJson(report.getClassificationLevel())).append("\",\n");
+        if (report == null) return "{}";
+        try {
+            Map<String, Object> root = new LinkedHashMap<>();
+            root.put("reportId", report.getReportId() != null ? report.getReportId() : "");
+            root.put("generatedAt", report.getGeneratedAt() != null ? report.getGeneratedAt().toString() : "");
+            root.put("reportVersion", report.getReportVersion() != null ? report.getReportVersion() : "");
+            root.put("generatedBy", report.getGeneratedBy() != null ? report.getGeneratedBy() : "");
+            root.put("classificationLevel", report.getClassificationLevel() != null ? report.getClassificationLevel() : "");
 
-        if (report.getCaseContext() != null) {
-            ForensicReportDto.CaseContextDto c = report.getCaseContext();
-            sb.append("  \"caseContext\": {\n");
-            sb.append("    \"caseId\": \"").append(c.getCaseId() != null ? c.getCaseId().toString() : "").append("\",\n");
-            sb.append("    \"caseNumber\": \"").append(escapeJson(c.getCaseNumber())).append("\",\n");
-            sb.append("    \"title\": \"").append(escapeJson(c.getTitle())).append("\",\n");
-            sb.append("    \"status\": \"").append(escapeJson(c.getStatus())).append("\"\n");
-            sb.append("  },\n");
+            if (report.getCaseContext() != null) {
+                ForensicReportDto.CaseContextDto c = report.getCaseContext();
+                Map<String, Object> caseContext = new LinkedHashMap<>();
+                caseContext.put("caseId", c.getCaseId() != null ? c.getCaseId().toString() : "");
+                caseContext.put("caseNumber", c.getCaseNumber() != null ? c.getCaseNumber() : "");
+                caseContext.put("title", c.getTitle() != null ? c.getTitle() : "");
+                caseContext.put("status", c.getStatus() != null ? c.getStatus() : "");
+                root.put("caseContext", caseContext);
+            }
+
+            if (report.getEvidenceIntegrity() != null) {
+                ForensicReportDto.EvidenceIntegrityDto i = report.getEvidenceIntegrity();
+                Map<String, Object> evidenceIntegrity = new LinkedHashMap<>();
+                evidenceIntegrity.put("emailId", i.getEmailId() != null ? i.getEmailId().toString() : "");
+                evidenceIntegrity.put("originalFilename", i.getOriginalFilename() != null ? i.getOriginalFilename() : "");
+                evidenceIntegrity.put("sha256Hash", i.getSha256Hash() != null ? i.getSha256Hash() : "");
+                evidenceIntegrity.put("recalculatedHash", i.getRecalculatedHash() != null ? i.getRecalculatedHash() : "");
+                evidenceIntegrity.put("fileSizeBytes", i.getFileSizeBytes() != null ? i.getFileSizeBytes() : 0);
+                evidenceIntegrity.put("integrityVerified", i.isIntegrityVerified());
+                evidenceIntegrity.put("integrityStatus", i.getIntegrityStatus() != null ? i.getIntegrityStatus() : "");
+                evidenceIntegrity.put("integrityCheckTimestamp", i.getIntegrityCheckTimestamp() != null ? i.getIntegrityCheckTimestamp().toString() : "");
+                root.put("evidenceIntegrity", evidenceIntegrity);
+            }
+
+            if (report.getMessageSummary() != null) {
+                ForensicReportDto.MessageSummaryDto m = report.getMessageSummary();
+                Map<String, Object> messageSummary = new LinkedHashMap<>();
+                messageSummary.put("subject", m.getSubject() != null ? m.getSubject() : "");
+                messageSummary.put("fromAddress", m.getFromAddress() != null ? m.getFromAddress() : "");
+                messageSummary.put("toAddress", m.getToAddress() != null ? m.getToAddress() : "");
+                messageSummary.put("sentDate", m.getSentDate() != null ? m.getSentDate().toString() : "");
+                messageSummary.put("attachmentsCount", m.getAttachmentsCount());
+                root.put("messageSummary", messageSummary);
+            }
+
+            if (report.getRiskSummary() != null) {
+                ForensicReportDto.DeterministicRiskSummaryDto r = report.getRiskSummary();
+                Map<String, Object> riskSummary = new LinkedHashMap<>();
+                riskSummary.put("deterministicRiskScore", r.getDeterministicRiskScore());
+                riskSummary.put("riskLevel", r.getRiskLevel() != null ? r.getRiskLevel() : "");
+                riskSummary.put("evidenceConfidenceScore", r.getEvidenceConfidenceScore());
+                riskSummary.put("confidenceLevel", r.getConfidenceLevel() != null ? r.getConfidenceLevel() : "");
+                riskSummary.put("contributingFactorsCount", r.getContributingFactorsCount());
+                root.put("riskSummary", riskSummary);
+            }
+
+            if (report.getAiAssessment() != null) {
+                ForensicReportDto.AiAssessmentSummaryDto a = report.getAiAssessment();
+                Map<String, Object> aiAssessment = new LinkedHashMap<>();
+                aiAssessment.put("assessmentPresent", a.isAssessmentPresent());
+                aiAssessment.put("status", a.getStatus() != null ? a.getStatus() : "");
+                aiAssessment.put("provider", a.getProvider() != null ? a.getProvider() : "");
+                aiAssessment.put("modelName", a.getModelName() != null ? a.getModelName() : "");
+                aiAssessment.put("threatClassification", a.getThreatClassification() != null ? a.getThreatClassification() : "");
+                aiAssessment.put("confidenceAssessment", a.getConfidenceAssessment() != null ? a.getConfidenceAssessment() : "");
+                aiAssessment.put("tokensUsed", a.getTokensUsed() != null ? a.getTokensUsed() : 0);
+                aiAssessment.put("generationTimeMs", a.getGenerationTimeMs() != null ? a.getGenerationTimeMs() : 0);
+                aiAssessment.put("summaryExplanation", a.getSummaryExplanation() != null ? a.getSummaryExplanation() : "");
+                aiAssessment.put("promptInjectionDetected", a.isPromptInjectionDetected());
+                root.put("aiAssessment", aiAssessment);
+            }
+
+            if (report.getAnalystSignoff() != null) {
+                ForensicReportDto.AnalystSignoffDto s = report.getAnalystSignoff();
+                Map<String, Object> analystSignoff = new LinkedHashMap<>();
+                analystSignoff.put("certifyingAnalyst", s.getCertifyingAnalyst() != null ? s.getCertifyingAnalyst() : "");
+                analystSignoff.put("signoffTimestamp", s.getSignoffTimestamp() != null ? s.getSignoffTimestamp().toString() : "");
+                analystSignoff.put("certificationStatement", s.getCertificationStatement() != null ? s.getCertificationStatement() : "");
+                root.put("analystSignoff", analystSignoff);
+            } else {
+                root.put("analystSignoff", null);
+            }
+
+            return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(root);
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to export forensic report as JSON", e);
         }
-
-        if (report.getEvidenceIntegrity() != null) {
-            ForensicReportDto.EvidenceIntegrityDto i = report.getEvidenceIntegrity();
-            sb.append("  \"evidenceIntegrity\": {\n");
-            sb.append("    \"emailId\": \"").append(i.getEmailId() != null ? i.getEmailId().toString() : "").append("\",\n");
-            sb.append("    \"originalFilename\": \"").append(escapeJson(i.getOriginalFilename())).append("\",\n");
-            sb.append("    \"sha256Hash\": \"").append(escapeJson(i.getSha256Hash())).append("\",\n");
-            sb.append("    \"recalculatedHash\": \"").append(escapeJson(i.getRecalculatedHash())).append("\",\n");
-            sb.append("    \"fileSizeBytes\": ").append(i.getFileSizeBytes() != null ? i.getFileSizeBytes() : 0).append(",\n");
-            sb.append("    \"integrityVerified\": ").append(i.isIntegrityVerified()).append(",\n");
-            sb.append("    \"integrityStatus\": \"").append(escapeJson(i.getIntegrityStatus())).append("\",\n");
-            sb.append("    \"integrityCheckTimestamp\": \"").append(i.getIntegrityCheckTimestamp() != null ? i.getIntegrityCheckTimestamp().toString() : "").append("\"\n");
-            sb.append("  },\n");
-        }
-
-        if (report.getMessageSummary() != null) {
-            ForensicReportDto.MessageSummaryDto m = report.getMessageSummary();
-            sb.append("  \"messageSummary\": {\n");
-            sb.append("    \"subject\": \"").append(escapeJson(m.getSubject())).append("\",\n");
-            sb.append("    \"fromAddress\": \"").append(escapeJson(m.getFromAddress())).append("\",\n");
-            sb.append("    \"toAddress\": \"").append(escapeJson(m.getToAddress())).append("\",\n");
-            sb.append("    \"sentDate\": \"").append(m.getSentDate() != null ? m.getSentDate().toString() : "").append("\",\n");
-            sb.append("    \"attachmentsCount\": ").append(m.getAttachmentsCount()).append("\n");
-            sb.append("  },\n");
-        }
-
-        if (report.getRiskSummary() != null) {
-            ForensicReportDto.DeterministicRiskSummaryDto r = report.getRiskSummary();
-            sb.append("  \"riskSummary\": {\n");
-            sb.append("    \"deterministicRiskScore\": ").append(r.getDeterministicRiskScore()).append(",\n");
-            sb.append("    \"riskLevel\": \"").append(escapeJson(r.getRiskLevel())).append("\",\n");
-            sb.append("    \"evidenceConfidenceScore\": ").append(r.getEvidenceConfidenceScore()).append(",\n");
-            sb.append("    \"confidenceLevel\": \"").append(escapeJson(r.getConfidenceLevel())).append("\",\n");
-            sb.append("    \"contributingFactorsCount\": ").append(r.getContributingFactorsCount()).append("\n");
-            sb.append("  },\n");
-        }
-
-        if (report.getAiAssessment() != null) {
-            ForensicReportDto.AiAssessmentSummaryDto a = report.getAiAssessment();
-            sb.append("  \"aiAssessment\": {\n");
-            sb.append("    \"assessmentPresent\": ").append(a.isAssessmentPresent()).append(",\n");
-            sb.append("    \"status\": \"").append(escapeJson(a.getStatus())).append("\",\n");
-            sb.append("    \"provider\": \"").append(escapeJson(a.getProvider())).append("\",\n");
-            sb.append("    \"modelName\": \"").append(escapeJson(a.getModelName())).append("\",\n");
-            sb.append("    \"threatClassification\": \"").append(escapeJson(a.getThreatClassification())).append("\",\n");
-            sb.append("    \"confidenceAssessment\": \"").append(escapeJson(a.getConfidenceAssessment())).append("\",\n");
-            sb.append("    \"tokensUsed\": ").append(a.getTokensUsed() != null ? a.getTokensUsed() : 0).append(",\n");
-            sb.append("    \"generationTimeMs\": ").append(a.getGenerationTimeMs() != null ? a.getGenerationTimeMs() : 0).append(",\n");
-            sb.append("    \"summaryExplanation\": \"").append(escapeJson(a.getSummaryExplanation())).append("\",\n");
-            sb.append("    \"promptInjectionDetected\": ").append(a.isPromptInjectionDetected()).append("\n");
-            sb.append("  },\n");
-        }
-
-        if (report.getAnalystSignoff() != null) {
-            ForensicReportDto.AnalystSignoffDto s = report.getAnalystSignoff();
-            sb.append("  \"analystSignoff\": {\n");
-            sb.append("    \"certifyingAnalyst\": \"").append(escapeJson(s.getCertifyingAnalyst())).append("\",\n");
-            sb.append("    \"signoffTimestamp\": \"").append(s.getSignoffTimestamp() != null ? s.getSignoffTimestamp().toString() : "").append("\",\n");
-            sb.append("    \"certificationStatement\": \"").append(escapeJson(s.getCertificationStatement())).append("\"\n");
-            sb.append("  }\n");
-        } else {
-            sb.append("  \"analystSignoff\": null\n");
-        }
-
-        sb.append("}\n");
-        return sb.toString();
     }
 
     private ForensicReportDto buildForensicReport(EmailEvidence evidence, AnalysisRun run, String certifyingUser) {
@@ -510,15 +515,6 @@ public class ReportService {
         report.setAnalystSignoff(signoff);
 
         return report;
-    }
-
-    private String escapeJson(String input) {
-        if (input == null) return "";
-        return input.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\r", "\\r")
-                .replace("\n", "\\n")
-                .replace("\t", "\\t");
     }
 
     private List<String> parseStringList(String json) {

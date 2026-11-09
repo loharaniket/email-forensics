@@ -32,9 +32,9 @@ public class UrlAnalysisService {
     private final EmailParserService emailParserService;
     private final UrlExtractionService urlExtractionService;
     private final UrlNormalizationService urlNormalizationService;
-    private final UrlCheckService UrlCheckService;
+    private final UrlCheckService urlCheckService;
     private final DnsLookupService dnsLookupService;
-    private final IpArtifactService IpArtifactService;
+    private final IpArtifactService ipArtifactService;
 
     public UrlAnalysisService(ExtractedUrlRepository extractedUrlRepository,
                            EmailEvidenceRepository evidenceRepository,
@@ -43,9 +43,9 @@ public class UrlAnalysisService {
                            EmailParserService emailParserService,
                            UrlExtractionService urlExtractionService,
                            UrlNormalizationService urlNormalizationService,
-                           UrlCheckService UrlCheckService,
+                           UrlCheckService urlCheckService,
                            DnsLookupService dnsLookupService,
-                           IpArtifactService IpArtifactService) {
+                           IpArtifactService ipArtifactService) {
         this.extractedUrlRepository = extractedUrlRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
@@ -53,9 +53,9 @@ public class UrlAnalysisService {
         this.emailParserService = emailParserService;
         this.urlExtractionService = urlExtractionService;
         this.urlNormalizationService = urlNormalizationService;
-        this.UrlCheckService = UrlCheckService;
+        this.urlCheckService = urlCheckService;
         this.dnsLookupService = dnsLookupService;
-        this.IpArtifactService = IpArtifactService;
+        this.ipArtifactService = ipArtifactService;
     }
 
     @Transactional
@@ -93,13 +93,13 @@ public class UrlAnalysisService {
                 continue;
             }
 
-            boolean isIp = UrlCheckService.isIpUrl(norm.getDomain());
-            boolean unusualPort = UrlCheckService.isUnusualPort(norm.getPort());
-            boolean isShortened = UrlCheckService.isShortened(norm.getDomain());
-            boolean subdomainExcess = UrlCheckService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = UrlCheckService.isLookalike(norm.getDomain());
-            boolean anchorMismatch = UrlCheckService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
-            int riskScore = UrlCheckService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+            boolean isIp = urlCheckService.isIpUrl(norm.getDomain());
+            boolean unusualPort = urlCheckService.isUnusualPort(norm.getPort());
+            boolean isShortened = urlCheckService.isShortened(norm.getDomain());
+            boolean subdomainExcess = urlCheckService.isSubdomainExcess(norm.getDomain());
+            boolean lookalike = urlCheckService.isLookalike(norm.getDomain());
+            boolean anchorMismatch = urlCheckService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
+            int riskScore = urlCheckService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
 
             String dnsStatus;
             String dataMode;
@@ -140,7 +140,7 @@ public class UrlAnalysisService {
             extractedUrlRepository.flush();
         }
 
-        IpArtifactService.analyzeAndSaveInfrastructure(emailId, discoveredIps);
+        ipArtifactService.analyzeAndSaveInfrastructure(emailId, discoveredIps);
 
         return toDtoList(entitiesToSave);
     }
@@ -173,13 +173,13 @@ public class UrlAnalysisService {
                 continue;
             }
 
-            boolean isIp = UrlCheckService.isIpUrl(norm.getDomain());
-            boolean unusualPort = UrlCheckService.isUnusualPort(norm.getPort());
-            boolean isShortened = UrlCheckService.isShortened(norm.getDomain());
-            boolean subdomainExcess = UrlCheckService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = UrlCheckService.isLookalike(norm.getDomain());
-            boolean anchorMismatch = UrlCheckService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
-            int riskScore = UrlCheckService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+            boolean isIp = urlCheckService.isIpUrl(norm.getDomain());
+            boolean unusualPort = urlCheckService.isUnusualPort(norm.getPort());
+            boolean isShortened = urlCheckService.isShortened(norm.getDomain());
+            boolean subdomainExcess = urlCheckService.isSubdomainExcess(norm.getDomain());
+            boolean lookalike = urlCheckService.isLookalike(norm.getDomain());
+            boolean anchorMismatch = urlCheckService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
+            int riskScore = urlCheckService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
 
             String dnsStatus;
             String dataMode;

@@ -42,7 +42,7 @@ public class VisualAnalysisService {
     private final EvidenceStorageService storageService;
     private final QrDecodingService qrDecodingService;
     private final UrlNormalizationService urlNormalizationService;
-    private final UrlCheckService UrlCheckService;
+    private final UrlCheckService urlCheckService;
     private final DnsLookupService dnsLookupService;
     private final ExtractedUrlRepository extractedUrlRepository;
 
@@ -53,7 +53,7 @@ public class VisualAnalysisService {
                                  EvidenceStorageService storageService,
                                  QrDecodingService qrDecodingService,
                                  UrlNormalizationService urlNormalizationService,
-                                 UrlCheckService UrlCheckService,
+                                 UrlCheckService urlCheckService,
                                  DnsLookupService dnsLookupService,
                                  ExtractedUrlRepository extractedUrlRepository) {
         this.visualArtifactRepository = visualArtifactRepository;
@@ -63,7 +63,7 @@ public class VisualAnalysisService {
         this.storageService = storageService;
         this.qrDecodingService = qrDecodingService;
         this.urlNormalizationService = urlNormalizationService;
-        this.UrlCheckService = UrlCheckService;
+        this.urlCheckService = urlCheckService;
         this.dnsLookupService = dnsLookupService;
         this.extractedUrlRepository = extractedUrlRepository;
     }
@@ -299,12 +299,12 @@ public class VisualAnalysisService {
             }
 
             UrlNormalizationService.NormalizedUrlResult norm = urlNormalizationService.normalize(rawUrl);
-            boolean isIp = UrlCheckService.isIpUrl(norm.getDomain());
-            boolean unusualPort = UrlCheckService.isUnusualPort(norm.getPort());
-            boolean isShortened = UrlCheckService.isShortened(norm.getDomain());
-            boolean subdomainExcess = UrlCheckService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = UrlCheckService.isLookalike(norm.getDomain());
-            int riskScore = UrlCheckService.calculateRiskScore(false, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+            boolean isIp = urlCheckService.isIpUrl(norm.getDomain());
+            boolean unusualPort = urlCheckService.isUnusualPort(norm.getPort());
+            boolean isShortened = urlCheckService.isShortened(norm.getDomain());
+            boolean subdomainExcess = urlCheckService.isSubdomainExcess(norm.getDomain());
+            boolean lookalike = urlCheckService.isLookalike(norm.getDomain());
+            int riskScore = urlCheckService.calculateRiskScore(false, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
             String dnsStatus = isIp ? "SKIPPED_IP" : dnsLookupService.lookupDomain(norm.getDomain()).getStatus();
 
             ExtractedUrl entity = new ExtractedUrl(

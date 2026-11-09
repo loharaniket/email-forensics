@@ -47,26 +47,26 @@ import java.util.UUID;
 public class EvidenceController {
 
     private final EvidenceService evidenceService;
-    private final HeaderAnalysisService HeaderAnalysisService;
-    private final UrlAnalysisService UrlAnalysisService;
-    private final IpArtifactService IpArtifactService;
+    private final HeaderAnalysisService headerAnalysisService;
+    private final UrlAnalysisService urlAnalysisService;
+    private final IpArtifactService ipArtifactService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
     private final RiskScoringService riskScoringService;
     private final CorrelationService correlationService;
 
     public EvidenceController(EvidenceService evidenceService,
-                              HeaderAnalysisService HeaderAnalysisService,
-                              UrlAnalysisService UrlAnalysisService,
-                              IpArtifactService IpArtifactService,
+                              HeaderAnalysisService headerAnalysisService,
+                              UrlAnalysisService urlAnalysisService,
+                              IpArtifactService ipArtifactService,
                               VisualAnalysisService visualAnalysisService,
                               ContentAnalysisService contentAnalysisService,
                               RiskScoringService riskScoringService,
                               CorrelationService correlationService) {
         this.evidenceService = evidenceService;
-        this.HeaderAnalysisService = HeaderAnalysisService;
-        this.UrlAnalysisService = UrlAnalysisService;
-        this.IpArtifactService = IpArtifactService;
+        this.headerAnalysisService = headerAnalysisService;
+        this.urlAnalysisService = urlAnalysisService;
+        this.ipArtifactService = ipArtifactService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
         this.riskScoringService = riskScoringService;
@@ -128,25 +128,25 @@ public class EvidenceController {
 
     @GetMapping("/evidence/{emailId}/headers")
     public ResponseEntity<HeaderAnalysisDto> getHeaderAnalysis(@PathVariable UUID emailId) {
-        HeaderAnalysisDto response = HeaderAnalysisService.getHeaderAnalysis(emailId);
+        HeaderAnalysisDto response = headerAnalysisService.getHeaderAnalysis(emailId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/evidence/{emailId}/hops")
     public ResponseEntity<List<ReceivedHopDto>> getReceivedHops(@PathVariable UUID emailId) {
-        List<ReceivedHopDto> response = HeaderAnalysisService.getReceivedHops(emailId);
+        List<ReceivedHopDto> response = headerAnalysisService.getReceivedHops(emailId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/evidence/{emailId}/urls")
     public ResponseEntity<List<ExtractedUrlDto>> getExtractedUrls(@PathVariable UUID emailId) {
-        List<ExtractedUrlDto> response = UrlAnalysisService.getExtractedUrls(emailId);
+        List<ExtractedUrlDto> response = urlAnalysisService.getExtractedUrls(emailId);
         return ResponseEntity.ok(response);
     }
 
     @GetMapping("/evidence/{emailId}/infrastructure")
     public ResponseEntity<List<IpArtifactDto>> getInfrastructure(@PathVariable UUID emailId) {
-        List<IpArtifactDto> response = IpArtifactService.getInfrastructure(emailId);
+        List<IpArtifactDto> response = ipArtifactService.getInfrastructure(emailId);
         return ResponseEntity.ok(response);
     }
 

@@ -16,6 +16,8 @@ import com.emailforensics.backend.visual.QrArtifact;
 import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifact;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,20 +25,16 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class ContentAnalysisService {
 
-    private static final Pattern OBJECT_PATTERN = Pattern.compile("\\{([^{}]+)\\}");
-    private static final Pattern FIELD_PATTERN = Pattern.compile("\"([^\"]+)\"\\s*:\\s*\"((?:\\\\\"|[^\"])*)\"");
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final AnalysisResultRepository analysisResultRepository;
     private final EmailEvidenceRepository emailEvidenceRepository;
@@ -213,102 +211,37 @@ public class ContentAnalysisService {
 
     private String formatPromptMatchesJson(List<PromptInjectionMatchDto> list) {
         if (list == null || list.isEmpty()) return "[]";
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < list.size(); i++) {
-            if (i > 0) sb.append(",");
-            PromptInjectionMatchDto m = list.get(i);
-            sb.append("{")
-                    .append("\"category\":\"").append(escapeJson(m.getCategory())).append("\",")
-                    .append("\"matchedPattern\":\"").append(escapeJson(m.getMatchedPattern())).append("\",")
-                    .append("\"sourceChannel\":\"").append(escapeJson(m.getSourceChannel())).append("\",")
-                    .append("\"explanation\":\"").append(escapeJson(m.getExplanation())).append("\",")
-                    .append("\"severity\":\"").append(escapeJson(m.getSeverity())).append("\"")
-                    .append("}");
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return "[]";
         }
-        sb.append("]");
-        return sb.toString();
     }
 
     private List<PromptInjectionMatchDto> parsePromptMatchesJson(String json) {
-        List<PromptInjectionMatchDto> list = new ArrayList<>();
-        if (json == null || json.trim().isEmpty() || json.equals("[]")) return list;
-        Matcher om = OBJECT_PATTERN.matcher(json);
-        while (om.find()) {
-            Map<String, String> map = parseFieldMap(om.group(1));
-            list.add(new PromptInjectionMatchDto(
-                    map.get("category"),
-                    map.get("matchedPattern"),
-                    map.get("sourceChannel"),
-                    map.get("explanation"),
-                    map.get("severity")
-            ));
+        if (json == null || json.isBlank() || json.equals("[]")) return new ArrayList<>();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<PromptInjectionMatchDto>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
-        return list;
     }
 
     private String formatSocialEngineeringMatchesJson(List<SocialEngineeringMatchDto> list) {
         if (list == null || list.isEmpty()) return "[]";
-        StringBuilder sb = new StringBuilder("[");
-        for (int i = 0; i < list.size(); i++) {
-            if (i > 0) sb.append(",");
-            SocialEngineeringMatchDto m = list.get(i);
-            sb.append("{")
-                    .append("\"category\":\"").append(escapeJson(m.getCategory())).append("\",")
-                    .append("\"matchedPattern\":\"").append(escapeJson(m.getMatchedPattern())).append("\",")
-                    .append("\"sourceChannel\":\"").append(escapeJson(m.getSourceChannel())).append("\",")
-                    .append("\"explanation\":\"").append(escapeJson(m.getExplanation())).append("\",")
-                    .append("\"severity\":\"").append(escapeJson(m.getSeverity())).append("\"")
-                    .append("}");
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return "[]";
         }
-        sb.append("]");
-        return sb.toString();
     }
 
     private List<SocialEngineeringMatchDto> parseSocialEngineeringMatchesJson(String json) {
-        List<SocialEngineeringMatchDto> list = new ArrayList<>();
-        if (json == null || json.trim().isEmpty() || json.equals("[]")) return list;
-        Matcher om = OBJECT_PATTERN.matcher(json);
-        while (om.find()) {
-            Map<String, String> map = parseFieldMap(om.group(1));
-            list.add(new SocialEngineeringMatchDto(
-                    map.get("category"),
-                    map.get("matchedPattern"),
-                    map.get("sourceChannel"),
-                    map.get("explanation"),
-                    map.get("severity")
-            ));
+        if (json == null || json.isBlank() || json.equals("[]")) return new ArrayList<>();
+        try {
+            return objectMapper.readValue(json, new TypeReference<List<SocialEngineeringMatchDto>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
-        return list;
-    }
-
-    private Map<String, String> parseFieldMap(String objContent) {
-        Map<String, String> map = new HashMap<>();
-        Matcher fm = FIELD_PATTERN.matcher(objContent);
-        while (fm.find()) {
-            map.put(fm.group(1), unescapeJson(fm.group(2)));
-        }
-        return map;
-    }
-
-    private String escapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\", "\\\\")
-                .replace("\"", "\\\"")
-                .replace("\b", "\\b")
-                .replace("\f", "\\f")
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t");
-    }
-
-    private String unescapeJson(String s) {
-        if (s == null) return "";
-        return s.replace("\\\"", "\"")
-                .replace("\\\\", "\\")
-                .replace("\\b", "\b")
-                .replace("\\f", "\f")
-                .replace("\\n", "\n")
-                .replace("\\r", "\r")
-                .replace("\\t", "\t");
     }
 }

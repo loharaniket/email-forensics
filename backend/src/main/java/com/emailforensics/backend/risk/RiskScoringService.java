@@ -22,13 +22,16 @@ import com.emailforensics.backend.headers.HeaderAnalysisService;
 import com.emailforensics.backend.infrastructure.IpArtifactService;
 import com.emailforensics.backend.urlintel.UrlAnalysisService;
 import com.emailforensics.backend.visual.VisualAnalysisService;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -37,11 +40,11 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class RiskScoringService {
+
+    private static final Logger log = LoggerFactory.getLogger(RiskScoringService.class);
 
     public static final String CAT_IDENTITY = "IDENTITY";
     public static final String CAT_AUTHENTICATION = "AUTHENTICATION";
@@ -53,16 +56,15 @@ public class RiskScoringService {
 
     public static final String ENGINE_VERSION = "v1.0.0";
 
-    private static final Pattern OBJECT_PATTERN = Pattern.compile("\\{([^{}]+)\\}");
-    private static final Pattern FIELD_PATTERN = Pattern.compile("\"([^\"]+)\"\\s*:\\s*(?:\"((?:\\\\\"|[^\"])*)\"|([0-9]+))");
+    private final ObjectMapper objectMapper = new ObjectMapper();
 
     private final RiskFactorRepository riskFactorRepository;
     private final AnalysisResultRepository analysisResultRepository;
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
-    private final HeaderAnalysisService HeaderAnalysisService;
-    private final UrlAnalysisService UrlAnalysisService;
-    private final IpArtifactService IpArtifactService;
+    private final HeaderAnalysisService headerAnalysisService;
+    private final UrlAnalysisService urlAnalysisService;
+    private final IpArtifactService ipArtifactService;
     private final VisualAnalysisService visualAnalysisService;
     private final ContentAnalysisService contentAnalysisService;
 
@@ -70,18 +72,18 @@ public class RiskScoringService {
                               AnalysisResultRepository analysisResultRepository,
                               EmailEvidenceRepository evidenceRepository,
                               AnalysisRunRepository analysisRunRepository,
-                              HeaderAnalysisService HeaderAnalysisService,
-                              UrlAnalysisService UrlAnalysisService,
-                              IpArtifactService IpArtifactService,
+                              HeaderAnalysisService headerAnalysisService,
+                              UrlAnalysisService urlAnalysisService,
+                              IpArtifactService ipArtifactService,
                               VisualAnalysisService visualAnalysisService,
                               ContentAnalysisService contentAnalysisService) {
         this.riskFactorRepository = riskFactorRepository;
         this.analysisResultRepository = analysisResultRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
-        this.HeaderAnalysisService = HeaderAnalysisService;
-        this.UrlAnalysisService = UrlAnalysisService;
-        this.IpArtifactService = IpArtifactService;
+        this.headerAnalysisService = headerAnalysisService;
+        this.urlAnalysisService = urlAnalysisService;
+        this.ipArtifactService = ipArtifactService;
         this.visualAnalysisService = visualAnalysisService;
         this.contentAnalysisService = contentAnalysisService;
     }
@@ -96,38 +98,44 @@ public class RiskScoringService {
 
         HeaderAnalysisDto headerAnalysis = null;
         try {
-            headerAnalysis = HeaderAnalysisService.getHeaderAnalysis(emailId);
-        } catch (Throwable ignored) {
+            headerAnalysis = headerAnalysisService.getHeaderAnalysis(emailId);
+        } catch (Exception e) {
+            log.warn("Could not retrieve header analysis for risk scoring: {}", e.getMessage());
         }
 
         List<ReceivedHopDto> hops = Collections.emptyList();
         try {
-            hops = HeaderAnalysisService.getReceivedHops(emailId);
-        } catch (Throwable ignored) {
+            hops = headerAnalysisService.getReceivedHops(emailId);
+        } catch (Exception e) {
+            log.warn("Could not retrieve received hops for risk scoring: {}", e.getMessage());
         }
 
         List<ExtractedUrlDto> urls = Collections.emptyList();
         try {
-            urls = UrlAnalysisService.getExtractedUrls(emailId);
-        } catch (Throwable ignored) {
+            urls = urlAnalysisService.getExtractedUrls(emailId);
+        } catch (Exception e) {
+            log.warn("Could not retrieve extracted URLs for risk scoring: {}", e.getMessage());
         }
 
         List<IpArtifactDto> ips = Collections.emptyList();
         try {
-            ips = IpArtifactService.getInfrastructure(emailId);
-        } catch (Throwable ignored) {
+            ips = ipArtifactService.getInfrastructure(emailId);
+        } catch (Exception e) {
+            log.warn("Could not retrieve infrastructure IPs for risk scoring: {}", e.getMessage());
         }
 
         List<VisualArtifactDto> visuals = Collections.emptyList();
         try {
             visuals = visualAnalysisService.getVisualArtifacts(emailId);
-        } catch (Throwable ignored) {
+        } catch (Exception e) {
+            log.warn("Could not retrieve visual artifacts for risk scoring: {}", e.getMessage());
         }
 
         Optional<ContentAnalysisDto> contentOpt = Optional.empty();
         try {
             contentOpt = contentAnalysisService.getContentAnalysis(emailId);
-        } catch (Throwable ignored) {
+        } catch (Exception e) {
+            log.warn("Could not retrieve content analysis for risk scoring: {}", e.getMessage());
         }
 
         List<RiskFactor> rawFactors = new ArrayList<>();
@@ -661,58 +669,23 @@ public class RiskScoringService {
     }
 
     private String formatCategoryScoresJson(Map<String, Integer> scores, Map<String, Integer> counts) {
-        StringBuilder sb = new StringBuilder("[");
-        Map<String, String> displayNames = getCategoryDisplayNames();
-        int idx = 0;
-        for (Map.Entry<String, Integer> entry : scores.entrySet()) {
-            if (idx > 0) {
-                sb.append(",");
-            }
-            String cat = entry.getKey();
-            sb.append("{")
-                    .append("\"category\":\"").append(cat).append("\",")
-                    .append("\"displayName\":\"").append(displayNames.getOrDefault(cat, cat)).append("\",")
-                    .append("\"score\":").append(entry.getValue()).append(",")
-                    .append("\"factorCount\":").append(counts.getOrDefault(cat, 0))
-                    .append("}");
-            idx++;
+        if (scores == null || scores.isEmpty()) return "[]";
+        List<RiskCategoryScoreDto> list = buildCategoryScoreDtos(scores, counts);
+        try {
+            return objectMapper.writeValueAsString(list);
+        } catch (Exception e) {
+            return "[]";
         }
-        sb.append("]");
-        return sb.toString();
     }
 
     private List<RiskCategoryScoreDto> parseCategoryScoresJson(String json) {
-        List<RiskCategoryScoreDto> list = new ArrayList<>();
-        if (json == null || json.trim().isEmpty() || json.equals("[]")) {
-            return list;
+        if (json == null || json.isBlank() || json.equals("[]")) {
+            return new ArrayList<>();
         }
-
-        Matcher om = OBJECT_PATTERN.matcher(json);
-        while (om.find()) {
-            String obj = om.group(1);
-            Map<String, String> map = new HashMap<>();
-            Matcher fm = FIELD_PATTERN.matcher(obj);
-            while (fm.find()) {
-                String key = fm.group(1);
-                String val = fm.group(2) != null ? fm.group(2) : fm.group(3);
-                map.put(key, val);
-            }
-            list.add(new RiskCategoryScoreDto(
-                    map.get("category"),
-                    map.get("displayName"),
-                    parseIntSafe(map.get("score")),
-                    parseIntSafe(map.get("factorCount"))
-            ));
-        }
-        return list;
-    }
-
-    private int parseIntSafe(String val) {
-        if (val == null) return 0;
         try {
-            return Integer.parseInt(val);
-        } catch (NumberFormatException e) {
-            return 0;
+            return objectMapper.readValue(json, new TypeReference<List<RiskCategoryScoreDto>>() {});
+        } catch (Exception e) {
+            return new ArrayList<>();
         }
     }
 }

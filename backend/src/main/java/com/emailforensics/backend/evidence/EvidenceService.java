@@ -98,6 +98,11 @@ public class EvidenceService {
         // If an email with the identical SHA-256 hash has already been preserved anywhere in the system,
         // do not store duplicate vault files or duplicate database records.
         // Instead, reuse and return the existing evidence and its forensic analysis results along with the actual case link.
+        //
+        // Concurrency Note: We synchronize on the interned SHA-256 string (stored.getSha256Hash().intern())
+        // so that concurrent upload requests for the exact same file share the same lock instance.
+        // This simple mutex prevents race conditions where two simultaneous uploads of an identical
+        // file could both pass the duplicate check and create duplicate database records.
         synchronized (stored.getSha256Hash().intern()) {
             Optional<EmailEvidence> existingEvidenceOpt = evidenceRepository
                     .findFirstBySha256HashOrderByUploadedAtAsc(stored.getSha256Hash());

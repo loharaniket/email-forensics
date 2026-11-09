@@ -115,4 +115,32 @@ class ContentAnalysisServiceTest {
         assertTrue(!result.getPromptMatches().isEmpty());
         assertTrue(!result.getSocialEngineeringMatches().isEmpty());
     }
+
+    @Test
+    void shouldParseMatchesWithQuotesBackslashesAndNewlines() {
+        UUID emailId = UUID.randomUUID();
+        UUID runId = UUID.randomUUID();
+
+        when(emailEvidenceRepo.findById(emailId)).thenReturn(Optional.of(Mockito.mock(EmailEvidence.class)));
+
+        AnalysisRun run = Mockito.mock(AnalysisRun.class);
+        when(run.getId()).thenReturn(runId);
+        when(analysisRunRepo.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(run));
+
+        AnalysisResult entity = new AnalysisResult(run);
+        entity.setContentResultId(UUID.randomUUID());
+        entity.setPromptInjectionDetected(true);
+        // JSON containing quotation marks, backslashes, and newlines
+        String promptJson = "[{\"category\":\"INJECTION\",\"matchedPattern\":\"\\\"ignore\\\\all\\\"\\ninstructions\",\"sourceChannel\":\"BODY_TEXT\",\"explanation\":\"Line 1\\nLine 2 with \\\"quotes\\\" and \\\\ backslash\",\"severity\":\"HIGH\"}]";
+        entity.setPromptMatchesJson(promptJson);
+
+        when(analysisResultRepo.findByAnalysisRunId(runId)).thenReturn(Optional.of(entity));
+
+        Optional<ContentAnalysisDto> dtoOpt = service.getContentAnalysis(emailId);
+        assertTrue(dtoOpt.isPresent());
+        ContentAnalysisDto dto = dtoOpt.get();
+        assertEquals(1, dto.getPromptMatches().size());
+        assertEquals("\"ignore\\all\"\ninstructions", dto.getPromptMatches().get(0).getMatchedPattern());
+        assertEquals("Line 1\nLine 2 with \"quotes\" and \\ backslash", dto.getPromptMatches().get(0).getExplanation());
+    }
 }
