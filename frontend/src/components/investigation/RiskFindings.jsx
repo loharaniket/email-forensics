@@ -20,7 +20,7 @@ export default function RiskFindings({ riskBreakdown }) {
 
   const riskScore = riskBreakdown.deterministicRiskScore ?? 0
   const riskLevel = riskBreakdown.riskLevel || 'LOW'
-  const confidenceScore = riskBreakdown.evidenceConfidenceScore ?? riskBreakdown.confidenceScore ?? 0
+  const confidenceScore = riskBreakdown.evidenceConfidenceScore ?? 0
   const confidenceLevel = riskBreakdown.confidenceLevel || 'LOW'
 
   const factors = riskBreakdown.factors || []

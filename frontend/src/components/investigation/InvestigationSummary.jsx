@@ -95,10 +95,7 @@ export default function InvestigationSummary({
     return <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#667085] border border-[#E4E7EC]">{s.toLowerCase()}</span>
   }
 
-  const topFindings =
-    riskBreakdown?.factors ||
-    riskBreakdown?.contributingFactors ||
-    []
+  const topFindings = riskBreakdown?.factors || []
 
   return (
     <div className="space-y-6">

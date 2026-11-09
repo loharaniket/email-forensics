@@ -20,6 +20,8 @@ import com.emailforensics.backend.visual.QrArtifact;
 import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifact;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,8 @@ import java.util.UUID;
 
 @Service
 public class CorrelationService {
+
+    private static final Logger log = LoggerFactory.getLogger(CorrelationService.class);
 
     private final HistoricalMatchRepository matchRepository;
     private final EmailEvidenceRepository evidenceRepository;
@@ -88,7 +92,13 @@ public class CorrelationService {
         List<IpArtifact> sourceIps = ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
         Optional<AnalysisResult> sourceHeader = analysisResultRepository.findByAnalysisRunId(sourceRun.getId());
         List<VisualArtifact> sourceVisuals = visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(sourceRun.getId());
-        List<AttachmentMetaDto> sourceAttachments = getEvidenceAttachments(sourceEvidence);
+        List<AttachmentMetaDto> sourceAttachments;
+        try {
+            sourceAttachments = getEvidenceAttachments(sourceEvidence);
+        } catch (Exception e) {
+            log.error("Failed to read source evidence attachments for correlation (evidence ID: {}): {}", sourceEvidence.getId(), e.getMessage());
+            throw new IllegalStateException("Failed to read source evidence attachments for correlation (evidence ID: " + sourceEvidence.getId() + ")", e);
+        }
 
         List<HistoricalMatch> newMatches = new ArrayList<>();
         Set<String> matchDeduplicationKeys = new HashSet<>();
@@ -120,7 +130,8 @@ public class CorrelationService {
                             }
                         }
                     }
-                } catch (Exception ignored) {
+                } catch (Exception e) {
+                    log.warn("Failed to read attachments for correlated historical evidence (ID: {}): {}", other.getId(), e.getMessage());
                 }
             }
         }
@@ -260,15 +271,16 @@ public class CorrelationService {
         return dtos;
     }
 
-    private List<AttachmentMetaDto> getEvidenceAttachments(EmailEvidence evidence) {
+    private List<AttachmentMetaDto> getEvidenceAttachments(EmailEvidence evidence) throws Exception {
         if (evidence == null || evidence.getStorageKey() == null) {
             return Collections.emptyList();
         }
         try (InputStream inputStream = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
             ParsedEmailDto parsed = emailParserService.parse(inputStream);
+            if (parsed != null && parsed.getParseWarnings() != null && !parsed.getParseWarnings().isEmpty()) {
+                log.warn("MIME parser warnings for evidence ID {}: {}", evidence.getId(), parsed.getParseWarnings());
+            }
             return parsed != null && parsed.getAttachments() != null ? parsed.getAttachments() : Collections.emptyList();
-        } catch (Exception e) {
-            return Collections.emptyList();
         }
     }
 }

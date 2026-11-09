@@ -39,6 +39,7 @@ import java.util.UUID;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -216,6 +217,50 @@ public class CorrelationServiceTest {
         when(emailParserService.parse(any(InputStream.class))).thenReturn(new ParsedEmailDto());
         when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));
 
+        when(matchRepository.findBySourceEmailId(email1.getId())).thenReturn(Collections.emptyList());
+
+        List<CorrelationMatchDto> results = correlationService.correlateAndSave(email1.getId());
+
+        assertNotNull(results);
+        assertTrue(results.isEmpty());
+    }
+
+    @Test
+    void testCorrelateAndSave_UnreadableSourceEvidenceFile_ThrowsIllegalStateException() {
+        when(evidenceRepository.findById(email1.getId())).thenReturn(Optional.of(email1));
+        when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(email1.getId())).thenReturn(Optional.of(run1));
+
+        when(urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
+        when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
+        when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
+        when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
+        when(storageService.loadAsResource(email1.getStorageKey())).thenThrow(new RuntimeException("Disk I/O failure reading evidence"));
+
+        IllegalStateException ex = assertThrows(IllegalStateException.class, () -> correlationService.correlateAndSave(email1.getId()));
+        assertTrue(ex.getMessage().contains("Failed to read source evidence attachments for correlation"));
+    }
+
+    @Test
+    void testCorrelateAndSave_UnreadableCorrelatedEvidenceFile_LogsAndContinues() {
+        when(evidenceRepository.findById(email1.getId())).thenReturn(Optional.of(email1));
+        when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(email1.getId())).thenReturn(Optional.of(run1));
+
+        when(urlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
+        when(ipRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
+        when(analysisResultRepository.findByAnalysisRunId(run1.getId())).thenReturn(Optional.empty());
+        when(visualRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run1.getId())).thenReturn(Collections.emptyList());
+        when(evidenceRepository.findAllBySha256Hash(email1.getSha256Hash())).thenReturn(List.of(email1));
+
+        String attachmentHash = "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855";
+        AttachmentMetaDto att1 = new AttachmentMetaDto("invoice.pdf", "application/pdf", 1024L, attachmentHash, false, null, false);
+        ParsedEmailDto parsed1 = new ParsedEmailDto();
+        parsed1.setAttachments(List.of(att1));
+
+        when(storageService.loadAsResource(email1.getStorageKey())).thenReturn(new ByteArrayResource(new byte[0]));
+        when(emailParserService.parse(any(InputStream.class))).thenReturn(parsed1);
+
+        when(storageService.loadAsResource(email2.getStorageKey())).thenThrow(new RuntimeException("Corrupted file"));
+        when(evidenceRepository.findAll()).thenReturn(List.of(email1, email2));
         when(matchRepository.findBySourceEmailId(email1.getId())).thenReturn(Collections.emptyList());
 
         List<CorrelationMatchDto> results = correlationService.correlateAndSave(email1.getId());

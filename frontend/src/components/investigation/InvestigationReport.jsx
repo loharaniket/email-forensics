@@ -91,8 +91,8 @@ export default function InvestigationReport({
   const reportId = reportData?.reportId || `DFIR-${(emailId || '00000000').substring(0, 8).toUpperCase()}`
   const caseNumber = detail.caseNumber || 'N/A'
   const caseTitle = detail.caseTitle || 'Email Evidence Investigation'
-  const examinerName = reportData?.analystSignoff?.signoffAnalyst || user?.username || 'analyst'
-  const examinerRole = reportData?.analystSignoff?.signoffRole || user?.role || 'Digital Forensics Analyst'
+  const examinerName = reportData?.analystSignoff?.certifyingAnalyst || user?.username || 'analyst'
+  const examinerRole = user?.role || 'Digital Forensics Analyst'
   const reportDate = formatLocalDate(reportData?.generatedAt || new Date())
   const sentDateDisplay = formatUtcDate(parsed?.sentDate || parsed?.rawDate)
   const uploadDateDisplay = formatUtcDate(detail?.uploadedAt)

@@ -246,9 +246,6 @@ public class HeaderAnalysisService {
             dto.setActiveVerificationSummary(entity.getIndependentVerification());
         }
 
-        dto.setSpfResult(dto.getSpfResult());
-        dto.setDkimResult(dto.getDkimResult());
-        dto.setDmarcResult(dto.getDmarcResult());
         return dto;
     }
 
@@ -407,9 +404,6 @@ public class HeaderAnalysisService {
                 dto.setActiveVerificationSummary(activeRes.getSummary());
             }
 
-            dto.setSpfResult(dto.getSpfResult());
-            dto.setDkimResult(dto.getDkimResult());
-            dto.setDmarcResult(dto.getDmarcResult());
             return dto;
 
         } catch (Exception e) {

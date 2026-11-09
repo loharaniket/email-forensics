@@ -69,11 +69,11 @@ const STAGE_LABELS = {
 // Helper to extract clean parsed email fields from backend response
 function normalizeParsedEmail(detail, hops, reportData, infrastructure) {
   const parsed = detail?.parsedEmail || {}
-  const emailDate = parsed.sentDate || parsed.rawDate || reportData?.messageMetadata?.sentDate || null
+  const emailDate = parsed.sentDate || parsed.rawDate || reportData?.messageSummary?.sentDate || null
   const originatingIp =
     hops?.[0]?.hopIp ||
     hops?.[0]?.ip ||
-    reportData?.headers?.firstOriginatingIp ||
+    reportData?.headerForensics?.firstOriginatingIp ||
     infrastructure?.[0]?.ipAddress ||
     null
 
