@@ -20,7 +20,7 @@ import {
   getEvidenceStatus,
   retryEvidenceAnalysis
 } from '../api/evidence'
-import { getEvidenceReport, downloadEvidenceReportJson } from '../api/report'
+import { getEvidenceReport } from '../api/report'
 
 import InvestigationHeader from '../components/investigation/InvestigationHeader'
 import InvestigationSummary from '../components/investigation/InvestigationSummary'
@@ -122,7 +122,6 @@ export default function InvestigationPage() {
   const [activeTab, setActiveTab] = useState('overview')
   const [copiedKey, setCopiedKey] = useState(null)
   const [reportData, setReportData] = useState(null)
-  const [isExportingJson, setIsExportingJson] = useState(false)
   const [integrityCheckResult, setIntegrityCheckResult] = useState(null)
   const [isVerifyingIntegrity, setIsVerifyingIntegrity] = useState(false)
 
@@ -255,17 +254,6 @@ export default function InvestigationPage() {
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to restart analysis.')
       setIsRetrying(false)
-    }
-  }
-
-  const handleExportReportJson = async () => {
-    setIsExportingJson(true)
-    try {
-      await downloadEvidenceReportJson(emailId)
-    } catch (err) {
-      console.error(err)
-    } finally {
-      setIsExportingJson(false)
     }
   }
 
@@ -466,8 +454,6 @@ export default function InvestigationPage() {
             setActiveTab('report')
             setTimeout(() => window.print(), 300)
           }}
-          onExportJson={handleExportReportJson}
-          isExportingJson={isExportingJson}
           onDownloadOriginal={() =>
             downloadOriginalEvidence(detail.evidenceId, detail.originalFilename)
           }
@@ -812,8 +798,6 @@ export default function InvestigationPage() {
             aiAssessment={aiAssessment}
             flags={flags}
             emailId={emailId}
-            isExportingJson={isExportingJson}
-            handleExportReportJson={handleExportReportJson}
             isVerifyingIntegrity={isVerifyingIntegrity}
             handleVerifyIntegrity={handleVerifyIntegrity}
             currentIntegrityStatus={currentIntegrityStatus}

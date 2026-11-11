@@ -1,15 +1,12 @@
 package com.emailforensics.backend.report;
 
 import com.emailforensics.backend.dto.report.ForensicReportDto;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
 @RestController
@@ -26,18 +23,5 @@ public class ReportController {
     public ResponseEntity<ForensicReportDto> getEvidenceReport(@PathVariable UUID emailId) {
         ForensicReportDto report = reportService.generateReport(emailId);
         return ResponseEntity.ok(report);
-    }
-
-    @GetMapping(value = "/evidence/{emailId}/report/json", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<byte[]> downloadEvidenceReportJson(@PathVariable UUID emailId) {
-        ForensicReportDto report = reportService.generateReport(emailId);
-        String json = reportService.exportReportJson(report);
-        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
-
-        String filename = "forensic-report-" + emailId.toString().substring(0, 8) + ".json";
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
-                .contentType(MediaType.APPLICATION_JSON)
-                .body(bytes);
     }
 }

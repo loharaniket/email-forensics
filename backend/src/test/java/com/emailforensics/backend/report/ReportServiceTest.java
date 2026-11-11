@@ -233,22 +233,4 @@ class ReportServiceTest {
         assertEquals("tamperedHash999", report.getEvidenceIntegrity().getRecalculatedHash());
         assertEquals("MISMATCH", report.getEvidenceIntegrity().getIntegrityStatus());
     }
-
-    @Test
-    void exportReportJson_producesValidPrettyJson() throws Exception {
-        UUID emailId = evidence.getId();
-        when(evidenceRepository.findById(emailId)).thenReturn(Optional.of(evidence));
-        when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(run));
-        when(storageService.loadAsResource("storage/key.eml")).thenReturn(new ByteArrayResource("Subject: Clean".getBytes()));
-
-        ForensicReportDto report = service.generateReport(emailId);
-        String json = service.exportReportJson(report);
-
-        assertNotNull(json);
-        assertTrue(json.contains("\"reportId\""));
-        assertTrue(json.contains("\"evidenceIntegrity\""));
-        assertTrue(json.contains("\"recalculatedHash\""));
-        assertTrue(json.contains("\"integrityStatus\""));
-        assertTrue(json.contains("\"riskSummary\""));
-    }
 }

@@ -295,27 +295,83 @@ public class RiskScoringService {
         List<String> flags = h.getIdentityMismatchFlags();
         if (flags != null) {
             for (String flag : flags) {
-                if ("FROM_REPLYTO_MISMATCH".equalsIgnoreCase(flag)) {
+                if (flag == null) continue;
+                String normalized = flag.trim().toUpperCase(Locale.ROOT);
+                if (normalized.equals("FROM_REPLYTO_MISMATCH")
+                        || normalized.startsWith("REPLY_TO_DOMAIN_MISMATCH")
+                        || normalized.contains("REPLY_TO")
+                        || normalized.contains("REPLYTO")) {
                     addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
                             UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_REPLY_TO_MISMATCH", "MEDIUM", 15,
                             "Reply-To address uses a different domain than the From header address.",
                             "From: " + h.getFromAddress() + " vs Reply-To: " + h.getReplyTo()
                     ), "REPLY_TO");
-                } else if ("FROM_RETURNPATH_MISMATCH".equalsIgnoreCase(flag)) {
+                } else if (normalized.equals("FROM_RETURNPATH_MISMATCH")
+                        || normalized.startsWith("RETURN_PATH_MISMATCH")
+                        || normalized.contains("RETURN_PATH")
+                        || normalized.contains("RETURNPATH")) {
                     addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
                             UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_RETURN_PATH_MISMATCH", "LOW", 10,
                             "Envelope Return-Path domain differs from the message From header domain.",
                             "From: " + h.getFromAddress() + " vs Return-Path: " + h.getReturnPath()
                     ), "RETURN_PATH");
-                } else if ("DISPLAY_NAME_EMAIL_MISMATCH".equalsIgnoreCase(flag) || "DISPLAY_NAME_SPOOFING".equalsIgnoreCase(flag)) {
+                } else if (normalized.equals("DISPLAY_NAME_EMAIL_MISMATCH")
+                        || normalized.equals("DISPLAY_NAME_SPOOFING")
+                        || normalized.startsWith("SUSPICIOUS_DISPLAY_NAME")
+                        || normalized.contains("DISPLAY_NAME")) {
                     addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
                             UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_DISPLAY_NAME_SPOOFING", "HIGH", 20,
                             "From display name contains an embedded email address or deceptive brand mismatch.",
                             "From: " + h.getFromAddress()
                     ), "DISPLAY_NAME");
+                } else if (normalized.startsWith("DKIM_DOMAIN_MISMATCH") || normalized.contains("DKIM_DOMAIN")) {
+                    addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
+                            UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_DKIM_DOMAIN_MISMATCH", "LOW", 10,
+                            "DKIM signature domain does not match From header domain.",
+                            "From: " + h.getFromAddress() + " vs DKIM: " + h.getDkimDomain()
+                    ), "DKIM_MISMATCH");
                 }
             }
         }
+
+        // Direct check fallback: Compare Reply-To and From domain directly
+        if (h.getReplyTo() != null && (h.getFromDomain() != null || h.getFromAddress() != null)) {
+            String fromDomain = h.getFromDomain() != null ? h.getFromDomain().trim().toLowerCase(Locale.ROOT) : extractDomain(h.getFromAddress());
+            String replyToDomain = extractDomain(h.getReplyTo());
+            if (fromDomain != null && replyToDomain != null && !fromDomain.equalsIgnoreCase(replyToDomain)) {
+                addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
+                        UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_REPLY_TO_MISMATCH", "MEDIUM", 15,
+                        "Reply-To address uses a different domain than the From header address.",
+                        "From: " + h.getFromAddress() + " vs Reply-To: " + h.getReplyTo()
+                ), "REPLY_TO");
+            }
+        }
+
+        // Direct check fallback: Compare Return-Path and From domain directly
+        if (h.getReturnPath() != null && (h.getFromDomain() != null || h.getFromAddress() != null)) {
+            String fromDomain = h.getFromDomain() != null ? h.getFromDomain().trim().toLowerCase(Locale.ROOT) : extractDomain(h.getFromAddress());
+            String returnPathDomain = extractDomain(h.getReturnPath());
+            if (fromDomain != null && returnPathDomain != null && !fromDomain.equalsIgnoreCase(returnPathDomain)) {
+                addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
+                        UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_RETURN_PATH_MISMATCH", "LOW", 10,
+                        "Envelope Return-Path domain differs from the message From header domain.",
+                        "From: " + h.getFromAddress() + " vs Return-Path: " + h.getReturnPath()
+                ), "RETURN_PATH");
+            }
+        }
+    }
+
+    private String extractDomain(String emailAddress) {
+        if (emailAddress == null) return null;
+        int atIndex = emailAddress.lastIndexOf('@');
+        if (atIndex >= 0 && atIndex < emailAddress.length() - 1) {
+            String domain = emailAddress.substring(atIndex + 1).trim().toLowerCase(Locale.ROOT);
+            if (domain.endsWith(">")) {
+                domain = domain.substring(0, domain.length() - 1).trim();
+            }
+            return domain;
+        }
+        return null;
     }
 
     private void collectAuthenticationFactors(HeaderAnalysisDto h, AnalysisRun run, List<RiskFactor> factors, Set<String> deduplicationKeys) {

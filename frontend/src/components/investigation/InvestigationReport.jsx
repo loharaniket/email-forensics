@@ -17,8 +17,6 @@ export default function InvestigationReport({
   flags = [],
   user,
   emailId,
-  isExportingJson,
-  handleExportReportJson,
   isVerifyingIntegrity,
   handleVerifyIntegrity,
   currentIntegrityStatus = 'NOT_VERIFIED',
@@ -121,15 +119,6 @@ export default function InvestigationReport({
             className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
           >
             Print / Save as PDF
-          </button>
-
-          <button
-            id="btn-report-tab-export-json"
-            onClick={handleExportReportJson}
-            disabled={isExportingJson}
-            className="px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer disabled:opacity-50"
-          >
-            {isExportingJson ? 'Exporting...' : 'Export JSON Report'}
           </button>
         </div>
       </div>

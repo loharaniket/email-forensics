@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import {
   ArrowLeft,
   Printer,
-  FileDown,
   Download,
   Hash,
   Copy,
@@ -18,8 +17,6 @@ export default function InvestigationHeader({
   copiedKey,
   copyValue,
   onPrint,
-  onExportJson,
-  isExportingJson,
   onDownloadOriginal,
   caseId,
   formatBytes
@@ -64,16 +61,6 @@ export default function InvestigationHeader({
           >
             <Printer className="h-3.5 w-3.5 text-[#2563EB]" />
             <span>Print / PDF report</span>
-          </button>
-
-          <button
-            id="btn-export-report-json"
-            onClick={onExportJson}
-            disabled={isExportingJson}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer disabled:opacity-50"
-          >
-            <FileDown className="h-3.5 w-3.5 text-[#15803D]" />
-            <span>{isExportingJson ? 'Exporting...' : 'Export JSON report'}</span>
           </button>
 
           <button

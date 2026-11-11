@@ -440,4 +440,47 @@ class RiskScoringServiceTest {
         // 6 channels * 10 = 60 completeness points
         assertTrue(result.getConfidenceExplanation().contains("6 forensic channels evaluated"));
     }
+
+    @Test
+    void testHeaderAnalysisMismatchFlagsTriggerIdentityCategory() {
+        HeaderAnalysisDto headers = new HeaderAnalysisDto();
+        headers.setFromAddress("rahul.sharma@yourcompany.in");
+        headers.setFromDomain("yourcompany.in");
+        headers.setReplyTo("rahul.sharma.official123@gmail.com");
+        headers.setReturnPath("bounce@cheap-vps-hosting.net");
+        headers.setIdentityMismatchFlags(List.of(
+                "REPLY_TO_DOMAIN_MISMATCH: Reply-To domain (@gmail.com) differs from From domain (@yourcompany.in)",
+                "RETURN_PATH_MISMATCH: Return-Path envelope (@cheap-vps-hosting.net) differs from From domain (@yourcompany.in)"
+        ));
+        headers.setReportedSpf("pass");
+        headers.setReportedDkim("pass");
+        headers.setReportedDmarc("pass");
+        when(headerAnalysisService.getHeaderAnalysis(emailId)).thenReturn(headers);
+
+        when(headerAnalysisService.getReceivedHops(emailId)).thenReturn(Collections.emptyList());
+        when(urlAnalysisService.getExtractedUrls(emailId)).thenReturn(Collections.emptyList());
+        when(visualAnalysisService.getVisualArtifacts(emailId)).thenReturn(Collections.emptyList());
+        when(contentAnalysisService.getContentAnalysis(emailId)).thenReturn(Optional.empty());
+
+        RiskBreakdownDto result = service.evaluateAndSaveRisk(emailId);
+
+        assertNotNull(result);
+        // IDENTITY should be triggered
+        assertTrue(result.getTriggeredCategories().contains("IDENTITY"));
+
+        // Check category score
+        RiskCategoryScoreDto identityScore = result.getCategoryScores().stream()
+                .filter(c -> "IDENTITY".equals(c.getCategory()))
+                .findFirst()
+                .orElse(null);
+        assertNotNull(identityScore);
+        assertTrue(identityScore.getScore() > 0);
+        assertEquals(2, identityScore.getFactorCount());
+        assertEquals(25, identityScore.getScore()); // 15 (reply-to) + 10 (return-path)
+
+        // Check factors
+        assertEquals(2, result.getFactors().size());
+        assertTrue(result.getFactors().stream().anyMatch(f -> "IDENTITY_REPLY_TO_MISMATCH".equals(f.getFactorCode())));
+        assertTrue(result.getFactors().stream().anyMatch(f -> "IDENTITY_RETURN_PATH_MISMATCH".equals(f.getFactorCode())));
+    }
 }

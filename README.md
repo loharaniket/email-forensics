@@ -17,7 +17,7 @@ When an analyst receives a suspicious or malicious email, they upload the raw `.
 7. **Calculates an Explainable Risk Score:** Computes a transparent 0–100 risk score based on weighted forensic rules. Every score comes with a confidence rating and an itemized breakdown of contributing factors.
 8. **Correlates Across Past Cases:** Checks if sender domains, subject patterns, IP addresses, or attachment hashes match evidence from other investigations in the database.
 9. **Generates AI Threat Summaries:** Provides a grounded technical summary and maps findings to MITRE ATT&CK techniques (supports Groq/OpenAI compatible models with an automatic local fallback).
-10. **Produces Multi-Format Reports:** Generates an interactive web dossier, a printer-friendly PDF layout with analyst sign-off blocks, and a structured JSON export.
+10. **Produces Multi-Format Reports:** Generates an interactive web dossier and a printer-friendly PDF layout with analyst sign-off blocks.
 
 ---
 
@@ -47,7 +47,7 @@ When an analyst receives a suspicious or malicious email, they upload the raw `.
 [ Real-time Updates ] ──► Server-Sent Events (SSE) stream to React frontend
         │
         ▼
-[ Dossier & Reports ] ──► Web UI, Printable PDF, JSON Export
+[ Dossier & Reports ] ──► Web UI, Printable PDF
 ```
 
 ---
@@ -112,7 +112,7 @@ email-forensics/
 │   │   ├── headers/          # Header checks, SPF/DKIM/DMARC, received hops
 │   │   ├── health/           # Health checks and system reset/truncate tool
 │   │   ├── infrastructure/   # IP classification and DNS lookups
-│   │   ├── report/           # Dossier report builder and JSON export
+│   │   ├── report/           # Dossier report builder and formatting
 │   │   ├── risk/             # Deterministic risk scoring and confidence rating
 │   │   ├── security/         # Spring Security filters and UserDetailsService
 │   │   ├── urlintel/         # URL extraction, heuristics, and normalization
@@ -205,7 +205,7 @@ The frontend will run at `http://localhost:5173` and automatically proxies `/api
    - **Risk Scoring:** Transparent 0–100 score with an itemized table of risk reasons and weights.
    - **Correlations:** Links to any matching indicators found in earlier cases.
    - **AI Assessment:** High-level narrative summary and MITRE ATT&CK technique tags.
-5. **Generate a Report:** Open the **"Forensic Dossier Report"** tab to view the formatted report, export it as a clean JSON file, or print/save it as a PDF.
+5. **Generate a Report:** Open the **"Forensic Dossier Report"** tab to view the formatted report, or print/save it as a PDF.
 
 ---
 
