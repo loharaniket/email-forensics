@@ -1,13 +1,8 @@
 package com.emailforensics.backend.evidence;
 
-import com.emailforensics.backend.casefile.CaseFile;
-import com.emailforensics.backend.user.User;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.Id;
-import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
@@ -15,17 +10,13 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "email_evidence")
+@Table(name = "emails")
 public class EmailEvidence {
 
     @Id
     private UUID id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "case_id", nullable = false)
-    private CaseFile caseFile;
-
-    @Column(name = "original_filename", nullable = false, length = 255)
+    @Column(name = "original_file_name", nullable = false, length = 255)
     private String originalFilename;
 
     @Column(name = "storage_key", nullable = false, unique = true, length = 500)
@@ -44,12 +35,8 @@ public class EmailEvidence {
     @Column(name = "message_id", length = 998)
     private String messageId;
 
-    @Column(name = "sent_date")
+    @Column(name = "sent_at")
     private Instant sentDate;
-
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "uploaded_by", nullable = false)
-    private User uploadedBy;
 
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
@@ -57,15 +44,13 @@ public class EmailEvidence {
     public EmailEvidence() {
     }
 
-    public EmailEvidence(UUID id, CaseFile caseFile, String originalFilename, String storageKey,
-                         Long fileSizeBytes, String sha256Hash, User uploadedBy) {
+    public EmailEvidence(UUID id, String originalFilename, String storageKey,
+                         Long fileSizeBytes, String sha256Hash) {
         this.id = id;
-        this.caseFile = caseFile;
         this.originalFilename = originalFilename;
         this.storageKey = storageKey;
         this.fileSizeBytes = fileSizeBytes;
         this.sha256Hash = sha256Hash;
-        this.uploadedBy = uploadedBy;
         this.uploadedAt = Instant.now();
     }
 
@@ -87,20 +72,20 @@ public class EmailEvidence {
         this.id = id;
     }
 
-    public CaseFile getCaseFile() {
-        return caseFile;
-    }
-
-    public void setCaseFile(CaseFile caseFile) {
-        this.caseFile = caseFile;
-    }
-
     public String getOriginalFilename() {
         return originalFilename;
     }
 
     public void setOriginalFilename(String originalFilename) {
         this.originalFilename = originalFilename;
+    }
+
+    public String getOriginalFileName() {
+        return originalFilename;
+    }
+
+    public void setOriginalFileName(String originalFileName) {
+        this.originalFilename = originalFileName;
     }
 
     public String getStorageKey() {
@@ -151,12 +136,12 @@ public class EmailEvidence {
         this.sentDate = sentDate;
     }
 
-    public User getUploadedBy() {
-        return uploadedBy;
+    public Instant getSentAt() {
+        return sentDate;
     }
 
-    public void setUploadedBy(User uploadedBy) {
-        this.uploadedBy = uploadedBy;
+    public void setSentAt(Instant sentAt) {
+        this.sentDate = sentAt;
     }
 
     public Instant getUploadedAt() {

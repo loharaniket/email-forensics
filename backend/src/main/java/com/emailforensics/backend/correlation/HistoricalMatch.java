@@ -15,30 +15,30 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "historical_matches")
+@Table(name = "email_matches")
 public class HistoricalMatch {
 
     @Id
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "source_run_id", nullable = false)
+    @JoinColumn(name = "source_analysis_run_id", nullable = false)
     private AnalysisRun sourceRun;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "matched_email_id", nullable = false)
     private EmailEvidence matchedEmail;
 
-    @Column(name = "indicator_type", nullable = false, length = 50)
+    @Column(name = "match_type", nullable = false, length = 50)
     private String indicatorType;
 
-    @Column(name = "normalized_indicator_value", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "match_value", nullable = false, columnDefinition = "TEXT")
     private String normalizedIndicatorValue;
 
     @Column(name = "match_strength", nullable = false, length = 20)
     private String matchStrength;
 
-    @Column(name = "match_explanation", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "explanation", nullable = false, columnDefinition = "TEXT")
     private String matchExplanation;
 
     @Column(name = "created_at", nullable = false)

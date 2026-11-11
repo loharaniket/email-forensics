@@ -23,6 +23,13 @@ public class InvestigationDetailDto {
     public InvestigationDetailDto() {
     }
 
+    public InvestigationDetailDto(UUID evidenceId, String originalFilename, Long fileSizeBytes,
+                                  String sha256Hash, Instant uploadedAt, AnalysisStatus pipelineStatus,
+                                  String currentStage, ParsedEmailDto parsedEmail) {
+        this(evidenceId, null, null, null, originalFilename, fileSizeBytes, sha256Hash,
+                uploadedAt, null, pipelineStatus, currentStage, parsedEmail);
+    }
+
     public InvestigationDetailDto(UUID evidenceId, UUID caseId, String caseNumber, String caseTitle,
                                   String originalFilename, Long fileSizeBytes, String sha256Hash,
                                   Instant uploadedAt, String uploadedByUsername, AnalysisStatus pipelineStatus,

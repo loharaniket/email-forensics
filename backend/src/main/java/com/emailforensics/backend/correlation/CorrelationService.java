@@ -108,7 +108,7 @@ public class CorrelationService {
             if (!other.getId().equals(sourceEvidence.getId())) {
                 addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
                         "EMAIL_HASH", sourceEvidence.getSha256Hash(), "EXACT",
-                        "Identical email message SHA-256 hash observed in Case " + other.getCaseFile().getCaseNumber());
+                        "Identical email message SHA-256 hash observed in previous email (" + other.getOriginalFilename() + ")");
             }
         }
 
@@ -125,7 +125,7 @@ public class CorrelationService {
                                 if (sAtt.getSha256Hash().equalsIgnoreCase(oAtt.getSha256Hash())) {
                                     addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
                                             "ATTACHMENT_HASH", sAtt.getSha256Hash(), "EXACT",
-                                            "Identical attachment file payload (" + sAtt.getFilename() + ") also observed in Case " + other.getCaseFile().getCaseNumber());
+                                            "Identical attachment file payload (" + sAtt.getFilename() + ") also observed in email " + other.getOriginalFilename());
                                 }
                             }
                         }
@@ -145,7 +145,7 @@ public class CorrelationService {
                     if (!other.getId().equals(sourceEvidence.getId())) {
                         addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
                                 "URL", norm, "EXACT",
-                                "Exact matching target URL (" + norm + ") identified in Case " + other.getCaseFile().getCaseNumber());
+                                "Exact matching target URL (" + norm + ") identified in email " + other.getOriginalFilename());
                     }
                 }
             }
@@ -172,7 +172,7 @@ public class CorrelationService {
                     if (!other.getId().equals(sourceEvidence.getId())) {
                         addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
                                 "IP_ADDRESS", ip.getIpAddress(), "EXACT",
-                                "Identical transit mail server IP (" + ip.getIpAddress() + ") linked to Case " + other.getCaseFile().getCaseNumber());
+                                "Identical transit mail server IP (" + ip.getIpAddress() + ") linked to email " + other.getOriginalFilename());
                     }
                 }
             }
@@ -188,7 +188,7 @@ public class CorrelationService {
                         if (!other.getId().equals(sourceEvidence.getId())) {
                             addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
                                     "QR_PAYLOAD", qr.getDecodedPayload(), "EXACT",
-                                    "Identical decoded QR code destination URL observed in Case " + other.getCaseFile().getCaseNumber());
+                                    "Identical decoded QR code destination URL observed in email " + other.getOriginalFilename());
                         }
                     }
                 }
@@ -204,7 +204,7 @@ public class CorrelationService {
                     if (!other.getId().equals(sourceEvidence.getId())) {
                         addMatchCandidate(newMatches, matchDeduplicationKeys, sourceRun, other,
                                 "SENDER_DOMAIN", fromDomain, "MEDIUM",
-                                "Matching sender domain (" + fromDomain + ") found in previous investigation " + other.getCaseFile().getCaseNumber());
+                                "Matching sender domain (" + fromDomain + ") found in previous email " + other.getOriginalFilename());
                     }
                 }
             }
@@ -253,9 +253,9 @@ public class CorrelationService {
                     m.getSourceRun().getId(),
                     m.getSourceRun().getEmailEvidence().getId(),
                     matched.getId(),
-                    matched.getCaseFile().getId(),
-                    matched.getCaseFile().getCaseNumber(),
-                    matched.getCaseFile().getTitle(),
+                    null,
+                    null,
+                    null,
                     matched.getSubject() != null ? matched.getSubject() : "Untitled Email",
                     matched.getOriginalFilename(),
                     matched.getSentDate(),

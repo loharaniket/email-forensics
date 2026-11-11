@@ -1,6 +1,5 @@
 package com.emailforensics.backend.correlation;
 
-import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.ParsedEmailDto;
@@ -17,8 +16,6 @@ import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
-import com.emailforensics.backend.user.Role;
-import com.emailforensics.backend.user.User;
 import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -82,9 +79,6 @@ public class CorrelationServiceTest {
 
     private CorrelationService correlationService;
 
-    private User analyst;
-    private CaseFile caseFile1;
-    private CaseFile caseFile2;
     private EmailEvidence email1;
     private EmailEvidence email2;
     private AnalysisRun run1;
@@ -105,16 +99,12 @@ public class CorrelationServiceTest {
                 emailParserService
         );
 
-        analyst = new User(UUID.randomUUID(), "analyst", "analyst@test.local", "hashed", Role.ANALYST, true, Instant.now());
-        caseFile1 = new CaseFile(UUID.randomUUID(), "CASE-2026-0001", "Phishing Campaign Alpha", "Desc", com.emailforensics.backend.casefile.CaseStatus.OPEN, "notes", analyst, Instant.now(), Instant.now());
-        caseFile2 = new CaseFile(UUID.randomUUID(), "CASE-2026-0002", "Credential Harvest Beta", "Desc", com.emailforensics.backend.casefile.CaseStatus.OPEN, "notes", analyst, Instant.now(), Instant.now());
-
-        email1 = new EmailEvidence(UUID.randomUUID(), caseFile1, "phish1.eml", "storage-1", 1024L,
-                "a1b2c3d4e5f60000000000000000000000000000000000000000000000000001", analyst);
+        email1 = new EmailEvidence(UUID.randomUUID(), "phish1.eml", "storage-1", 1024L,
+                "a1b2c3d4e5f60000000000000000000000000000000000000000000000000001");
         email1.setSubject("Urgent Account Verification");
 
-        email2 = new EmailEvidence(UUID.randomUUID(), caseFile2, "phish2.eml", "storage-2", 2048L,
-                "a1b2c3d4e5f60000000000000000000000000000000000000000000000000002", analyst);
+        email2 = new EmailEvidence(UUID.randomUUID(), "phish2.eml", "storage-2", 2048L,
+                "a1b2c3d4e5f60000000000000000000000000000000000000000000000000002");
         email2.setSubject("Security Alert Notice");
 
         run1 = new AnalysisRun(UUID.randomUUID(), email1, "v1.0.0", AnalysisStatus.COMPLETED, "MIME_PARSED");
@@ -162,7 +152,7 @@ public class CorrelationServiceTest {
         assertEquals("URL", match.getIndicatorType());
         assertEquals("EXACT", match.getMatchStrength());
         assertEquals(email2.getId(), match.getMatchedEmailId());
-        assertEquals("CASE-2026-0002", match.getMatchedCaseNumber());
+        assertEquals("phish2.eml", match.getMatchedEmailFilename());
 
     }
 

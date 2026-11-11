@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
-import { useAuth } from '../auth/AuthContext'
 import Navbar from '../components/Navbar'
 import {
   getInvestigationDetail,
@@ -9,6 +8,8 @@ import {
   getEvidenceUrls,
   getEvidenceInfrastructure,
   getEvidenceVisuals,
+  getEvidenceImages,
+  getEvidenceQrCodes,
   getEvidenceContentAnalysis,
   getEvidenceRiskBreakdown,
   getEvidenceCorrelations,
@@ -39,6 +40,7 @@ import {
   Server,
   FileText,
   Paperclip,
+  Image as ImageIcon,
   Activity,
   Link2,
   Network,
@@ -98,9 +100,8 @@ function normalizeParsedEmail(detail, hops, reportData, infrastructure) {
 }
 
 export default function InvestigationPage() {
-  const { caseId, emailId } = useParams()
+  const { emailId } = useParams()
   const navigate = useNavigate()
-  const { user } = useAuth()
 
   const [detail, setDetail] = useState(null)
   const [pipelineStatus, setPipelineStatus] = useState(null)
@@ -110,6 +111,7 @@ export default function InvestigationPage() {
   const [urls, setUrls] = useState([])
   const [infrastructure, setInfrastructure] = useState([])
   const [visuals, setVisuals] = useState([])
+  const [qrCodes, setQrCodes] = useState([])
   const [contentAnalysis, setContentAnalysis] = useState(null)
   const [riskBreakdown, setRiskBreakdown] = useState(null)
   const [correlations, setCorrelations] = useState([])
@@ -135,6 +137,7 @@ export default function InvestigationPage() {
         urlsData,
         infraData,
         visualsData,
+        qrData,
         contentData,
         riskData,
         correlationsData,
@@ -146,7 +149,8 @@ export default function InvestigationPage() {
         getEvidenceHops(emailId).catch(() => []),
         getEvidenceUrls(emailId).catch(() => []),
         getEvidenceInfrastructure(emailId).catch(() => []),
-        getEvidenceVisuals(emailId).catch(() => []),
+        getEvidenceImages(emailId).catch(() => []),
+        getEvidenceQrCodes(emailId).catch(() => []),
         getEvidenceContentAnalysis(emailId).catch(() => null),
         getEvidenceRiskBreakdown(emailId).catch(() => null),
         getEvidenceCorrelations(emailId).catch(() => []),
@@ -159,6 +163,7 @@ export default function InvestigationPage() {
       setUrls(urlsData || [])
       setInfrastructure(infraData || [])
       setVisuals(visualsData || [])
+      setQrCodes(qrData || [])
       setContentAnalysis(contentData)
       setRiskBreakdown(riskData)
       setCorrelations(correlationsData || [])
@@ -395,11 +400,11 @@ export default function InvestigationPage() {
                 <span>{isRetrying ? 'Retrying...' : 'Retry analysis'}</span>
               </button>
               <Link
-                to={`/cases/${caseId}`}
+                to="/"
                 className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg bg-white hover:bg-slate-50 border border-[#E4E7EC] text-sm text-[#202938] font-medium transition-colors"
               >
                 <ArrowLeft className="h-4 w-4 text-[#667085]" />
-                <span>Back to case</span>
+                <span>Back to dashboard</span>
               </Link>
             </div>
           </div>
@@ -466,7 +471,6 @@ export default function InvestigationPage() {
           onDownloadOriginal={() =>
             downloadOriginalEvidence(detail.evidenceId, detail.originalFilename)
           }
-          caseId={caseId}
           formatBytes={formatBytes}
         />
 
@@ -544,13 +548,26 @@ export default function InvestigationPage() {
             id="tab-visuals"
             onClick={() => setActiveTab('visuals')}
             className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'visuals'
+              activeTab === 'visuals' || activeTab === 'images'
+                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
+                : 'text-[#667085] hover:text-[#202938] hover:bg-slate-100'
+            }`}
+          >
+            <ImageIcon className="h-3.5 w-3.5" />
+            <span>Images ({visuals.length})</span>
+          </button>
+
+          <button
+            id="tab-qr"
+            onClick={() => setActiveTab('qr')}
+            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+              activeTab === 'qr'
                 ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
                 : 'text-[#667085] hover:text-[#202938] hover:bg-slate-100'
             }`}
           >
             <QrCode className="h-3.5 w-3.5" />
-            <span>Images and QR codes ({visuals.length})</span>
+            <span>QR codes ({qrCodes.length || visuals.reduce((acc, v) => acc + (v.qrArtifacts?.length || 0), 0)})</span>
           </button>
 
           <button
@@ -594,7 +611,7 @@ export default function InvestigationPage() {
             }`}
           >
             <Layers className="h-3.5 w-3.5" />
-            <span>Related cases</span>
+            <span>Correlations</span>
             {correlations.length > 0 && (
               <span className="px-1.5 py-0.2 rounded text-[11px] font-mono font-semibold bg-white border border-[#E4E7EC] text-[#202938]">
                 {correlations.length}
@@ -663,6 +680,8 @@ export default function InvestigationPage() {
             headerAnalysis={headerAnalysis}
             urls={urls}
             attachments={attachments}
+            visuals={visuals}
+            qrCodes={qrCodes}
             hops={hops}
             infrastructure={infrastructure}
             onNavigateTab={(tab) => setActiveTab(tab)}
@@ -701,24 +720,42 @@ export default function InvestigationPage() {
           />
         )}
 
-        {activeTab === 'visuals' && (
+        {(activeTab === 'visuals' || activeTab === 'images') && (
           <AttachmentsAndImages
             mode="visuals"
+            emailId={emailId}
             visuals={visuals}
+            qrCodes={qrCodes}
             copiedKey={copiedKey}
             copyValue={copyValue}
             formatBytes={formatBytes}
+            onNavigateTab={(tab) => setActiveTab(tab)}
+          />
+        )}
+
+        {activeTab === 'qr' && (
+          <AttachmentsAndImages
+            mode="qr"
+            emailId={emailId}
+            visuals={visuals}
+            qrCodes={qrCodes}
+            copiedKey={copiedKey}
+            copyValue={copyValue}
+            formatBytes={formatBytes}
+            onNavigateTab={(tab) => setActiveTab(tab)}
           />
         )}
 
         {activeTab === 'attachments' && (
           <AttachmentsAndImages
             mode="attachments"
+            emailId={emailId}
             attachments={attachments}
             inlineImages={inlineImages}
             copiedKey={copiedKey}
             copyValue={copyValue}
             formatBytes={formatBytes}
+            onNavigateTab={(tab) => setActiveTab(tab)}
           />
         )}
 
@@ -774,7 +811,6 @@ export default function InvestigationPage() {
             contentAnalysis={contentAnalysis}
             aiAssessment={aiAssessment}
             flags={flags}
-            user={user}
             emailId={emailId}
             isExportingJson={isExportingJson}
             handleExportReportJson={handleExportReportJson}

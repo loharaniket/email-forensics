@@ -73,9 +73,8 @@ public class EvidenceContextAssembler {
         StringBuilder sb = new StringBuilder();
         boolean promptInjectionDetected = false;
 
-        sb.append("FORENSIC EVIDENCE SUMMARY (Case: ")
-                .append(evidence.getCaseFile() != null ? evidence.getCaseFile().getCaseNumber() : "Unknown")
-                .append(", File: ").append(evidence.getOriginalFilename())
+        sb.append("FORENSIC EVIDENCE SUMMARY (File: ")
+                .append(evidence.getOriginalFilename())
                 .append(", SHA256: ").append(evidence.getSha256Hash()).append(")\n\n");
 
         whitelist.add("FILE:SHA256");
@@ -241,7 +240,7 @@ public class EvidenceContextAssembler {
 
         List<HistoricalMatch> matches = historicalMatchRepository.findBySourceRunId(run.getId());
         if (!matches.isEmpty()) {
-            sb.append("8. HISTORICAL CORRELATIONS (").append(matches.size()).append(" prior matches across cases):\n");
+            sb.append("8. HISTORICAL CORRELATIONS (").append(matches.size()).append(" prior matches across emails):\n");
             for (HistoricalMatch m : matches) {
                 sb.append(" - Matched ").append(m.getIndicatorType()).append(" (")
                         .append(m.getMatchStrength()).append("): ").append(m.getNormalizedIndicatorValue()).append("\n");

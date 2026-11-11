@@ -24,8 +24,8 @@ export default function RelatedCases({ correlations = [] }) {
           match.normalizedIndicatorValue.toLowerCase().includes(query)) ||
         (match.matchedEmailSubject &&
           match.matchedEmailSubject.toLowerCase().includes(query)) ||
-        (match.matchedCaseNumber &&
-          match.matchedCaseNumber.toLowerCase().includes(query)) ||
+        (match.matchedEmailFilename &&
+          match.matchedEmailFilename.toLowerCase().includes(query)) ||
         (match.matchExplanation &&
           match.matchExplanation.toLowerCase().includes(query))
 
@@ -39,10 +39,10 @@ export default function RelatedCases({ correlations = [] }) {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-[#E4E7EC] pb-4">
           <div>
             <h2 className="text-sm font-bold text-[#202938]">
-              Related cases ({correlations.length})
+              Correlated emails ({correlations.length})
             </h2>
             <p className="text-xs text-[#667085] mt-0.5">
-              Indicators matching previously analyzed emails and cases.
+              Indicators matching previously analyzed emails in the database.
             </p>
           </div>
 
@@ -95,7 +95,7 @@ export default function RelatedCases({ correlations = [] }) {
               <tr>
                 <th className="py-3 px-4 font-semibold">Indicator</th>
                 <th className="py-3 px-4 font-semibold">Indicator value</th>
-                <th className="py-3 px-4 font-semibold">Related email &amp; case</th>
+                <th className="py-3 px-4 font-semibold">Matched email</th>
                 <th className="py-3 px-4 font-semibold">Match strength</th>
                 <th className="py-3 px-4 font-semibold">Explanation</th>
                 <th className="py-3 px-4 text-right font-semibold">Action</th>
@@ -105,7 +105,7 @@ export default function RelatedCases({ correlations = [] }) {
               {filteredCorrelations.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="py-8 text-center text-[#667085]">
-                    No related case matches found. Indicators appear unique across existing records.
+                    No correlation matches found. Indicators appear unique across existing records.
                   </td>
                 </tr>
               ) : (
@@ -128,12 +128,9 @@ export default function RelatedCases({ correlations = [] }) {
                       >
                         {match.matchedEmailSubject || 'Untitled email'}
                       </span>
-                      <Link
-                        to={`/cases/${match.matchedCaseId}`}
-                        className="text-[11px] text-[#2563EB] hover:underline block truncate"
-                      >
-                        {match.matchedCaseNumber}
-                      </Link>
+                      <span className="text-[11px] font-mono text-[#667085] block truncate">
+                        {match.matchedEmailFilename || 'evidence.eml'}
+                      </span>
                     </td>
 
                     <td className="py-3.5 px-4">
@@ -158,9 +155,7 @@ export default function RelatedCases({ correlations = [] }) {
                       <button
                         id={`inspect-match-${match.id}`}
                         onClick={() =>
-                          navigate(
-                            `/cases/${match.matchedCaseId}/evidence/${match.matchedEmailId}`
-                          )
+                          navigate(`/evidence/${match.matchedEmailId}`)
                         }
                         className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
                       >
@@ -178,4 +173,3 @@ export default function RelatedCases({ correlations = [] }) {
     </div>
   )
 }
-

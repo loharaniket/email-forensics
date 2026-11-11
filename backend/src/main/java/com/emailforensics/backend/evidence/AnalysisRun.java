@@ -15,7 +15,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "analysis_runs")
+@Table(name = "email_analysis_runs")
 public class AnalysisRun {
 
     @Id
@@ -25,14 +25,14 @@ public class AnalysisRun {
     @JoinColumn(name = "email_id", nullable = false)
     private EmailEvidence emailEvidence;
 
-    @Column(name = "pipeline_version", nullable = false, length = 40)
+    @Column(name = "analysis_version", nullable = false, length = 40)
     private String pipelineVersion;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false, length = 20)
     private AnalysisStatus status;
 
-    @Column(name = "current_stage", length = 80)
+    @Column(name = "current_step", length = 80)
     private String currentStage;
 
     @Column(name = "attempt_number", nullable = false)
@@ -47,7 +47,7 @@ public class AnalysisRun {
     @Column(name = "error_code", length = 80)
     private String errorCode;
 
-    @Column(name = "safe_error_message", columnDefinition = "TEXT")
+    @Column(name = "error_message", columnDefinition = "TEXT")
     private String safeErrorMessage;
 
     @Column(name = "created_at", nullable = false)
@@ -104,6 +104,14 @@ public class AnalysisRun {
         this.pipelineVersion = pipelineVersion;
     }
 
+    public String getAnalysisVersion() {
+        return pipelineVersion;
+    }
+
+    public void setAnalysisVersion(String analysisVersion) {
+        this.pipelineVersion = analysisVersion;
+    }
+
     public AnalysisStatus getStatus() {
         return status;
     }
@@ -118,6 +126,14 @@ public class AnalysisRun {
 
     public void setCurrentStage(String currentStage) {
         this.currentStage = currentStage;
+    }
+
+    public String getCurrentStep() {
+        return currentStage;
+    }
+
+    public void setCurrentStep(String currentStep) {
+        this.currentStage = currentStep;
     }
 
     public Integer getAttemptNumber() {
@@ -158,6 +174,14 @@ public class AnalysisRun {
 
     public void setSafeErrorMessage(String safeErrorMessage) {
         this.safeErrorMessage = safeErrorMessage;
+    }
+
+    public String getErrorMessage() {
+        return safeErrorMessage;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.safeErrorMessage = errorMessage;
     }
 
     public Instant getCreatedAt() {

@@ -118,6 +118,38 @@ public class EvidenceStorageService {
         return new FileSystemResource(filePath);
     }
 
+    public void storeImageFile(String imageKey, byte[] data) {
+        if (imageKey == null || data == null) {
+            return;
+        }
+        try {
+            Path imagesDir = vaultPath.resolve("images");
+            Files.createDirectories(imagesDir);
+            Path target = imagesDir.resolve(imageKey).normalize();
+            if (!target.startsWith(imagesDir)) {
+                return;
+            }
+            Files.write(target, data, StandardOpenOption.CREATE, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (IOException ignored) {
+        }
+    }
+
+    public byte[] loadImageFile(String imageKey) {
+        if (imageKey == null) {
+            return null;
+        }
+        try {
+            Path imagesDir = vaultPath.resolve("images");
+            Path target = imagesDir.resolve(imageKey).normalize();
+            if (Files.exists(target) && Files.isRegularFile(target) && target.startsWith(imagesDir)) {
+                return Files.readAllBytes(target);
+            }
+        } catch (IOException ignored) {
+            return null;
+        }
+        return null;
+    }
+
     public boolean deleteStoredFile(String storageKey) {
         if (storageKey == null || storageKey.trim().isEmpty()) {
             return false;

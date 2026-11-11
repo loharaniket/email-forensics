@@ -16,21 +16,21 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ai_grounded_assessments")
+@Table(name = "ai_assessments")
 public class AiGroundedAssessment {
 
     @Id
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "email_evidence_id", nullable = false)
+    @JoinColumn(name = "email_id", nullable = false)
     private EmailEvidence emailEvidence;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "analysis_run_id", nullable = false)
     private AnalysisRun analysisRun;
 
-    @Column(name = "provider", nullable = false, length = 50)
+    @Column(name = "ai_provider", nullable = false, length = 50)
     private String provider;
 
     @Column(name = "model_name", nullable = false, length = 100)
@@ -42,13 +42,13 @@ public class AiGroundedAssessment {
     @Column(name = "status", nullable = false, length = 20)
     private String status;
 
-    @Column(name = "threat_classification", nullable = false, length = 50)
+    @Column(name = "threat_type", nullable = false, length = 50)
     private String threatClassification;
 
-    @Column(name = "confidence_assessment", nullable = false, length = 20)
+    @Column(name = "confidence_level", nullable = false, length = 20)
     private String confidenceAssessment;
 
-    @Column(name = "summary_explanation", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "summary", nullable = false, columnDefinition = "TEXT")
     private String summaryExplanation;
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -63,13 +63,13 @@ public class AiGroundedAssessment {
     @Column(name = "unsupported_references_json", columnDefinition = "jsonb")
     private String unsupportedReferencesJson;
 
-    @Column(name = "limitations_and_caveats", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "limitations", nullable = false, columnDefinition = "TEXT")
     private String limitationsAndCaveats;
 
-    @Column(name = "untrusted_injections_detected", nullable = false)
+    @Column(name = "has_untrusted_injection", nullable = false)
     private boolean untrustedInjectionsDetected;
 
-    @Column(name = "sanitized_context_summary", columnDefinition = "TEXT")
+    @Column(name = "safe_context_summary", columnDefinition = "TEXT")
     private String sanitizedContextSummary;
 
     @Column(name = "error_message", columnDefinition = "TEXT")

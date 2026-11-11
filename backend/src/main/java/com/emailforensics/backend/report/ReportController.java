@@ -1,11 +1,9 @@
 package com.emailforensics.backend.report;
 
 import com.emailforensics.backend.dto.report.ForensicReportDto;
-import com.emailforensics.backend.security.UserPrincipal;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -25,18 +23,14 @@ public class ReportController {
     }
 
     @GetMapping("/evidence/{emailId}/report")
-    public ResponseEntity<ForensicReportDto> getEvidenceReport(
-            @PathVariable UUID emailId,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
-        ForensicReportDto report = reportService.generateReport(emailId, currentUser);
+    public ResponseEntity<ForensicReportDto> getEvidenceReport(@PathVariable UUID emailId) {
+        ForensicReportDto report = reportService.generateReport(emailId);
         return ResponseEntity.ok(report);
     }
 
     @GetMapping(value = "/evidence/{emailId}/report/json", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<byte[]> downloadEvidenceReportJson(
-            @PathVariable UUID emailId,
-            @AuthenticationPrincipal UserPrincipal currentUser) {
-        ForensicReportDto report = reportService.generateReport(emailId, currentUser);
+    public ResponseEntity<byte[]> downloadEvidenceReportJson(@PathVariable UUID emailId) {
+        ForensicReportDto report = reportService.generateReport(emailId);
         String json = reportService.exportReportJson(report);
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
 

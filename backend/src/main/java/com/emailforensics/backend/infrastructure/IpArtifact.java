@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "ip_artifacts")
+@Table(name = "email_ip_addresses")
 public class IpArtifact {
 
     @Id
@@ -27,10 +27,10 @@ public class IpArtifact {
     @Column(name = "ip_address", nullable = false, length = 50)
     private String ipAddress;
 
-    @Column(name = "source_context", nullable = false, length = 100)
+    @Column(name = "found_in", nullable = false, length = 100)
     private String sourceContext;
 
-    @Column(name = "is_private", nullable = false)
+    @Column(name = "is_private_ip", nullable = false)
     private Boolean isPrivate = false;
 
     @Column(name = "lookup_status", nullable = false, length = 50)
@@ -42,7 +42,7 @@ public class IpArtifact {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Column(name = "data_mode", nullable = false, length = 50)
+    @Column(name = "data_status", nullable = false, length = 50)
     private String dataMode = DataProvenance.UNAVAILABLE.name();
 
     public IpArtifact() {

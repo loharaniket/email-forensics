@@ -36,6 +36,6 @@ class HealthControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.truncatedTables").isArray())
-                .andExpect(jsonPath("$.truncatedTables.length()").value(13));
+                .andExpect(jsonPath("$.truncatedTables.length()").value(11));
     }
 }

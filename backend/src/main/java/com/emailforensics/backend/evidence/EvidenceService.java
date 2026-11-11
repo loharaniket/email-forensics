@@ -1,24 +1,19 @@
 package com.emailforensics.backend.evidence;
 
-import com.emailforensics.backend.casefile.CaseFile;
-import com.emailforensics.backend.casefile.CaseRepository;
 import com.emailforensics.backend.common.BadRequestException;
 import com.emailforensics.backend.common.ResourceNotFoundException;
-import com.emailforensics.backend.dto.common.PageResponse;
+import com.emailforensics.backend.dto.email.AttachmentMetaDto;
+import com.emailforensics.backend.dto.email.InvestigationDetailDto;
+import com.emailforensics.backend.dto.email.ParsedEmailDto;
 import com.emailforensics.backend.dto.evidence.EvidenceIntegrityResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceStatusResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceSummaryDto;
 import com.emailforensics.backend.dto.evidence.EvidenceUploadResponse;
-import com.emailforensics.backend.dto.email.AttachmentMetaDto;
-import com.emailforensics.backend.dto.email.InvestigationDetailDto;
-import com.emailforensics.backend.dto.email.ParsedEmailDto;
 import com.emailforensics.backend.email.EmailParserService;
-import com.emailforensics.backend.security.UserPrincipal;
-import com.emailforensics.backend.user.User;
-import com.emailforensics.backend.user.UserRepository;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.Resource;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -39,8 +34,6 @@ public class EvidenceService {
 
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
-    private final CaseRepository caseRepository;
-    private final UserRepository userRepository;
     private final EvidenceStorageService storageService;
     private final EmailParserService emailParserService;
     private final com.emailforensics.backend.analysis.AnalysisResultRepository analysisResultRepository;
@@ -49,8 +42,6 @@ public class EvidenceService {
 
     public EvidenceService(EmailEvidenceRepository evidenceRepository,
                            AnalysisRunRepository analysisRunRepository,
-                           CaseRepository caseRepository,
-                           UserRepository userRepository,
                            EvidenceStorageService storageService,
                            EmailParserService emailParserService,
                            com.emailforensics.backend.analysis.AnalysisResultRepository analysisResultRepository,
@@ -58,8 +49,6 @@ public class EvidenceService {
                            @Value("${emailforensics.pipeline.version:1.0.0}") String pipelineVersion) {
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
-        this.caseRepository = caseRepository;
-        this.userRepository = userRepository;
         this.storageService = storageService;
         this.emailParserService = emailParserService;
         this.analysisResultRepository = analysisResultRepository;
@@ -68,7 +57,7 @@ public class EvidenceService {
     }
 
     @Transactional
-    public EvidenceUploadResponse uploadEvidence(UUID caseId, MultipartFile file, UserPrincipal currentUser) {
+    public EvidenceUploadResponse uploadEvidence(MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new BadRequestException("Evidence file is required and cannot be empty");
         }
@@ -83,12 +72,6 @@ public class EvidenceService {
             throw new BadRequestException("Only .eml files are supported as email evidence");
         }
 
-        CaseFile caseFile = caseRepository.findById(caseId)
-                .orElseThrow(() -> new ResourceNotFoundException("Case not found with ID: " + caseId));
-
-        User uploader = userRepository.findById(currentUser.getId())
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with ID: " + currentUser.getId()));
-
         StoredEvidenceFile stored;
         try (InputStream inputStream = file.getInputStream()) {
             stored = storageService.storeEvidence(inputStream);
@@ -97,20 +80,12 @@ public class EvidenceService {
         }
 
         // Global Deduplication:
-        // If an email with the identical SHA-256 hash has already been preserved anywhere in the system,
-        // do not store duplicate vault files or duplicate database records.
-        // Instead, reuse and return the existing evidence and its forensic analysis results along with the actual case link.
-        //
-        // Concurrency Note: We synchronize on the interned SHA-256 string (stored.getSha256Hash().intern())
-        // so that concurrent upload requests for the exact same file share the same lock instance.
-        // This simple mutex prevents race conditions where two simultaneous uploads of an identical
-        // file could both pass the duplicate check and create duplicate database records.
+        // If an email with identical SHA-256 hash already exists, reuse it.
         synchronized (stored.getSha256Hash().intern()) {
             Optional<EmailEvidence> existingEvidenceOpt = evidenceRepository
                     .findFirstBySha256HashOrderByUploadedAtAsc(stored.getSha256Hash());
 
             if (existingEvidenceOpt.isPresent()) {
-                // Delete the redundant newly stored file to prevent disk bloat
                 storageService.deleteStoredFile(stored.getStorageKey());
 
                 EmailEvidence existing = existingEvidenceOpt.get();
@@ -126,14 +101,6 @@ public class EvidenceService {
                 UUID runId = existingRun != null ? existingRun.getId() : null;
                 String statusUrl = "/api/v1/evidence/" + existing.getId() + "/status";
 
-                UUID existingCaseId = existing.getCaseFile() != null ? existing.getCaseFile().getId() : null;
-                String existingCaseNumber = existing.getCaseFile() != null ? existing.getCaseFile().getCaseNumber() : "Unknown";
-                String existingCaseTitle = existing.getCaseFile() != null ? existing.getCaseFile().getTitle() : null;
-
-                String deduplicationMsg = (existingCaseId != null && existingCaseId.equals(caseId))
-                        ? "Duplicate email evidence detected with identical SHA-256 hash in this case. Reusing existing evidence and forensic analysis results."
-                        : "Duplicate email evidence detected globally in Case " + existingCaseNumber + " with identical SHA-256 hash. Reusing existing evidence and forensic analysis results.";
-
                 return new EvidenceUploadResponse(
                         existing.getId(),
                         runId,
@@ -143,21 +110,19 @@ public class EvidenceService {
                         existing.getOriginalFilename(),
                         existing.getFileSizeBytes(),
                         true,
-                        existingCaseId,
-                        existingCaseNumber,
-                        existingCaseTitle,
-                        deduplicationMsg
+                        null,
+                        null,
+                        null,
+                        "Duplicate email evidence detected with identical SHA-256 hash. Reusing existing evidence and forensic analysis results."
                 );
             }
 
             EmailEvidence evidence = new EmailEvidence(
                     UUID.randomUUID(),
-                    caseFile,
                     sanitizedFilename,
                     stored.getStorageKey(),
                     stored.getFileSizeBytes(),
-                    stored.getSha256Hash(),
-                    uploader
+                    stored.getSha256Hash()
             );
 
             try (InputStream streamForParse = storageService.loadAsResource(stored.getStorageKey()).getInputStream()) {
@@ -192,9 +157,9 @@ public class EvidenceService {
                     evidence.getOriginalFilename(),
                     evidence.getFileSizeBytes(),
                     false,
-                    caseFile.getId(),
-                    caseFile.getCaseNumber(),
-                    caseFile.getTitle(),
+                    null,
+                    null,
+                    null,
                     "Evidence preserved and queued for forensic analysis."
             );
         }
@@ -228,12 +193,8 @@ public class EvidenceService {
     }
 
     @Transactional(readOnly = true)
-    public PageResponse<EvidenceSummaryDto> getCaseEvidence(UUID caseId, Pageable pageable) {
-        if (!caseRepository.existsById(caseId)) {
-            throw new ResourceNotFoundException("Case not found with ID: " + caseId);
-        }
-
-        Page<EmailEvidence> page = evidenceRepository.findByCaseFileIdOrderByUploadedAtDesc(caseId, pageable);
+    public Page<EvidenceSummaryDto> getEvidenceList(Pageable pageable) {
+        Page<EmailEvidence> page = evidenceRepository.findAllByOrderByUploadedAtDesc(pageable);
         List<EvidenceSummaryDto> content = new ArrayList<>();
 
         for (EmailEvidence item : page.getContent()) {
@@ -243,14 +204,12 @@ public class EvidenceService {
 
             EvidenceSummaryDto dto = new EvidenceSummaryDto(
                     item.getId(),
-                    item.getCaseFile().getId(),
                     item.getOriginalFilename(),
                     item.getFileSizeBytes(),
                     item.getSha256Hash(),
                     item.getSubject(),
                     item.getMessageId(),
                     item.getSentDate(),
-                    item.getUploadedBy().getUsername(),
                     item.getUploadedAt(),
                     status,
                     currentStage
@@ -258,14 +217,7 @@ public class EvidenceService {
             content.add(dto);
         }
 
-        return new PageResponse<>(
-                content,
-                page.getNumber(),
-                page.getSize(),
-                page.getTotalElements(),
-                page.getTotalPages(),
-                page.isLast()
-        );
+        return new PageImpl<>(content, pageable, page.getTotalElements());
     }
 
     @Transactional(readOnly = true)
@@ -321,14 +273,10 @@ public class EvidenceService {
 
         return new InvestigationDetailDto(
                 evidence.getId(),
-                evidence.getCaseFile().getId(),
-                evidence.getCaseFile().getCaseNumber(),
-                evidence.getCaseFile().getTitle(),
                 evidence.getOriginalFilename(),
                 evidence.getFileSizeBytes(),
                 evidence.getSha256Hash(),
                 evidence.getUploadedAt(),
-                evidence.getUploadedBy().getUsername(),
                 status,
                 currentStage,
                 parsed
@@ -336,7 +284,7 @@ public class EvidenceService {
     }
 
     @Transactional
-    public EvidenceStatusResponse retryAnalysis(UUID emailId, UserPrincipal currentUser) {
+    public EvidenceStatusResponse retryAnalysis(UUID emailId) {
         EmailEvidence evidence = evidenceRepository.findById(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Email evidence not found with ID: " + emailId));
 

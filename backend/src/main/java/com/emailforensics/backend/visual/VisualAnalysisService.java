@@ -1,5 +1,6 @@
 package com.emailforensics.backend.visual;
 
+import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.dto.visual.QrArtifactDto;
 import com.emailforensics.backend.dto.visual.VisualArtifactDto;
 import com.emailforensics.backend.evidence.AnalysisRun;
@@ -108,7 +109,7 @@ public class VisualAnalysisService {
 
         List<VisualArtifact> existing = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         if (!existing.isEmpty()) {
-            return toDtoList(existing);
+            return toDtoList(emailId, existing);
         }
 
         List<ExtractedImage> images;
@@ -149,10 +150,11 @@ public class VisualAnalysisService {
             visual.setQrArtifacts(qrEntities);
 
             visualArtifactRepository.save(visual);
+            storageService.storeImageFile(visual.getId().toString(), img.getData());
             savedList.add(visual);
         }
 
-        return toDtoList(savedList);
+        return toDtoList(emailId, savedList);
     }
 
     @Transactional(readOnly = true)
@@ -164,7 +166,77 @@ public class VisualAnalysisService {
         }
 
         List<VisualArtifact> list = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
-        return toDtoList(list);
+        return toDtoList(emailId, list);
+    }
+
+    @Transactional(readOnly = true)
+    public VisualArtifact getVisualArtifact(UUID emailId, UUID imageId) {
+        VisualArtifact visual = visualArtifactRepository.findById(imageId)
+                .orElseThrow(() -> new ResourceNotFoundException("Image artifact not found: " + imageId));
+
+        if (visual.getAnalysisRun() == null || visual.getAnalysisRun().getEmailEvidence() == null
+                || !visual.getAnalysisRun().getEmailEvidence().getId().equals(emailId)) {
+            throw new ResourceNotFoundException("Image artifact does not belong to email: " + emailId);
+        }
+        return visual;
+    }
+
+    @Transactional(readOnly = true)
+    public byte[] getImageData(UUID emailId, UUID imageId) {
+        VisualArtifact visual = getVisualArtifact(emailId, imageId);
+
+        byte[] cached = storageService.loadImageFile(visual.getId().toString());
+        if (cached != null && cached.length > 0) {
+            return cached;
+        }
+
+        EmailEvidence evidence = evidenceRepository.findById(emailId)
+                .orElseThrow(() -> new ResourceNotFoundException("Evidence not found: " + emailId));
+
+        try (InputStream in = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
+            List<ExtractedImage> images = extractImages(in);
+            for (ExtractedImage img : images) {
+                if (visual.getSha256Hash().equalsIgnoreCase(img.getSha256Hash())
+                        || (visual.getFilename() != null && visual.getFilename().equalsIgnoreCase(img.getFilename()))) {
+                    storageService.storeImageFile(visual.getId().toString(), img.getData());
+                    return img.getData();
+                }
+            }
+        } catch (ResourceNotFoundException rne) {
+            throw rne;
+        } catch (Exception e) {
+            throw new IllegalStateException("Failed to read image data from email evidence", e);
+        }
+
+        throw new ResourceNotFoundException("Image content not found for artifact: " + imageId);
+    }
+
+    @Transactional(readOnly = true)
+    public List<QrArtifactDto> getQrArtifacts(UUID emailId) {
+        AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
+                .orElse(null);
+        if (run == null) {
+            return Collections.emptyList();
+        }
+
+        List<VisualArtifact> visuals = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
+        List<QrArtifactDto> qrDtos = new ArrayList<>();
+        for (VisualArtifact v : visuals) {
+            if (v.getQrArtifacts() != null) {
+                for (QrArtifact q : v.getQrArtifacts()) {
+                    qrDtos.add(new QrArtifactDto(
+                            q.getId(),
+                            v.getId(),
+                            v.getFilename(),
+                            q.getDecodedPayload(),
+                            q.getPayloadType(),
+                            q.getNormalizedUrl(),
+                            q.getCreatedAt()
+                    ));
+                }
+            }
+        }
+        return qrDtos;
     }
 
     public List<VisualArtifactDto> analyzeImagesFromStream(InputStream in) {
@@ -330,13 +402,27 @@ public class VisualAnalysisService {
     }
 
     private List<VisualArtifactDto> toDtoList(List<VisualArtifact> entities) {
+        UUID emailId = null;
+        if (entities != null && !entities.isEmpty() && entities.get(0).getAnalysisRun() != null
+                && entities.get(0).getAnalysisRun().getEmailEvidence() != null) {
+            emailId = entities.get(0).getAnalysisRun().getEmailEvidence().getId();
+        }
+        return toDtoList(emailId, entities);
+    }
+
+    private List<VisualArtifactDto> toDtoList(UUID emailId, List<VisualArtifact> entities) {
         List<VisualArtifactDto> dtos = new ArrayList<>();
+        if (entities == null) {
+            return dtos;
+        }
         for (VisualArtifact v : entities) {
             List<QrArtifactDto> qrDtos = new ArrayList<>();
             if (v.getQrArtifacts() != null) {
                 for (QrArtifact q : v.getQrArtifacts()) {
                     qrDtos.add(new QrArtifactDto(
                             q.getId(),
+                            v.getId(),
+                            v.getFilename(),
                             q.getDecodedPayload(),
                             q.getPayloadType(),
                             q.getNormalizedUrl(),
@@ -344,7 +430,7 @@ public class VisualAnalysisService {
                     ));
                 }
             }
-            dtos.add(new VisualArtifactDto(
+            VisualArtifactDto dto = new VisualArtifactDto(
                     v.getId(),
                     v.getFilename(),
                     v.getContentType(),
@@ -354,8 +440,13 @@ public class VisualAnalysisService {
                     v.getCreatedAt(),
                     qrDtos,
                     v.getDataMode()
-            ));
+            );
+            if (emailId != null) {
+                dto.setImageUrl("/api/v1/evidence/" + emailId + "/images/" + v.getId() + "/content");
+            }
+            dtos.add(dto);
         }
         return dtos;
     }
+
 }

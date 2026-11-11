@@ -12,9 +12,9 @@ import java.util.UUID;
 @Repository
 public interface EmailEvidenceRepository extends JpaRepository<EmailEvidence, UUID> {
 
-    Page<EmailEvidence> findByCaseFileIdOrderByUploadedAtDesc(UUID caseId, Pageable pageable);
+    Page<EmailEvidence> findAllByOrderByUploadedAtDesc(Pageable pageable);
 
-    List<EmailEvidence> findByCaseFileIdOrderByUploadedAtDesc(UUID caseId);
+    List<EmailEvidence> findAllByOrderByUploadedAtDesc();
 
     Optional<EmailEvidence> findBySha256Hash(String sha256Hash);
 

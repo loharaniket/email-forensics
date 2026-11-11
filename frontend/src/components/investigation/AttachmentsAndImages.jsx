@@ -6,25 +6,54 @@ import {
   Search,
   Hash,
   Copy,
-  Check
+  Check,
+  ExternalLink,
+  Download,
+  Link2,
+  AlertTriangle
 } from 'lucide-react'
 
 export default function AttachmentsAndImages({
-  mode = 'attachments', // 'attachments' or 'visuals'
+  mode = 'attachments', // 'attachments', 'visuals', or 'qr'
+  emailId,
   attachments = [],
   inlineImages = [],
   visuals = [],
+  qrCodes = [],
   copiedKey,
   copyValue,
-  formatBytes
+  formatBytes = (b) => (b != null ? `${b} B` : '0 B'),
+  onNavigateTab
 }) {
-  const [visualSearch, setVisualSearch] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
 
+  // Flatten QR codes from dedicated prop or extract from visuals
+  const allQrCodes = useMemo(() => {
+    if (qrCodes && qrCodes.length > 0) {
+      return qrCodes
+    }
+    const collected = []
+    visuals.forEach((v) => {
+      if (v.qrArtifacts && v.qrArtifacts.length > 0) {
+        v.qrArtifacts.forEach((q) => {
+          collected.push({
+            ...q,
+            imageId: q.imageId || v.id,
+            imageFileName: q.imageFileName || v.filename
+          })
+        })
+      }
+    })
+    return collected
+  }, [qrCodes, visuals])
+
+  // Filtered visuals
   const filteredVisuals = useMemo(() => {
-    if (!visualSearch.trim()) return visuals
-    const q = visualSearch.toLowerCase()
+    if (!searchQuery.trim()) return visuals
+    const q = searchQuery.toLowerCase()
     return visuals.filter((v) => {
       const matchFile = v.filename && v.filename.toLowerCase().includes(q)
+      const matchHash = v.sha256Hash && v.sha256Hash.toLowerCase().includes(q)
       const matchQr =
         v.qrArtifacts &&
         v.qrArtifacts.some(
@@ -32,10 +61,41 @@ export default function AttachmentsAndImages({
             (qr.decodedPayload && qr.decodedPayload.toLowerCase().includes(q)) ||
             (qr.normalizedUrl && qr.normalizedUrl.toLowerCase().includes(q))
         )
-      return matchFile || matchQr
+      return matchFile || matchHash || matchQr
     })
-  }, [visuals, visualSearch])
+  }, [visuals, searchQuery])
 
+  // Filtered QR codes
+  const filteredQrCodes = useMemo(() => {
+    if (!searchQuery.trim()) return allQrCodes
+    const q = searchQuery.toLowerCase()
+    return allQrCodes.filter((qr) => {
+      const matchPayload = qr.decodedPayload && qr.decodedPayload.toLowerCase().includes(q)
+      const matchUrl = qr.normalizedUrl && qr.normalizedUrl.toLowerCase().includes(q)
+      const matchFile = qr.imageFileName && qr.imageFileName.toLowerCase().includes(q)
+      return matchPayload || matchUrl || matchFile
+    })
+  }, [allQrCodes, searchQuery])
+
+  // Helper to build image content URL
+  const getImageContentUrl = (visual) => {
+    if (visual?.imageUrl) return visual.imageUrl
+    if (emailId && visual?.id) {
+      return `/api/v1/evidence/${emailId}/images/${visual.id}/content`
+    }
+    return null
+  }
+
+  // Helper for QR source image URL
+  const getQrImageUrl = (qr) => {
+    const imgId = qr.imageId
+    if (emailId && imgId) {
+      return `/api/v1/evidence/${emailId}/images/${imgId}/content`
+    }
+    return null
+  }
+
+  // 1. ATTACHMENTS MODE
   if (mode === 'attachments') {
     return (
       <div className="space-y-6">
@@ -146,15 +206,193 @@ export default function AttachmentsAndImages({
     )
   }
 
-  // Visuals & QR codes mode
+  // 2. DEDICATED QR CODES MODE
+  if (mode === 'qr') {
+    return (
+      <div className="space-y-4">
+        {/* QR Search Header */}
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
+          <div className="flex items-center gap-2">
+            <QrCode className="h-4 w-4 text-[#2563EB]" />
+            <span className="text-xs text-[#202938] font-semibold">
+              QR Code Analysis ({filteredQrCodes.length} of {allQrCodes.length})
+            </span>
+          </div>
+
+          <div className="relative w-full sm:w-80">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[#98A2B3]" />
+            <input
+              id="qr-search-input"
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search QR decoded content or URLs..."
+              className="w-full bg-[#F5F6F8] border border-[#E4E7EC] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#202938] placeholder-[#98A2B3] focus:outline-none focus:border-[#2563EB]"
+            />
+          </div>
+        </div>
+
+        {filteredQrCodes.length === 0 ? (
+          <div className="p-12 text-center bg-white rounded-xl border border-[#E4E7EC]">
+            <QrCode className="h-10 w-10 text-[#98A2B3] mx-auto mb-3" />
+            <p className="text-sm font-medium text-[#202938]">
+              No QR codes detected
+            </p>
+            <p className="text-xs text-[#667085] mt-1 max-w-sm mx-auto">
+              {searchQuery
+                ? 'No QR codes match your search.'
+                : 'No QR codes were found in any embedded images or attachments in this email.'}
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4">
+            {filteredQrCodes.map((qr, idx) => {
+              const qrImageUrl = getQrImageUrl(qr)
+              return (
+                <div
+                  key={qr.id || idx}
+                  className="bg-white p-5 rounded-xl border border-[#E4E7EC] space-y-4"
+                >
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC]">
+                    <div className="flex items-center gap-2.5">
+                      <div className="p-2 rounded-lg bg-[#EFF6FF] border border-blue-100 text-[#2563EB]">
+                        <QrCode className="h-4 w-4" />
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-bold text-[#202938]">
+                            QR Code #{idx + 1}
+                          </span>
+                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
+                            {qr.payloadType || 'PAYLOAD'}
+                          </span>
+                        </div>
+                        {qr.imageFileName && (
+                          <span className="text-[11px] text-[#667085]">
+                            Source image: <span className="font-mono text-[#202938]">{qr.imageFileName}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
+
+                    {qr.normalizedUrl && onNavigateTab && (
+                      <button
+                        onClick={() => onNavigateTab('urls')}
+                        className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#F5F6F8] hover:bg-slate-100 border border-[#E4E7EC] text-xs font-medium text-[#2563EB] cursor-pointer transition-colors"
+                      >
+                        <Link2 className="h-3.5 w-3.5" />
+                        <span>Inspect in Links tab</span>
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col md:flex-row gap-4 items-start">
+                    {/* Source QR Image Thumbnail */}
+                    {qrImageUrl && (
+                      <div className="w-full sm:w-36 h-36 bg-[#F5F6F8] border border-[#E4E7EC] rounded-xl overflow-hidden flex items-center justify-center shrink-0 relative group">
+                        <img
+                          src={qrImageUrl}
+                          alt="QR Code source"
+                          className="max-h-full max-w-full object-contain p-2"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                          }}
+                        />
+                        <a
+                          href={qrImageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center gap-1 text-[11px] font-medium"
+                          title="Open full image"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                          <span>View Image</span>
+                        </a>
+                      </div>
+                    )}
+
+                    {/* QR Payload Details */}
+                    <div className="flex-1 space-y-3 w-full">
+                      {/* Decoded Content */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-semibold text-[#202938]">
+                            Decoded payload content:
+                          </span>
+                          <button
+                            id={`copy-qr-decoded-${idx}`}
+                            onClick={() => copyValue(`qr-decoded-${idx}`, qr.decodedPayload)}
+                            className="text-xs text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                          >
+                            {copiedKey === `qr-decoded-${idx}` ? (
+                              <>
+                                <Check className="h-3.5 w-3.5 text-[#15803D]" />
+                                <span>Copied</span>
+                              </>
+                            ) : (
+                              <>
+                                <Copy className="h-3.5 w-3.5" />
+                                <span>Copy</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                        <div className="p-3 bg-[#F5F6F8] rounded-lg border border-[#E4E7EC] font-mono text-xs text-[#202938] select-all break-all whitespace-pre-wrap max-h-32 overflow-y-auto">
+                          {qr.decodedPayload}
+                        </div>
+                      </div>
+
+                      {/* Normalized URL Destination */}
+                      {qr.normalizedUrl && (
+                        <div className="space-y-1 pt-2 border-t border-[#E4E7EC]">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-semibold text-[#2563EB] flex items-center gap-1.5">
+                              <Link2 className="h-3.5 w-3.5" />
+                              <span>Normalized destination URL:</span>
+                            </span>
+                            <button
+                              id={`copy-qr-url-${idx}`}
+                              onClick={() => copyValue(`qr-url-${idx}`, qr.normalizedUrl)}
+                              className="text-xs text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer font-medium"
+                            >
+                              {copiedKey === `qr-url-${idx}` ? (
+                                <>
+                                  <Check className="h-3.5 w-3.5 text-[#15803D]" />
+                                  <span>Copied</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Copy className="h-3.5 w-3.5" />
+                                  <span>Copy</span>
+                                </>
+                              )}
+                            </button>
+                          </div>
+                          <div className="p-2.5 bg-blue-50/50 rounded-lg border border-blue-100 text-xs font-mono text-[#202938] break-all select-all">
+                            {qr.normalizedUrl}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
+      </div>
+    )
+  }
+
+  // 3. VISUALS / IMAGES MODE
   return (
     <div className="space-y-4">
-      {/* Visual search header */}
+      {/* Visual Search Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
         <div className="flex items-center gap-2">
-          <QrCode className="h-4 w-4 text-[#2563EB]" />
+          <ImageIcon className="h-4 w-4 text-[#2563EB]" />
           <span className="text-xs text-[#202938] font-semibold">
-            Images and QR codes ({filteredVisuals.length} of {visuals.length})
+            Extracted Images ({filteredVisuals.length} of {visuals.length})
           </span>
         </div>
 
@@ -163,8 +401,8 @@ export default function AttachmentsAndImages({
           <input
             id="visuals-search-input"
             type="text"
-            value={visualSearch}
-            onChange={(e) => setVisualSearch(e.target.value)}
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search images or QR payloads..."
             className="w-full bg-[#F5F6F8] border border-[#E4E7EC] rounded-lg pl-9 pr-3 py-1.5 text-xs text-[#202938] placeholder-[#98A2B3] focus:outline-none focus:border-[#2563EB]"
           />
@@ -178,171 +416,260 @@ export default function AttachmentsAndImages({
             No image files found
           </p>
           <p className="text-xs text-[#667085] mt-1 max-w-sm mx-auto">
-            {visualSearch
+            {searchQuery
               ? 'No images match your search.'
               : 'No inline images or image attachments were detected in this email.'}
           </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 gap-4">
-          {filteredVisuals.map((v, idx) => (
-            <div
-              key={v.id || idx}
-              className="bg-white p-5 rounded-xl border border-[#E4E7EC] space-y-4"
-            >
-              <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC]">
-                <div className="flex items-start gap-3">
-                  <div className="p-2.5 rounded-lg bg-[#EFF6FF] border border-blue-100 text-[#2563EB] shrink-0">
-                    <ImageIcon className="h-5 w-5" />
-                  </div>
-                  <div className="space-y-1">
-                    <span className="text-xs font-semibold text-[#202938] block break-all">
-                      {v.filename || 'unnamed-image'}
-                    </span>
-                    <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#667085]">
-                      <span className="px-2 py-0.5 rounded bg-[#F5F6F8] border border-[#E4E7EC]">
-                        {v.contentType || 'image/*'}
+          {filteredVisuals.map((v, idx) => {
+            const imageUrl = getImageContentUrl(v)
+            const hasQr = v.qrArtifacts && v.qrArtifacts.length > 0
+            return (
+              <div
+                key={v.id || idx}
+                className="bg-white p-5 rounded-xl border border-[#E4E7EC] space-y-4"
+              >
+                {/* Header row: image metadata + SHA-256 */}
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC]">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-lg bg-[#EFF6FF] border border-blue-100 text-[#2563EB] shrink-0">
+                      <ImageIcon className="h-5 w-5" />
+                    </div>
+                    <div className="space-y-1">
+                      <span className="text-xs font-semibold text-[#202938] block break-all">
+                        {v.filename || 'unnamed-image'}
                       </span>
-                      <span>{formatBytes(v.fileSizeBytes || v.byteSize || 0)}</span>
-                      {v.width && v.height && (
-                        <span>
-                          {v.width} &times; {v.height} px
+                      <div className="flex flex-wrap items-center gap-2 text-[11px] text-[#667085]">
+                        <span className="px-2 py-0.5 rounded bg-[#F5F6F8] border border-[#E4E7EC]">
+                          {v.contentType || 'image/*'}
                         </span>
+                        <span>{formatBytes(v.fileSizeBytes || v.byteSize || 0)}</span>
+                        {hasQr && (
+                          <span className="px-2 py-0.5 rounded font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
+                            {v.qrArtifacts.length} QR code{v.qrArtifacts.length > 1 ? 's' : ''} detected
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2 bg-[#F5F6F8] px-3 py-1.5 rounded-lg border border-[#E4E7EC] font-mono text-[11px] shrink-0">
+                    <Hash className="h-3 w-3 text-[#2563EB]" />
+                    <span className="text-[#667085]">SHA-256:</span>
+                    <span className="text-[#202938] select-all max-w-[140px] md:max-w-[200px] truncate">
+                      {v.sha256Hash}
+                    </span>
+                    <button
+                      id={`copy-visual-hash-${idx}`}
+                      onClick={() => copyValue(`visual-hash-${idx}`, v.sha256Hash)}
+                      className="p-1 hover:bg-white rounded text-[#667085] hover:text-[#202938] transition-colors cursor-pointer"
+                      title="Copy image SHA-256"
+                    >
+                      {copiedKey === `visual-hash-${idx}` ? (
+                        <Check className="h-3 w-3 text-[#15803D]" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+
+                {/* Body row: Image Preview & Details */}
+                <div className="flex flex-col sm:flex-row gap-5 items-start">
+                  {/* Real Image Preview Container */}
+                  <div className="w-full sm:w-48 h-48 bg-[#F5F6F8] border border-[#E4E7EC] rounded-xl overflow-hidden flex items-center justify-center relative shrink-0 group">
+                    {imageUrl ? (
+                      <>
+                        <img
+                          src={imageUrl}
+                          alt={v.filename || 'Visual artifact'}
+                          className="max-h-full max-w-full object-contain p-2"
+                          onError={(e) => {
+                            e.currentTarget.style.display = 'none'
+                            if (e.currentTarget.nextSibling) {
+                              e.currentTarget.nextSibling.style.display = 'flex'
+                            }
+                          }}
+                        />
+                        <div
+                          style={{ display: 'none' }}
+                          className="flex flex-col items-center justify-center p-4 text-[#98A2B3]"
+                        >
+                          <ImageIcon className="h-8 w-8 mb-1" />
+                          <span className="text-[11px]">Preview unavailable</span>
+                        </div>
+                      </>
+                    ) : (
+                      <div className="flex flex-col items-center justify-center p-4 text-[#98A2B3]">
+                        <ImageIcon className="h-8 w-8 mb-1" />
+                        <span className="text-[11px]">No preview</span>
+                      </div>
+                    )}
+
+                    {/* Hover actions overlay */}
+                    {imageUrl && (
+                      <div className="absolute inset-0 bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3">
+                        <a
+                          href={imageUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-colors"
+                          title="Open full image in new tab"
+                        >
+                          <ExternalLink className="h-4 w-4" />
+                        </a>
+                        <a
+                          href={imageUrl}
+                          download={v.filename || `image-${idx}.png`}
+                          className="p-2 rounded-lg bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white transition-colors"
+                          title="Download image"
+                        >
+                          <Download className="h-4 w-4" />
+                        </a>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Image Information & QR Detection details */}
+                  <div className="flex-1 space-y-4 w-full">
+                    <div className="flex flex-wrap items-center gap-2">
+                      {imageUrl && (
+                        <>
+                          <a
+                            href={imageUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#EFF6FF] hover:bg-blue-100 text-[#2563EB] text-xs font-medium border border-blue-100 transition-colors"
+                          >
+                            <ExternalLink className="h-3.5 w-3.5" />
+                            <span>View original image</span>
+                          </a>
+                          <a
+                            href={imageUrl}
+                            download={v.filename || `image-${idx}.png`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-[#F5F6F8] text-[#202938] text-xs font-medium border border-[#E4E7EC] transition-colors"
+                          >
+                            <Download className="h-3.5 w-3.5 text-[#667085]" />
+                            <span>Download file</span>
+                          </a>
+                        </>
+                      )}
+                    </div>
+
+                    {/* QR Code Detection Section inside Image card */}
+                    <div className="space-y-3 bg-[#F5F6F8] p-4 rounded-xl border border-[#E4E7EC]">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 text-xs font-semibold text-[#202938]">
+                          <QrCode className="h-3.5 w-3.5 text-[#2563EB]" />
+                          <span>QR code detection</span>
+                        </div>
+                        <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-[#E4E7EC] text-[#667085]">
+                          {hasQr ? `${v.qrArtifacts.length} detected` : 'None detected'}
+                        </span>
+                      </div>
+
+                      {hasQr ? (
+                        <div className="space-y-2.5">
+                          {v.qrArtifacts.map((qr, qIdx) => (
+                            <div
+                              key={qr.id || qIdx}
+                              className="p-3 bg-white rounded-lg border border-[#E4E7EC] space-y-2 text-xs"
+                            >
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
+                                  {qr.payloadType || 'PAYLOAD'}
+                                </span>
+                                {onNavigateTab && (
+                                  <button
+                                    onClick={() => onNavigateTab('qr')}
+                                    className="text-[11px] text-[#2563EB] hover:underline font-medium cursor-pointer"
+                                  >
+                                    View in QR tab &rarr;
+                                  </button>
+                                )}
+                              </div>
+
+                              <div className="space-y-1">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-[11px] text-[#667085]">
+                                    Decoded payload:
+                                  </span>
+                                  <button
+                                    id={`copy-visual-qr-${idx}-${qIdx}`}
+                                    onClick={() =>
+                                      copyValue(`visual-qr-${idx}-${qIdx}`, qr.decodedPayload)
+                                    }
+                                    className="text-[11px] text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
+                                  >
+                                    {copiedKey === `visual-qr-${idx}-${qIdx}` ? (
+                                      <>
+                                        <Check className="h-3 w-3 text-[#15803D]" />
+                                        <span>Copied</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Copy className="h-3 w-3" />
+                                        <span>Copy</span>
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                                <div className="p-2.5 bg-[#F5F6F8] rounded border border-[#E4E7EC] font-mono text-[11px] text-[#202938] select-all break-all whitespace-pre-wrap max-h-24 overflow-y-auto">
+                                  {qr.decodedPayload}
+                                </div>
+                              </div>
+
+                              {qr.normalizedUrl && (
+                                <div className="space-y-1 pt-1 border-t border-[#E4E7EC]">
+                                  <div className="flex items-center justify-between">
+                                    <span className="text-[11px] text-[#2563EB]">
+                                      Link in QR code:
+                                    </span>
+                                    <button
+                                      id={`copy-visual-url-${idx}-${qIdx}`}
+                                      onClick={() =>
+                                        copyValue(`visual-url-${idx}-${qIdx}`, qr.normalizedUrl)
+                                      }
+                                      className="text-[11px] text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
+                                    >
+                                      {copiedKey === `visual-url-${idx}-${qIdx}` ? (
+                                        <>
+                                          <Check className="h-3 w-3 text-[#15803D]" />
+                                          <span>Copied</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Copy className="h-3 w-3" />
+                                          <span>Copy</span>
+                                        </>
+                                      )}
+                                    </button>
+                                  </div>
+                                  <div className="text-[11px] font-mono text-[#202938] break-all select-all">
+                                    {qr.normalizedUrl}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-3 bg-white rounded-lg border border-[#E4E7EC] text-center">
+                          <span className="text-xs text-[#667085]">
+                            No QR codes were detected in this image.
+                          </span>
+                        </div>
                       )}
                     </div>
                   </div>
                 </div>
-
-                <div className="flex items-center gap-2 bg-[#F5F6F8] px-3 py-1.5 rounded-lg border border-[#E4E7EC] font-mono text-[11px] shrink-0">
-                  <Hash className="h-3 w-3 text-[#2563EB]" />
-                  <span className="text-[#667085]">SHA-256:</span>
-                  <span className="text-[#202938] select-all max-w-[140px] md:max-w-[200px] truncate">
-                    {v.sha256Hash}
-                  </span>
-                  <button
-                    id={`copy-visual-hash-${idx}`}
-                    onClick={() => copyValue(`visual-hash-${idx}`, v.sha256Hash)}
-                    className="p-1 hover:bg-white rounded text-[#667085] hover:text-[#202938] transition-colors cursor-pointer"
-                    title="Copy image SHA-256"
-                  >
-                    {copiedKey === `visual-hash-${idx}` ? (
-                      <Check className="h-3 w-3 text-[#15803D]" />
-                    ) : (
-                      <Copy className="h-3 w-3" />
-                    )}
-                  </button>
-                </div>
               </div>
-
-              {/* QR Code Detection Section */}
-              <div className="space-y-3 bg-[#F5F6F8] p-4 rounded-xl border border-[#E4E7EC]">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1.5 text-xs font-semibold text-[#202938]">
-                    <QrCode className="h-3.5 w-3.5 text-[#2563EB]" />
-                    <span>QR code detection</span>
-                  </div>
-                  <span className="text-[11px] px-2 py-0.5 rounded-full bg-white border border-[#E4E7EC] text-[#667085]">
-                    {v.qrArtifacts && v.qrArtifacts.length > 0
-                      ? `${v.qrArtifacts.length} detected`
-                      : 'None detected'}
-                  </span>
-                </div>
-
-                {v.qrArtifacts && v.qrArtifacts.length > 0 ? (
-                  <div className="space-y-2.5">
-                    {v.qrArtifacts.map((qr, qIdx) => (
-                      <div
-                        key={qr.id || qIdx}
-                        className="p-3 bg-white rounded-lg border border-[#E4E7EC] space-y-2 text-xs"
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
-                            {qr.payloadType || 'PAYLOAD'}
-                          </span>
-                          {qr.moduleCount && (
-                            <span className="text-[11px] text-[#667085]">
-                              Modules: {qr.moduleCount}
-                            </span>
-                          )}
-                        </div>
-
-                        <div className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-[11px] text-[#667085]">
-                              Decoded payload (safe preview):
-                            </span>
-                            <button
-                              id={`copy-qr-payload-${idx}-${qIdx}`}
-                              onClick={() =>
-                                copyValue(`qr-payload-${idx}-${qIdx}`, qr.decodedPayload)
-                              }
-                              className="text-[11px] text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
-                            >
-                              {copiedKey === `qr-payload-${idx}-${qIdx}` ? (
-                                <>
-                                  <Check className="h-3 w-3 text-[#15803D]" />
-                                  <span>Copied</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Copy className="h-3 w-3" />
-                                  <span>Copy</span>
-                                </>
-                              )}
-                            </button>
-                          </div>
-                          <div className="p-2.5 bg-[#F5F6F8] rounded border border-[#E4E7EC] font-mono text-[11px] text-[#202938] select-all break-all whitespace-pre-wrap max-h-28 overflow-y-auto">
-                            {qr.decodedPayload}
-                          </div>
-                        </div>
-
-                        {qr.normalizedUrl && (
-                          <div className="space-y-1 pt-1 border-t border-[#E4E7EC]">
-                            <div className="flex items-center justify-between">
-                              <span className="text-[11px] text-[#2563EB]">
-                                Link address in QR code:
-                              </span>
-                              <button
-                                id={`copy-qr-url-${idx}-${qIdx}`}
-                                onClick={() =>
-                                  copyValue(`qr-url-${idx}-${qIdx}`, qr.normalizedUrl)
-                                }
-                                className="text-[11px] text-[#2563EB] hover:underline flex items-center gap-1 cursor-pointer"
-                              >
-                                {copiedKey === `qr-url-${idx}-${qIdx}` ? (
-                                  <>
-                                    <Check className="h-3 w-3 text-[#15803D]" />
-                                    <span>Copied</span>
-                                  </>
-                                ) : (
-                                  <>
-                                    <Copy className="h-3 w-3" />
-                                    <span>Copy</span>
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                            <div className="text-[11px] font-mono text-[#202938] break-all select-all">
-                              {qr.normalizedUrl}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="p-3 bg-white rounded-lg border border-[#E4E7EC] text-center">
-                    <span className="text-xs text-[#667085]">
-                      No QR codes were detected in this image.
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))}
+            )
+          })}
         </div>
       )}
     </div>
   )
 }
-

@@ -173,19 +173,19 @@ export default function InvestigationReport({
             </div>
           </div>
 
-          {/* Case & Investigation Metadata Table */}
+          {/* Email Evidence Metadata Table */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#E4E7EC] border border-[#E4E7EC] text-xs pt-0 rounded overflow-hidden">
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Case Number</span>
-              <span className="font-bold font-mono text-[#202938] block">{caseNumber}</span>
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Original File</span>
+              <span className="font-bold font-mono text-[#202938] block truncate" title={detail.originalFilename}>{detail.originalFilename || 'evidence.eml'}</span>
             </div>
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Case Title</span>
-              <span className="font-semibold text-[#202938] block truncate">{caseTitle}</span>
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">SHA-256 Hash</span>
+              <span className="font-semibold font-mono text-[#202938] block truncate text-[11px]" title={verifiedHash}>{verifiedHash}</span>
             </div>
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Lead Examiner</span>
-              <span className="font-semibold text-[#202938] block">{examinerName} ({examinerRole})</span>
+              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Uploaded At</span>
+              <span className="font-semibold text-[#202938] block">{uploadDateDisplay}</span>
             </div>
             <div className="bg-white p-2.5 space-y-0.5">
               <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Analysis Pipeline</span>
@@ -690,7 +690,19 @@ export default function InvestigationReport({
                   <tbody className="divide-y divide-[#E4E7EC]">
                     {visuals.map((v, idx) => (
                       <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-2 font-semibold text-[#202938]">{v.filename || `Visual #${idx + 1}`}</td>
+                        <td className="p-2 font-semibold text-[#202938]">
+                          <div className="flex items-center gap-2">
+                            {(v.imageUrl || (detail?.evidenceId && v.id)) && (
+                              <img
+                                src={v.imageUrl || `/api/v1/evidence/${detail.evidenceId}/images/${v.id}/content`}
+                                alt=""
+                                className="w-8 h-8 object-contain rounded border border-[#E4E7EC] bg-white shrink-0"
+                                onError={(e) => { e.currentTarget.style.display = 'none' }}
+                              />
+                            )}
+                            <span className="break-all">{v.filename || `Visual #${idx + 1}`}</span>
+                          </div>
+                        </td>
                         <td className="p-2 font-mono text-[11px] text-[#667085]">{v.contentType || 'image/*'}</td>
                         <td className="p-2 font-mono text-[11px]">{safeFormatBytes(v.fileSizeBytes || v.byteSize || 0)}</td>
                         <td className="p-2 font-mono text-[11px] text-[#202938] break-all">
@@ -845,8 +857,8 @@ export default function InvestigationReport({
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
                   <tr>
-                    <th className="p-2 font-semibold">Related Case #</th>
-                    <th className="p-2 font-semibold">Matched Artifact</th>
+                    <th className="p-2 font-semibold">Matched Evidence</th>
+                    <th className="p-2 font-semibold">Subject / Title</th>
                     <th className="p-2 font-semibold">Indicator Type</th>
                     <th className="p-2 font-semibold">Indicator Value</th>
                     <th className="p-2 font-semibold">Match Strength</th>
@@ -855,7 +867,7 @@ export default function InvestigationReport({
                 <tbody className="divide-y divide-[#E4E7EC]">
                   {correlations.map((c, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2 font-bold font-mono text-[#2563EB]">{c.matchedCaseNumber || 'N/A'}</td>
+                      <td className="p-2 font-bold font-mono text-[#2563EB]">{c.matchedEmailFilename || 'Prior Evidence'}</td>
                       <td className="p-2 text-[#202938]">{c.matchedEmailSubject || 'Untitled'}</td>
                       <td className="p-2 font-mono text-[11px] text-[#667085]">{c.indicatorType}</td>
                       <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[200px] truncate" title={c.normalizedIndicatorValue}>
@@ -902,45 +914,6 @@ export default function InvestigationReport({
             </div>
           </section>
         )}
-
-        {/* Section 12: Examiner Certification, Chain of Custody & Sign-off */}
-        <section id="report-signoff-block" className="print-avoid-break border border-[#202938] p-6 rounded space-y-5 bg-[#F8FAFC]">
-          <div className="border-b border-[#202938] pb-1.5">
-            <h2 className="text-sm font-bold uppercase tracking-wider text-[#202938]">
-              12. Examiner Certification &amp; Custody Declaration
-            </h2>
-          </div>
-
-          <p className="text-xs text-[#202938] leading-relaxed">
-            I hereby certify under digital forensics professional standards (NIST SP 800-86 and ISO/IEC 27037) that the evidence cataloged in this report was ingested, hashed, verified, and analyzed in accordance with forensic best practices. Cryptographic integrity checks were performed to ensure no post-acquisition alteration or data degradation occurred. The analytical evaluations and indicator extractions recorded in this dossier reflect the objective state of the evidence.
-          </p>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-4 border-t border-[#E4E7EC] text-xs">
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Examining Analyst</span>
-              <span className="font-bold text-[#202938] block">{examinerName}</span>
-              <span className="text-[#667085] text-[11px] block">{examinerRole}</span>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Attribution Facility</span>
-              <span className="font-semibold text-[#202938] block">Email Forensics Laboratory</span>
-              <span className="text-[#667085] text-[11px] block">DFIR Operations Unit</span>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Date Certified</span>
-              <span className="font-mono font-semibold text-[#202938] block">{reportDate}</span>
-              <span className="text-[#667085] text-[11px] block">Standard Time</span>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[10px] uppercase font-mono tracking-wider text-[#667085] block">Signature</span>
-              <div className="h-6 border-b border-[#202938] mt-1"></div>
-              <span className="text-[10px] font-mono text-[#667085] block">Authorized Examiner Sign-off</span>
-            </div>
-          </div>
-        </section>
 
       </div>
     </div>

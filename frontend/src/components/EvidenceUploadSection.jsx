@@ -16,13 +16,13 @@ import {
 } from 'lucide-react'
 import {
   uploadEvidence,
-  getCaseEvidence,
+  getEvidenceList,
   getEvidenceStatus,
   checkEvidenceIntegrity,
   downloadOriginalEvidence
 } from '../api/evidence'
 
-export default function EvidenceUploadSection({ caseId }) {
+export default function EvidenceUploadSection() {
   const navigate = useNavigate()
   const [evidenceList, setEvidenceList] = useState([])
   const [isLoading, setIsLoading] = useState(true)
@@ -36,14 +36,14 @@ export default function EvidenceUploadSection({ caseId }) {
 
   const loadEvidence = useCallback(async () => {
     try {
-      const data = await getCaseEvidence(caseId, 0, 50)
+      const data = await getEvidenceList(0, 50)
       setEvidenceList(data.content || [])
     } catch (err) {
       console.error(err)
     } finally {
       setIsLoading(false)
     }
-  }, [caseId])
+  }, [])
 
   useEffect(() => {
     loadEvidence()
@@ -135,16 +135,13 @@ export default function EvidenceUploadSection({ caseId }) {
     setUploadSuccess(null)
 
     try {
-      const response = await uploadEvidence(caseId, fileToUpload)
+      const response = await uploadEvidence(fileToUpload)
       setUploadSuccess({
         filename: response.originalFilename,
         hash: response.sha256Hash,
         status: response.status,
         size: response.fileSizeBytes,
         duplicate: Boolean(response.duplicate),
-        existingCaseId: response.existingCaseId,
-        existingCaseNumber: response.existingCaseNumber,
-        existingCaseTitle: response.existingCaseTitle,
         evidenceId: response.emailId,
         message: response.message
       })
@@ -321,23 +318,6 @@ export default function EvidenceUploadSection({ caseId }) {
                     {uploadSuccess.status}
                   </div>
 
-                  {uploadSuccess.existingCaseId && (
-                    <div className="sm:col-span-2 flex flex-wrap items-center gap-1.5 pt-1 border-t border-slate-100">
-                      <span className="font-medium text-[#202938]">Existing case: </span>
-                      <Link
-                        id="actual-case-link"
-                        to={`/cases/${uploadSuccess.existingCaseId}`}
-                        className="inline-flex items-center gap-1 text-[#2563EB] hover:underline font-medium"
-                      >
-                        <span>{uploadSuccess.existingCaseNumber || 'Case'}</span>
-                        {uploadSuccess.existingCaseTitle && (
-                          <span className="text-[#667085] font-normal"> — {uploadSuccess.existingCaseTitle}</span>
-                        )}
-                        <ExternalLink className="h-3 w-3 ml-0.5" />
-                      </Link>
-                    </div>
-                  )}
-
                   <div className="sm:col-span-2 break-all text-[11px] pt-1">
                     <span className="font-medium text-[#202938]">SHA-256: </span>
                     <span className="font-mono text-[#667085]">{uploadSuccess.hash}</span>
@@ -345,26 +325,14 @@ export default function EvidenceUploadSection({ caseId }) {
                 </div>
 
                 <div className="pt-2 flex flex-wrap items-center gap-3">
-                  {uploadSuccess.existingCaseId && (
-                    <button
-                      type="button"
-                      id="go-to-actual-case-btn"
-                      onClick={() => navigate(`/cases/${uploadSuccess.existingCaseId}`)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
-                    >
-                      <FolderOpen className="h-3.5 w-3.5" />
-                      <span>Open existing case</span>
-                    </button>
-                  )}
-
                   <button
                     type="button"
                     id="view-duplicate-evidence-btn"
-                    onClick={() => navigate(`/cases/${uploadSuccess.existingCaseId || caseId}/evidence/${uploadSuccess.evidenceId}`)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
+                    onClick={() => navigate(`/evidence/${uploadSuccess.evidenceId}`)}
+                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
                   >
-                    <Eye className="h-3.5 w-3.5 text-[#667085]" />
-                    <span>View results</span>
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>View existing analysis results</span>
                   </button>
                 </div>
               </div>
@@ -393,7 +361,7 @@ export default function EvidenceUploadSection({ caseId }) {
                     <button
                       id="inspect-uploaded-evidence-btn"
                       type="button"
-                      onClick={() => navigate(`/cases/${caseId}/evidence/${uploadSuccess.evidenceId}`)}
+                      onClick={() => navigate(`/evidence/${uploadSuccess.evidenceId}`)}
                       className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#15803D] hover:bg-green-800 text-white transition-colors cursor-pointer"
                     >
                       <Eye className="h-3.5 w-3.5" />
@@ -490,13 +458,12 @@ export default function EvidenceUploadSection({ caseId }) {
                         {item.sentDate && (
                           <span>Sent: {new Date(item.sentDate).toLocaleString()}</span>
                         )}
-                        <span>By: {item.uploadedByUsername || 'analyst'}</span>
                       </div>
 
                       <div className="flex items-center gap-2">
                         <button
                           id={`inspect-btn-${item.id}`}
-                          onClick={() => navigate(`/cases/${caseId}/evidence/${item.id}`)}
+                          onClick={() => navigate(`/evidence/${item.id}`)}
                           className="inspect-artifact-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
                         >
                           <Eye className="h-3.5 w-3.5" />

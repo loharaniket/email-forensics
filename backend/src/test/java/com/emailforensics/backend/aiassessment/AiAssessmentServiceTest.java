@@ -1,6 +1,5 @@
 package com.emailforensics.backend.aiassessment;
 
-import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.dto.aiassessment.AiAssessmentDto;
 import com.emailforensics.backend.dto.aiassessment.AiStructuredOutput;
 import com.emailforensics.backend.dto.aiassessment.EvidenceContextSummaryDto;
@@ -9,8 +8,6 @@ import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
-import com.emailforensics.backend.user.Role;
-import com.emailforensics.backend.user.User;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -50,8 +47,6 @@ class AiAssessmentServiceTest {
 
     private AiAssessmentService service;
 
-    private User analyst;
-    private CaseFile caseFile;
     private EmailEvidence evidence;
     private AnalysisRun run;
 
@@ -66,9 +61,7 @@ class AiAssessmentServiceTest {
                 validator
         );
 
-        analyst = new User(UUID.randomUUID(), "analyst", "analyst@example.com", "pass", Role.ANALYST, true, java.time.Instant.now());
-        caseFile = new CaseFile(UUID.randomUUID(), "CF-2026-001", "Investigation 1", "Desc", com.emailforensics.backend.casefile.CaseStatus.OPEN, "notes", analyst, java.time.Instant.now(), java.time.Instant.now());
-        evidence = new EmailEvidence(UUID.randomUUID(), caseFile, "sample.eml", "storage-1", 1024L, "hash123", analyst);
+        evidence = new EmailEvidence(UUID.randomUUID(), "sample.eml", "storage-1", 1024L, "hash123");
         run = new AnalysisRun(UUID.randomUUID(), evidence, "v1.0.0", AnalysisStatus.COMPLETED, "COMPLETED");
     }
 

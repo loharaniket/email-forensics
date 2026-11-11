@@ -16,6 +16,7 @@ public class VisualArtifactDto {
     private Instant createdAt;
     private List<QrArtifactDto> qrArtifacts = new ArrayList<>();
     private String dataMode;
+    private String imageUrl;
 
     public VisualArtifactDto() {
     }
@@ -111,5 +112,13 @@ public class VisualArtifactDto {
 
     public void setDataMode(String dataMode) {
         this.dataMode = dataMode;
+    }
+
+    public String getImageUrl() {
+        return imageUrl;
+    }
+
+    public void setImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
     }
 }

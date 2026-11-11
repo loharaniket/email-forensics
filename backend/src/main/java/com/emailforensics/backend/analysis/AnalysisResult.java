@@ -20,7 +20,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "analysis_results")
+@Table(name = "email_analysis_results")
 public class AnalysisResult implements Persistable<UUID> {
 
     @Id
@@ -41,10 +41,10 @@ public class AnalysisResult implements Persistable<UUID> {
     @Column(name = "header_result_id")
     private UUID headerResultId;
 
-    @Column(name = "from_address", length = 254)
+    @Column(name = "sender_email", length = 254)
     private String fromAddress;
 
-    @Column(name = "from_domain", length = 255)
+    @Column(name = "sender_domain", length = 255)
     private String fromDomain;
 
     @Column(name = "reply_to", length = 254)
@@ -56,25 +56,25 @@ public class AnalysisResult implements Persistable<UUID> {
     @Column(name = "dkim_domain", length = 255)
     private String dkimDomain;
 
-    @Column(name = "reported_spf", length = 40)
+    @Column(name = "spf_result", length = 40)
     private String reportedSpf;
 
-    @Column(name = "reported_dkim", length = 40)
+    @Column(name = "dkim_result", length = 40)
     private String reportedDkim;
 
-    @Column(name = "reported_dmarc", length = 40)
+    @Column(name = "dmarc_result", length = 40)
     private String reportedDmarc;
 
-    @Column(name = "reported_arc", length = 40)
+    @Column(name = "arc_result", length = 40)
     private String reportedArc;
 
-    @Column(name = "current_dns_observation", columnDefinition = "TEXT")
+    @Column(name = "dns_observation", columnDefinition = "TEXT")
     private String currentDnsObservation;
 
-    @Column(name = "independent_verification", columnDefinition = "TEXT")
+    @Column(name = "sender_verification", columnDefinition = "TEXT")
     private String independentVerification;
 
-    @Column(name = "identity_mismatch_flags", columnDefinition = "TEXT")
+    @Column(name = "sender_mismatch_flags", columnDefinition = "TEXT")
     private String identityMismatchFlags;
 
     @Column(name = "raw_headers_json", columnDefinition = "TEXT")
@@ -93,35 +93,35 @@ public class AnalysisResult implements Persistable<UUID> {
     @Column(name = "ml_model_version", length = 80)
     private String mlModelVersion;
 
-    @Column(name = "probability")
+    @Column(name = "ml_probability")
     private Double probability;
 
-    @Column(name = "predicted_label", length = 80)
+    @Column(name = "ml_prediction", length = 80)
     private String predictedLabel;
 
     @Column(name = "ml_status", length = 50)
     private String mlStatus;
 
-    @Column(name = "urgency")
+    @Column(name = "has_urgent_language")
     private Boolean urgency;
 
-    @Column(name = "credential_request")
+    @Column(name = "asks_for_credentials")
     private Boolean credentialRequest;
 
-    @Column(name = "payment_instruction")
+    @Column(name = "has_payment_request")
     private Boolean paymentInstruction;
 
-    @Column(name = "impersonation")
+    @Column(name = "detects_impersonation")
     private Boolean impersonation;
 
-    @Column(name = "secrecy")
+    @Column(name = "asks_for_secrecy")
     private Boolean secrecy;
 
-    @Column(name = "prompt_injection_detected")
+    @Column(name = "has_prompt_injection")
     private Boolean promptInjectionDetected;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "prompt_matches", columnDefinition = "jsonb")
+    @Column(name = "prompt_matches_json", columnDefinition = "jsonb")
     private String promptMatchesJson;
 
     @JdbcTypeCode(SqlTypes.JSON)
@@ -138,7 +138,7 @@ public class AnalysisResult implements Persistable<UUID> {
     @Column(name = "risk_result_id")
     private UUID riskResultId;
 
-    @Column(name = "deterministic_risk_score")
+    @Column(name = "risk_score")
     private Integer deterministicRiskScore;
 
     @Column(name = "risk_level", length = 20)
@@ -154,16 +154,16 @@ public class AnalysisResult implements Persistable<UUID> {
     private String confidenceExplanation;
 
     @JdbcTypeCode(SqlTypes.JSON)
-    @Column(name = "category_scores_json", columnDefinition = "jsonb")
+    @Column(name = "risk_scores_by_category_json", columnDefinition = "jsonb")
     private String categoryScoresJson;
 
-    @Column(name = "total_uncapped_score")
+    @Column(name = "raw_risk_score")
     private Integer totalUncappedScore;
 
-    @Column(name = "engine_version", length = 50)
+    @Column(name = "risk_engine_version", length = 50)
     private String engineVersion;
 
-    @Column(name = "evaluated_at")
+    @Column(name = "risk_checked_at")
     private Instant evaluatedAt;
 
     @Column(name = "risk_created_at")

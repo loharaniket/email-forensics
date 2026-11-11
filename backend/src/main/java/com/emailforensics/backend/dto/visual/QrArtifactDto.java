@@ -6,6 +6,8 @@ import java.util.UUID;
 public class QrArtifactDto {
 
     private UUID id;
+    private UUID imageId;
+    private String imageFileName;
     private String decodedPayload;
     private String payloadType;
     private String normalizedUrl;
@@ -22,12 +24,38 @@ public class QrArtifactDto {
         this.createdAt = createdAt;
     }
 
+    public QrArtifactDto(UUID id, UUID imageId, String imageFileName, String decodedPayload, String payloadType, String normalizedUrl, Instant createdAt) {
+        this.id = id;
+        this.imageId = imageId;
+        this.imageFileName = imageFileName;
+        this.decodedPayload = decodedPayload;
+        this.payloadType = payloadType;
+        this.normalizedUrl = normalizedUrl;
+        this.createdAt = createdAt;
+    }
+
     public UUID getId() {
         return id;
     }
 
     public void setId(UUID id) {
         this.id = id;
+    }
+
+    public UUID getImageId() {
+        return imageId;
+    }
+
+    public void setImageId(UUID imageId) {
+        this.imageId = imageId;
+    }
+
+    public String getImageFileName() {
+        return imageFileName;
+    }
+
+    public void setImageFileName(String imageFileName) {
+        this.imageFileName = imageFileName;
     }
 
     public String getDecodedPayload() {

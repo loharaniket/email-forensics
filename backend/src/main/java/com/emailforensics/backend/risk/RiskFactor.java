@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "risk_factors")
+@Table(name = "risk_reasons")
 public class RiskFactor {
 
     @Id
@@ -27,16 +27,16 @@ public class RiskFactor {
     @Column(name = "category", nullable = false, length = 50)
     private String category;
 
-    @Column(name = "factor_code", nullable = false, length = 80)
+    @Column(name = "reason_code", nullable = false, length = 80)
     private String factorCode;
 
     @Column(name = "severity", nullable = false, length = 20)
     private String severity;
 
-    @Column(name = "weight_points", nullable = false)
+    @Column(name = "risk_points", nullable = false)
     private Integer weightPoints;
 
-    @Column(name = "explanation", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "reason", nullable = false, columnDefinition = "TEXT")
     private String explanation;
 
     @Column(name = "evidence_reference", nullable = false, length = 255)

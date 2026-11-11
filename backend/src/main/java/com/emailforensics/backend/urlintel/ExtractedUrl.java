@@ -15,7 +15,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "extracted_urls")
+@Table(name = "email_urls")
 public class ExtractedUrl {
 
     @Id
@@ -25,46 +25,46 @@ public class ExtractedUrl {
     @JoinColumn(name = "analysis_run_id", nullable = false)
     private AnalysisRun analysisRun;
 
-    @Column(name = "raw_url", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "original_url", nullable = false, columnDefinition = "TEXT")
     private String rawUrl;
 
-    @Column(name = "normalized_url", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "clean_url", nullable = false, columnDefinition = "TEXT")
     private String normalizedUrl;
 
     @Column(name = "domain", length = 255)
     private String domain;
 
-    @Column(name = "source_type", nullable = false, length = 50)
+    @Column(name = "found_in", nullable = false, length = 50)
     private String sourceType;
 
-    @Column(name = "anchor_text", columnDefinition = "TEXT")
+    @Column(name = "link_text", columnDefinition = "TEXT")
     private String anchorText;
 
-    @Column(name = "anchor_mismatch", nullable = false)
+    @Column(name = "link_text_mismatch", nullable = false)
     private Boolean anchorMismatch = false;
 
-    @Column(name = "is_ip_url", nullable = false)
+    @Column(name = "uses_ip_address", nullable = false)
     private Boolean isIpUrl = false;
 
-    @Column(name = "is_shortened", nullable = false)
+    @Column(name = "is_short_url", nullable = false)
     private Boolean isShortened = false;
 
-    @Column(name = "unusual_port", nullable = false)
+    @Column(name = "has_unusual_port", nullable = false)
     private Boolean unusualPort = false;
 
-    @Column(name = "subdomain_excess", nullable = false)
+    @Column(name = "has_many_subdomains", nullable = false)
     private Boolean subdomainExcess = false;
 
-    @Column(name = "lookalike", nullable = false)
+    @Column(name = "is_lookalike_domain", nullable = false)
     private Boolean lookalike = false;
 
     @Column(name = "dns_status", length = 50)
     private String dnsStatus;
 
-    @Column(name = "url_risk_score")
+    @Column(name = "risk_score")
     private Integer urlRiskScore;
 
-    @Column(name = "data_mode", nullable = false, length = 50)
+    @Column(name = "data_status", nullable = false, length = 50)
     private String dataMode = DataProvenance.NOT_CHECKED.name();
 
     @Column(name = "created_at", nullable = false)

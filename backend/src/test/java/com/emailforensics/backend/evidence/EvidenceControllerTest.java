@@ -1,6 +1,5 @@
 package com.emailforensics.backend.evidence;
 
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -33,37 +32,6 @@ class EvidenceControllerTest {
     @Autowired
     private EmailEvidenceRepository evidenceRepository;
 
-    private String authToken;
-    private String caseId;
-
-    @BeforeEach
-    void setUp() throws Exception {
-        String loginJson = "{\"username\":\"analyst\",\"password\":\"analyst123\"}";
-        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(loginJson))
-                .andExpect(status().isOk())
-                .andReturn();
-
-        String loginBody = loginResult.getResponse().getContentAsString();
-        int tokenStart = loginBody.indexOf("\"accessToken\":\"") + 15;
-        int tokenEnd = loginBody.indexOf("\"", tokenStart);
-        authToken = loginBody.substring(tokenStart, tokenEnd);
-
-        String createCaseJson = "{\"title\":\"Forensic Case Evidence Test\",\"description\":\"Testing upload and preservation\"}";
-        MvcResult caseResult = mockMvc.perform(post("/api/v1/cases")
-                        .header("Authorization", "Bearer " + authToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createCaseJson))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        String caseBody = caseResult.getResponse().getContentAsString();
-        int idStart = caseBody.indexOf("\"id\":\"") + 6;
-        int idEnd = caseBody.indexOf("\"", idStart);
-        caseId = caseBody.substring(idStart, idEnd);
-    }
-
     @Test
     void shouldUploadEmlEvidenceSuccessfullyAndReturn202() throws Exception {
         String testRunId = UUID.randomUUID().toString();
@@ -80,9 +48,8 @@ class EvidenceControllerTest {
                 emlBytes
         );
 
-        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file)
-                        .header("Authorization", "Bearer " + authToken))
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.emailId").isNotEmpty())
                 .andExpect(jsonPath("$.analysisRunId").isNotEmpty())
@@ -92,8 +59,6 @@ class EvidenceControllerTest {
                 .andExpect(jsonPath("$.originalFilename").value("sample-evidence.eml"))
                 .andExpect(jsonPath("$.fileSizeBytes").value(emlBytes.length))
                 .andExpect(jsonPath("$.duplicate").value(false))
-                .andExpect(jsonPath("$.existingCaseId").value(caseId))
-                .andExpect(jsonPath("$.existingCaseTitle").value("Forensic Case Evidence Test"))
                 .andReturn();
 
         String uploadBody = uploadResult.getResponse().getContentAsString();
@@ -104,8 +69,7 @@ class EvidenceControllerTest {
         // Await background forensic pipeline completion
         long deadline = System.currentTimeMillis() + 8000;
         while (System.currentTimeMillis() < deadline) {
-            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")
-                            .header("Authorization", "Bearer " + authToken))
+            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status"))
                     .andReturn();
             if (res.getResponse().getContentAsString().contains("\"status\":\"COMPLETED\"")) {
                 break;
@@ -113,76 +77,76 @@ class EvidenceControllerTest {
             Thread.sleep(50);
         }
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.emailId").value(emailId))
                 .andExpect(jsonPath("$.status").value("COMPLETED"));
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/integrity")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/integrity"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.emailId").value(emailId))
                 .andExpect(jsonPath("$.intact").value(true))
                 .andExpect(jsonPath("$.savedSha256").isNotEmpty())
                 .andExpect(jsonPath("$.recalculatedSha256").isNotEmpty());
 
-        mockMvc.perform(get("/api/v1/cases/" + caseId + "/evidence")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.content").isArray())
-                .andExpect(jsonPath("$.content[0].id").value(emailId));
+                .andExpect(jsonPath("$.content").isArray());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/original")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/original"))
                 .andExpect(status().isOk())
                 .andExpect(header().string("Content-Disposition", "attachment; filename=\"sample-evidence.eml\""))
                 .andExpect(content().bytes(emlBytes));
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/investigation")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/investigation"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.evidenceId").value(emailId))
                 .andExpect(jsonPath("$.parsedEmail.subject").value("Test Evidence Email"))
                 .andExpect(jsonPath("$.parsedEmail.from").value("alice@test.org"))
                 .andExpect(jsonPath("$.parsedEmail.extractedText").value("This is the raw content of evidence."));
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/headers")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/headers"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.fromAddress").value("alice@test.org"))
                 .andExpect(jsonPath("$.fromDomain").value("test.org"))
                 .andExpect(jsonPath("$.verificationNote").isNotEmpty());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/hops")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/hops"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/urls")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/urls"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/infrastructure")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/infrastructure"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/visuals")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/visuals"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$").isArray());
 
-        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/content-analysis")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/images"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/qr"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/qr-codes"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray());
+
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/content-analysis"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.mlModelVersion").value("tribuo-logreg-tfidf-v1.0.0"))
                 .andExpect(jsonPath("$.predictedLabel").isNotEmpty());
     }
 
     @Test
-    void shouldDeduplicateIdenticalEmailInSameCaseAndReturnPreviousResults() throws Exception {
+    void shouldDeduplicateIdenticalEmailAndReturnPreviousResults() throws Exception {
         String testRunId = UUID.randomUUID().toString();
         byte[] emlBytes = ("From: dedupe-test@domain.com\r\n" +
                 "To: target@victim.org\r\n" +
@@ -198,9 +162,8 @@ class EvidenceControllerTest {
         );
 
         // First upload: should create new evidence
-        MvcResult firstUploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file1)
-                        .header("Authorization", "Bearer " + authToken))
+        MvcResult firstUploadResult = mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file1))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.duplicate").value(false))
                 .andExpect(jsonPath("$.emailId").isNotEmpty())
@@ -224,90 +187,17 @@ class EvidenceControllerTest {
                 emlBytes
         );
 
-        mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file2)
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file2))
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.duplicate").value(true))
                 .andExpect(jsonPath("$.emailId").value(initialEmailId))
-                .andExpect(jsonPath("$.sha256Hash").value(initialHash))
-                .andExpect(jsonPath("$.existingCaseId").value(caseId))
-                .andExpect(jsonPath("$.existingCaseTitle").value("Forensic Case Evidence Test"));
+                .andExpect(jsonPath("$.sha256Hash").value(initialHash));
 
         // Verify only 1 record exists in database for this hash
         List<EmailEvidence> matching = evidenceRepository.findAllBySha256Hash(initialHash);
         assertThat(matching).hasSize(1);
         assertThat(matching.get(0).getId().toString()).isEqualTo(initialEmailId);
-    }
-
-    @Test
-    void shouldDeduplicateIdenticalEmailAcrossDifferentCasesGlobally() throws Exception {
-        String testRunId = UUID.randomUUID().toString();
-        byte[] emlBytes = ("From: global-dedupe@domain.com\r\n" +
-                "To: security@company.org\r\n" +
-                "Subject: Cross-Case Global Deduplication Test\r\n" +
-                "X-Test-Run-Id: " + testRunId + "\r\n\r\n" +
-                "Unique content for cross-case deduplication testing.").getBytes(StandardCharsets.UTF_8);
-
-        MockMultipartFile file1 = new MockMultipartFile(
-                "file",
-                "first-case-file.eml",
-                "message/rfc822",
-                emlBytes
-        );
-
-        // Upload in Case 1
-        MvcResult firstUploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file1)
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.duplicate").value(false))
-                .andReturn();
-
-        String body1 = firstUploadResult.getResponse().getContentAsString();
-        int idStart = body1.indexOf("\"emailId\":\"") + 11;
-        int idEnd = body1.indexOf("\"", idStart);
-        String initialEmailId = body1.substring(idStart, idEnd);
-
-        int hashStart = body1.indexOf("\"sha256Hash\":\"") + 14;
-        int hashEnd = body1.indexOf("\"", hashStart);
-        String initialHash = body1.substring(hashStart, hashEnd);
-
-        // Create Case 2
-        String createCase2Json = "{\"title\":\"Second Forensic Case\",\"description\":\"Testing cross case dedupe\"}";
-        MvcResult case2Result = mockMvc.perform(post("/api/v1/cases")
-                        .header("Authorization", "Bearer " + authToken)
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(createCase2Json))
-                .andExpect(status().isCreated())
-                .andReturn();
-
-        String case2Body = case2Result.getResponse().getContentAsString();
-        int case2IdStart = case2Body.indexOf("\"id\":\"") + 6;
-        int case2IdEnd = case2Body.indexOf("\"", case2IdStart);
-        String case2Id = case2Body.substring(case2IdStart, case2IdEnd);
-
-        // Upload identical email in Case 2: should return Case 1's evidence and duplicate=true
-        MockMultipartFile file2 = new MockMultipartFile(
-                "file",
-                "second-case-same-file.eml",
-                "message/rfc822",
-                emlBytes
-        );
-
-        mockMvc.perform(multipart("/api/v1/cases/" + case2Id + "/evidence/upload")
-                        .file(file2)
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isAccepted())
-                .andExpect(jsonPath("$.duplicate").value(true))
-                .andExpect(jsonPath("$.emailId").value(initialEmailId))
-                .andExpect(jsonPath("$.sha256Hash").value(initialHash))
-                .andExpect(jsonPath("$.existingCaseId").value(caseId))
-                .andExpect(jsonPath("$.existingCaseTitle").value("Forensic Case Evidence Test"));
-
-        // Verify only 1 record exists in the database
-        List<EmailEvidence> matching = evidenceRepository.findAllBySha256Hash(initialHash);
-        assertThat(matching).hasSize(1);
     }
 
     @Test
@@ -320,9 +210,8 @@ class EvidenceControllerTest {
                 exeBytes
         );
 
-        mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file)
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
     }
@@ -336,36 +225,10 @@ class EvidenceControllerTest {
                 new byte[0]
         );
 
-        mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file)
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file))
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.code").value("BAD_REQUEST"));
-    }
-
-    @Test
-    void shouldReturnNotFoundWhenUploadingToNonexistentCase() throws Exception {
-        UUID nonExistentCaseId = UUID.randomUUID();
-        byte[] emlBytes = "From: a@b.com\r\nSubject: Hi\r\n\r\nTest".getBytes(StandardCharsets.UTF_8);
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "valid.eml",
-                "message/rfc822",
-                emlBytes
-        );
-
-        mockMvc.perform(multipart("/api/v1/cases/" + nonExistentCaseId + "/evidence/upload")
-                        .file(file)
-                        .header("Authorization", "Bearer " + authToken))
-                .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RESOURCE_NOT_FOUND"));
-    }
-
-    @Test
-    void shouldRejectUnauthenticatedEvidenceAccess() throws Exception {
-        mockMvc.perform(get("/api/v1/cases/" + caseId + "/evidence"))
-                .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED"));
     }
 
     @Test
@@ -384,9 +247,8 @@ class EvidenceControllerTest {
                 emlBytes
         );
 
-        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/cases/" + caseId + "/evidence/upload")
-                        .file(file)
-                        .header("Authorization", "Bearer " + authToken))
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file))
                 .andExpect(status().isAccepted())
                 .andReturn();
 
@@ -398,8 +260,7 @@ class EvidenceControllerTest {
         // Wait for initial run to complete
         long deadline = System.currentTimeMillis() + 8000;
         while (System.currentTimeMillis() < deadline) {
-            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")
-                            .header("Authorization", "Bearer " + authToken))
+            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status"))
                     .andReturn();
             if (res.getResponse().getContentAsString().contains("\"status\":\"COMPLETED\"")) {
                 break;
@@ -408,10 +269,87 @@ class EvidenceControllerTest {
         }
 
         // Trigger retry
-        mockMvc.perform(post("/api/v1/evidence/" + emailId + "/retry")
-                        .header("Authorization", "Bearer " + authToken))
+        mockMvc.perform(post("/api/v1/evidence/" + emailId + "/retry"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.emailId").value(emailId))
                 .andExpect(jsonPath("$.attemptNumber").value(2));
+    }
+
+    @Test
+    void shouldRetrieveImagesAndQrEndpoints() throws Exception {
+        String testUrl = "https://phishing-gateway.security-check.test/login";
+        com.google.zxing.qrcode.QRCodeWriter writer = new com.google.zxing.qrcode.QRCodeWriter();
+        com.google.zxing.common.BitMatrix matrix = writer.encode(testUrl, com.google.zxing.BarcodeFormat.QR_CODE, 200, 200);
+        java.io.ByteArrayOutputStream imgBaos = new java.io.ByteArrayOutputStream();
+        com.google.zxing.client.j2se.MatrixToImageWriter.writeToStream(matrix, "PNG", imgBaos);
+        String base64Img = java.util.Base64.getMimeEncoder().encodeToString(imgBaos.toByteArray());
+
+        String eml = "From: security@alerts.test\r\n" +
+                "To: user@test.org\r\n" +
+                "Subject: Security Code\r\n" +
+                "MIME-Version: 1.0\r\n" +
+                "Content-Type: multipart/related; boundary=\"----=_Part_Boundary_Img\"\r\n\r\n" +
+                "------=_Part_Boundary_Img\r\n" +
+                "Content-Type: text/html; charset=UTF-8\r\n\r\n" +
+                "<html><body><p>Scan QR code</p></body></html>\r\n" +
+                "------=_Part_Boundary_Img\r\n" +
+                "Content-Type: image/png\r\n" +
+                "Content-Disposition: inline; filename=\"test_qr.png\"\r\n" +
+                "Content-Transfer-Encoding: base64\r\n\r\n" +
+                base64Img + "\r\n" +
+                "------=_Part_Boundary_Img--\r\n";
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "test-qr-email.eml",
+                "message/rfc822",
+                eml.getBytes(StandardCharsets.UTF_8)
+        );
+
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/evidence/upload")
+                        .file(file))
+                .andExpect(status().isAccepted())
+                .andReturn();
+
+        String uploadBody = uploadResult.getResponse().getContentAsString();
+        int emailIdStart = uploadBody.indexOf("\"emailId\":\"") + 11;
+        int emailIdEnd = uploadBody.indexOf("\"", emailIdStart);
+        String emailId = uploadBody.substring(emailIdStart, emailIdEnd);
+
+        // Wait for pipeline completion
+        long deadline = System.currentTimeMillis() + 8000;
+        while (System.currentTimeMillis() < deadline) {
+            MvcResult res = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/status")).andReturn();
+            if (res.getResponse().getContentAsString().contains("\"status\":\"COMPLETED\"")) {
+                break;
+            }
+            Thread.sleep(50);
+        }
+
+        // Test GET /images
+        MvcResult imagesResult = mockMvc.perform(get("/api/v1/evidence/" + emailId + "/images"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].filename").value("test_qr.png"))
+                .andExpect(jsonPath("$[0].imageUrl").isNotEmpty())
+                .andReturn();
+
+        String imagesJson = imagesResult.getResponse().getContentAsString();
+        int imageIdStart = imagesJson.indexOf("\"id\":\"") + 6;
+        int imageIdEnd = imagesJson.indexOf("\"", imageIdStart);
+        String imageId = imagesJson.substring(imageIdStart, imageIdEnd);
+
+        // Test GET /qr
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/qr"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$").isArray())
+                .andExpect(jsonPath("$[0].decodedPayload").value(testUrl))
+                .andExpect(jsonPath("$[0].imageId").value(imageId));
+
+        // Test GET /images/{imageId}/content
+        mockMvc.perform(get("/api/v1/evidence/" + emailId + "/images/" + imageId + "/content"))
+                .andExpect(status().isOk())
+                .andExpect(header().string("Content-Type", "image/png"))
+                .andExpect(header().string("Content-Disposition", "inline; filename=\"test_qr.png\""));
     }
 }

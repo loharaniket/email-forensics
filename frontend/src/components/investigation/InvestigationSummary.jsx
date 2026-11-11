@@ -5,6 +5,8 @@ import {
   AlertTriangle,
   Link2,
   Paperclip,
+  Image as ImageIcon,
+  QrCode,
   Server,
   Network,
   Sparkles,
@@ -17,6 +19,8 @@ export default function InvestigationSummary({
   headerAnalysis,
   urls,
   attachments,
+  visuals = [],
+  qrCodes = [],
   hops,
   infrastructure,
   onNavigateTab
@@ -178,7 +182,7 @@ export default function InvestigationSummary({
       </div>
 
       {/* Quick counts */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
         <button
           onClick={() => onNavigateTab('urls')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
@@ -192,6 +196,38 @@ export default function InvestigationSummary({
           </div>
           <span className="text-xs text-[#2563EB] mt-1 inline-flex items-center gap-1 font-medium">
             View links <ArrowRight className="h-3 w-3" />
+          </span>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('visuals')}
+          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-[#667085]">
+            <span className="text-xs">Images</span>
+            <ImageIcon className="h-4 w-4 text-[#98A2B3]" />
+          </div>
+          <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
+            {visuals?.length || 0}
+          </div>
+          <span className="text-xs text-[#2563EB] mt-1 inline-flex items-center gap-1 font-medium">
+            View images <ArrowRight className="h-3 w-3" />
+          </span>
+        </button>
+
+        <button
+          onClick={() => onNavigateTab('qr')}
+          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
+        >
+          <div className="flex items-center justify-between text-[#667085]">
+            <span className="text-xs">QR codes</span>
+            <QrCode className="h-4 w-4 text-[#98A2B3]" />
+          </div>
+          <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
+            {qrCodes?.length || visuals?.reduce((acc, v) => acc + (v.qrArtifacts?.length || 0), 0) || 0}
+          </div>
+          <span className="text-xs text-[#2563EB] mt-1 inline-flex items-center gap-1 font-medium">
+            View QR codes <ArrowRight className="h-3 w-3" />
           </span>
         </button>
 

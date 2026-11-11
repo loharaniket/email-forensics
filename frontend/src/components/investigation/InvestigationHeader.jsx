@@ -49,11 +49,11 @@ export default function InvestigationHeader({
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <Link
-          to={`/cases/${caseId}`}
+          to="/"
           className="flex items-center gap-1.5 text-xs text-[#667085] hover:text-[#202938] transition-colors cursor-pointer w-fit"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
-          <span>Back to case ({detail.caseNumber})</span>
+          <span>Back to dashboard</span>
         </Link>
 
         <div className="flex flex-wrap items-center gap-2" id="report-action-bar">
@@ -92,10 +92,8 @@ export default function InvestigationHeader({
           <div className="space-y-2 flex-1">
             <div className="flex flex-wrap items-center gap-2 text-xs">
               <span className="text-[#2563EB] font-mono font-semibold bg-[#EFF6FF] px-2.5 py-0.5 rounded border border-blue-100">
-                {detail.caseNumber}
+                {detail.originalFilename || 'Email Evidence'}
               </span>
-              <span className="text-[#98A2B3]">•</span>
-              <span className="text-[#667085] font-medium">{detail.caseTitle}</span>
               <span className="text-[#98A2B3]">•</span>
               <span className="text-[#15803D] text-[11px] bg-[#F0FDF4] px-2 py-0.5 rounded border border-green-200 font-medium">
                 Analysis complete

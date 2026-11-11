@@ -14,7 +14,7 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "received_hops")
+@Table(name = "email_hops")
 public class ReceivedHop {
 
     @Id
@@ -24,31 +24,31 @@ public class ReceivedHop {
     @JoinColumn(name = "analysis_run_id", nullable = false)
     private AnalysisRun analysisRun;
 
-    @Column(name = "hop_order", nullable = false)
+    @Column(name = "hop_number", nullable = false)
     private Integer hopOrder;
 
-    @Column(name = "from_host", length = 255)
+    @Column(name = "from_server", length = 255)
     private String fromHost;
 
-    @Column(name = "by_host", length = 255)
+    @Column(name = "received_by_server", length = 255)
     private String byHost;
 
-    @Column(name = "protocol", length = 50)
+    @Column(name = "mail_protocol", length = 50)
     private String protocol;
 
-    @Column(name = "hop_ip", length = 50)
+    @Column(name = "server_ip", length = 50)
     private String hopIp;
 
-    @Column(name = "hop_timestamp")
+    @Column(name = "received_at")
     private Instant hopTimestamp;
 
     @Column(name = "delay_seconds")
     private Long delaySeconds;
 
-    @Column(name = "raw_hop_line", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "original_received_header", nullable = false, columnDefinition = "TEXT")
     private String rawHopLine;
 
-    @Column(name = "parsing_warning", length = 255)
+    @Column(name = "parse_warning", length = 255)
     private String parsingWarning;
 
     @Column(name = "created_at", nullable = false)

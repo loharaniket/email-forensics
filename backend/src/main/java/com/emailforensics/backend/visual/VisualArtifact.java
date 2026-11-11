@@ -19,7 +19,7 @@ import java.util.List;
 import java.util.UUID;
 
 @Entity
-@Table(name = "visual_artifacts")
+@Table(name = "email_files")
 public class VisualArtifact {
 
     @Id
@@ -29,10 +29,10 @@ public class VisualArtifact {
     @JoinColumn(name = "analysis_run_id", nullable = false)
     private AnalysisRun analysisRun;
 
-    @Column(name = "filename", nullable = false)
+    @Column(name = "file_name", nullable = false)
     private String filename;
 
-    @Column(name = "content_type", nullable = false, length = 100)
+    @Column(name = "file_type", nullable = false, length = 100)
     private String contentType;
 
     @Column(name = "file_size_bytes", nullable = false)
@@ -48,7 +48,7 @@ public class VisualArtifact {
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
 
-    @Column(name = "data_mode", nullable = false, length = 50)
+    @Column(name = "data_status", nullable = false, length = 50)
     private String dataMode = DataProvenance.NOT_CHECKED.name();
 
     @OneToMany(mappedBy = "visualArtifact", cascade = CascadeType.ALL, orphanRemoval = true)

@@ -23,6 +23,14 @@ public class EvidenceSummaryDto {
     public EvidenceSummaryDto() {
     }
 
+    public EvidenceSummaryDto(UUID id, String originalFilename, Long fileSizeBytes,
+                              String sha256Hash, String subject, String messageId,
+                              Instant sentDate, Instant uploadedAt,
+                              AnalysisStatus latestStatus, String currentStage) {
+        this(id, null, originalFilename, fileSizeBytes, sha256Hash, subject, messageId,
+                sentDate, null, uploadedAt, latestStatus, currentStage);
+    }
+
     public EvidenceSummaryDto(UUID id, UUID caseId, String originalFilename, Long fileSizeBytes,
                               String sha256Hash, String subject, String messageId,
                               Instant sentDate, String uploadedByUsername, Instant uploadedAt,

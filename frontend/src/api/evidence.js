@@ -1,10 +1,10 @@
 import client from './client';
 
-export const uploadEvidence = async (caseId, file) => {
+export const uploadEvidence = async (file) => {
   const formData = new FormData();
   formData.append('file', file);
 
-  const response = await client.post(`/cases/${caseId}/evidence/upload`, formData, {
+  const response = await client.post('/evidence/upload', formData, {
     headers: {
       'Content-Type': 'multipart/form-data',
     },
@@ -12,12 +12,14 @@ export const uploadEvidence = async (caseId, file) => {
   return response.data;
 };
 
-export const getCaseEvidence = async (caseId, page = 0, size = 20) => {
-  const response = await client.get(`/cases/${caseId}/evidence`, {
+export const getEvidenceList = async (page = 0, size = 20) => {
+  const response = await client.get('/evidence', {
     params: { page, size },
   });
   return response.data;
 };
+
+export const getCaseEvidence = getEvidenceList;
 
 export const getEvidenceStatus = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/status`);
@@ -69,8 +71,22 @@ export const getEvidenceInfrastructure = async (emailId) => {
 };
 
 export const getEvidenceVisuals = async (emailId) => {
-  const response = await client.get(`/evidence/${emailId}/visuals`);
+  const response = await client.get(`/evidence/${emailId}/images`);
   return response.data;
+};
+
+export const getEvidenceImages = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/images`);
+  return response.data;
+};
+
+export const getEvidenceQrCodes = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/qr`);
+  return response.data;
+};
+
+export const getEvidenceImageUrl = (emailId, imageId) => {
+  return `/api/v1/evidence/${emailId}/images/${imageId}/content`;
 };
 
 export const getEvidenceContentAnalysis = async (emailId) => {

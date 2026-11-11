@@ -4,8 +4,6 @@ import com.emailforensics.backend.aiassessment.AiGroundedAssessment;
 import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
 import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
-import com.emailforensics.backend.casefile.CaseFile;
-import com.emailforensics.backend.casefile.CaseStatus;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
@@ -24,11 +22,8 @@ import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.risk.RiskFactor;
 import com.emailforensics.backend.risk.RiskFactorRepository;
-import com.emailforensics.backend.security.UserPrincipal;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
-import com.emailforensics.backend.user.Role;
-import com.emailforensics.backend.user.User;
 import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifact;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
@@ -97,8 +92,6 @@ class ReportServiceTest {
 
     private ReportService service;
 
-    private User analyst;
-    private CaseFile caseFile;
     private EmailEvidence evidence;
     private AnalysisRun run;
 
@@ -120,9 +113,7 @@ class ReportServiceTest {
                 emailParserService
         );
 
-        analyst = new User(UUID.randomUUID(), "analyst", "hash", "analyst@forensics.local", Role.ANALYST, true, Instant.now());
-        caseFile = new CaseFile(UUID.randomUUID(), "CASE-2026-TEST", "Phishing Test Case", "Description", CaseStatus.OPEN, "Notes", analyst, Instant.now(), Instant.now());
-        evidence = new EmailEvidence(UUID.randomUUID(), caseFile, "suspicious.eml", "storage/key.eml", 2048L, "hash123", analyst);
+        evidence = new EmailEvidence(UUID.randomUUID(), "suspicious.eml", "storage/key.eml", 2048L, "hash123");
         run = new AnalysisRun(UUID.randomUUID(), evidence, "v1.0.0", AnalysisStatus.COMPLETED, "COMPLETED");
     }
 
@@ -205,11 +196,9 @@ class ReportServiceTest {
         );
         when(aiRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(ai));
 
-        UserPrincipal principal = new UserPrincipal(analyst);
-        ForensicReportDto report = service.generateReport(emailId, principal);
+        ForensicReportDto report = service.generateReport(emailId);
 
         assertNotNull(report);
-        assertEquals("CASE-2026-TEST", report.getCaseContext().getCaseNumber());
         assertTrue(report.getEvidenceIntegrity().isIntegrityVerified());
         assertEquals("hash123", report.getEvidenceIntegrity().getSha256Hash());
         assertEquals("hash123", report.getEvidenceIntegrity().getRecalculatedHash());
@@ -226,7 +215,6 @@ class ReportServiceTest {
         assertTrue(report.getAiAssessment().isAssessmentPresent());
         assertEquals("LIVE_AI", report.getAiAssessment().getStatus());
         assertEquals("MALICIOUS_PHISHING", report.getAiAssessment().getThreatClassification());
-        assertNotNull(report.getAnalystSignoff());
     }
 
     @Test
@@ -237,7 +225,7 @@ class ReportServiceTest {
         when(storageService.computeFileHash("storage/key.eml")).thenReturn("tamperedHash999");
         when(storageService.loadAsResource("storage/key.eml")).thenReturn(new ByteArrayResource("Subject: Clean".getBytes()));
 
-        ForensicReportDto report = service.generateReport(emailId, null);
+        ForensicReportDto report = service.generateReport(emailId);
 
         assertNotNull(report);
         org.junit.jupiter.api.Assertions.assertFalse(report.getEvidenceIntegrity().isIntegrityVerified());
@@ -253,12 +241,11 @@ class ReportServiceTest {
         when(runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(run));
         when(storageService.loadAsResource("storage/key.eml")).thenReturn(new ByteArrayResource("Subject: Clean".getBytes()));
 
-        ForensicReportDto report = service.generateReport(emailId, null);
+        ForensicReportDto report = service.generateReport(emailId);
         String json = service.exportReportJson(report);
 
         assertNotNull(json);
         assertTrue(json.contains("\"reportId\""));
-        assertTrue(json.contains("\"caseContext\""));
         assertTrue(json.contains("\"evidenceIntegrity\""));
         assertTrue(json.contains("\"recalculatedHash\""));
         assertTrue(json.contains("\"integrityStatus\""));

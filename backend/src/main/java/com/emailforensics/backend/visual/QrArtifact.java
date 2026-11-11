@@ -13,23 +13,23 @@ import java.time.Instant;
 import java.util.UUID;
 
 @Entity
-@Table(name = "qr_artifacts")
+@Table(name = "qr_codes")
 public class QrArtifact {
 
     @Id
     private UUID id;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @JoinColumn(name = "visual_artifact_id", nullable = false)
+    @JoinColumn(name = "email_file_id", nullable = false)
     private VisualArtifact visualArtifact;
 
-    @Column(name = "decoded_payload", nullable = false, columnDefinition = "TEXT")
+    @Column(name = "qr_content", nullable = false, columnDefinition = "TEXT")
     private String decodedPayload;
 
-    @Column(name = "payload_type", nullable = false, length = 50)
+    @Column(name = "qr_content_type", nullable = false, length = 50)
     private String payloadType;
 
-    @Column(name = "normalized_url", columnDefinition = "TEXT")
+    @Column(name = "clean_url", columnDefinition = "TEXT")
     private String normalizedUrl;
 
     @Column(name = "created_at", nullable = false)

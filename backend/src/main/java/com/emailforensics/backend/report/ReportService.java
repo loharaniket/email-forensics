@@ -4,7 +4,6 @@ import com.emailforensics.backend.aiassessment.AiGroundedAssessment;
 import com.emailforensics.backend.aiassessment.AiGroundedAssessmentRepository;
 import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
-import com.emailforensics.backend.casefile.CaseFile;
 import com.emailforensics.backend.common.ResourceNotFoundException;
 import com.emailforensics.backend.correlation.HistoricalMatch;
 import com.emailforensics.backend.correlation.HistoricalMatchRepository;
@@ -23,7 +22,6 @@ import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.risk.RiskFactor;
 import com.emailforensics.backend.risk.RiskFactorRepository;
-import com.emailforensics.backend.security.UserPrincipal;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
 import com.emailforensics.backend.visual.QrArtifact;
@@ -95,15 +93,18 @@ public class ReportService {
     }
 
     @Transactional(readOnly = true)
-    public ForensicReportDto generateReport(UUID emailId, UserPrincipal currentUser) {
+    public ForensicReportDto generateReport(UUID emailId) {
         EmailEvidence evidence = evidenceRepository.findById(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Evidence not found with ID: " + emailId));
 
         AnalysisRun run = runRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                 .orElseThrow(() -> new ResourceNotFoundException("Analysis run not found for evidence: " + emailId));
 
-        String username = currentUser != null ? currentUser.getUsername() : "analyst";
-        return buildForensicReport(evidence, run, username);
+        return buildForensicReport(evidence, run, "Automated Forensic Engine");
+    }
+
+    public ForensicReportDto generateReport(UUID emailId, Object unused) {
+        return generateReport(emailId);
     }
 
     public String exportReportJson(ForensicReportDto report) {
@@ -204,18 +205,7 @@ public class ReportService {
         report.setGeneratedBy(certifyingUser);
         report.setClassificationLevel("CONFIDENTIAL - FORENSIC REPORT");
 
-        ForensicReportDto.CaseContextDto caseContext = new ForensicReportDto.CaseContextDto();
-        if (evidence.getCaseFile() != null) {
-            CaseFile c = evidence.getCaseFile();
-            caseContext.setCaseId(c.getId());
-            caseContext.setCaseNumber(c.getCaseNumber());
-            caseContext.setTitle(c.getTitle());
-            caseContext.setDescription(c.getDescription());
-            caseContext.setStatus(c.getStatus() != null ? c.getStatus().name() : "OPEN");
-            caseContext.setAnalystNotes(c.getAnalystNotes());
-            caseContext.setCreatedAt(c.getCreatedAt());
-        }
-        report.setCaseContext(caseContext);
+        report.setCaseContext(null);
 
         ForensicReportDto.EvidenceIntegrityDto integrity = new ForensicReportDto.EvidenceIntegrityDto();
         integrity.setEmailId(evidence.getId());
@@ -224,7 +214,7 @@ public class ReportService {
         integrity.setFileSizeBytes(evidence.getFileSizeBytes());
         integrity.setStorageKey(evidence.getStorageKey());
         integrity.setUploadedAt(evidence.getUploadedAt());
-        integrity.setUploaderUsername(evidence.getUploadedBy() != null ? evidence.getUploadedBy().getUsername() : "system");
+        integrity.setUploaderUsername("system");
 
         String recalculatedHash = null;
         String integrityStatus = "NOT_VERIFIED";
@@ -464,14 +454,14 @@ public class ReportService {
         corr.setHistoricalMatchesCount(matches.size());
         List<ForensicReportDto.ReportCorrelationMatchDto> rMatches = new ArrayList<>();
         for (HistoricalMatch m : matches) {
-            String targetCase = m.getMatchedEmail() != null && m.getMatchedEmail().getCaseFile() != null
-                    ? m.getMatchedEmail().getCaseFile().getCaseNumber()
-                    : "PREVIOUS_CASE";
+            String targetEvidence = m.getMatchedEmail() != null
+                    ? (m.getMatchedEmail().getOriginalFilename() != null ? m.getMatchedEmail().getOriginalFilename() : m.getMatchedEmail().getId().toString().substring(0, 8))
+                    : "PREVIOUS_EMAIL";
             rMatches.add(new ForensicReportDto.ReportCorrelationMatchDto(
                     m.getIndicatorType() != null ? m.getIndicatorType() : "INDICATOR",
                     m.getNormalizedIndicatorValue(),
                     m.getMatchStrength() != null ? m.getMatchStrength() : "MEDIUM",
-                    targetCase
+                    targetEvidence
             ));
         }
         corr.setMatchedIndicators(rMatches);
@@ -501,14 +491,7 @@ public class ReportService {
         }
         report.setAiAssessment(ai);
 
-        ForensicReportDto.AnalystSignoffDto signoff = new ForensicReportDto.AnalystSignoffDto();
-        signoff.setCertifyingAnalyst(certifyingUser);
-        signoff.setSignoffTimestamp(Instant.now());
-        signoff.setCertificationStatement("I hereby certify that the evidence analyzed in this report has been verified against its preserved SHA-256 hash, and that all findings were extracted using automated forensic analysis.");
-        if (evidence.getCaseFile() != null && evidence.getCaseFile().getAnalystNotes() != null) {
-            signoff.setNotes(evidence.getCaseFile().getAnalystNotes());
-        }
-        report.setAnalystSignoff(signoff);
+        report.setAnalystSignoff(null);
 
         return report;
     }
