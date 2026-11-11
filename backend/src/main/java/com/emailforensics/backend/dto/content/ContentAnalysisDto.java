@@ -21,6 +21,8 @@ public class ContentAnalysisDto {
     private boolean promptInjectionDetected;
     private List<PromptInjectionMatchDto> promptMatches = new ArrayList<>();
     private List<SocialEngineeringMatchDto> socialEngineeringMatches = new ArrayList<>();
+    private String socialEngineeringStatus = "EVALUATED";
+    private String socialEngineeringExplanation;
     private Instant createdAt;
 
     public ContentAnalysisDto() {
@@ -136,6 +138,22 @@ public class ContentAnalysisDto {
 
     public void setSocialEngineeringMatches(List<SocialEngineeringMatchDto> socialEngineeringMatches) {
         this.socialEngineeringMatches = socialEngineeringMatches;
+    }
+
+    public String getSocialEngineeringStatus() {
+        return socialEngineeringStatus;
+    }
+
+    public void setSocialEngineeringStatus(String socialEngineeringStatus) {
+        this.socialEngineeringStatus = socialEngineeringStatus;
+    }
+
+    public String getSocialEngineeringExplanation() {
+        return socialEngineeringExplanation;
+    }
+
+    public void setSocialEngineeringExplanation(String socialEngineeringExplanation) {
+        this.socialEngineeringExplanation = socialEngineeringExplanation;
     }
 
     public Instant getCreatedAt() {

@@ -42,6 +42,7 @@ class ContentAnalysisServiceTest {
     private EmailParserService emailParserService;
     private VisualArtifactRepository visualArtifactRepo;
     private QrArtifactRepository qrArtifactRepo;
+    private GroqSocialEngineeringService groqSeService;
 
     @BeforeEach
     void setUp() {
@@ -52,8 +53,18 @@ class ContentAnalysisServiceTest {
         emailParserService = Mockito.mock(EmailParserService.class);
         visualArtifactRepo = Mockito.mock(VisualArtifactRepository.class);
         qrArtifactRepo = Mockito.mock(QrArtifactRepository.class);
+        groqSeService = Mockito.mock(GroqSocialEngineeringService.class);
 
-        SocialEngineeringDetector seEngine = new SocialEngineeringDetector();
+        when(groqSeService.analyze(any())).thenReturn(new GroqSocialEngineeringService.SocialEngineeringFindings(
+                true, true, false, false, false,
+                List.of(
+                        new com.emailforensics.backend.dto.content.SocialEngineeringMatchDto("URGENCY", "Immediate action is required", "BODY_PLAIN", "Urgency tactic", "HIGH"),
+                        new com.emailforensics.backend.dto.content.SocialEngineeringMatchDto("CREDENTIAL_REQUEST", "Verify your password", "BODY_PLAIN", "Credential solicitation", "HIGH")
+                ),
+                "EVALUATED",
+                "Social engineering detected"
+        ));
+
         PromptInjectionDetector piDetector = new PromptInjectionDetector();
         MlClassifierService mlClassifierService = new MlClassifierService();
 
@@ -65,7 +76,7 @@ class ContentAnalysisServiceTest {
                 emailParserService,
                 visualArtifactRepo,
                 qrArtifactRepo,
-                seEngine,
+                groqSeService,
                 piDetector,
                 mlClassifierService
         );

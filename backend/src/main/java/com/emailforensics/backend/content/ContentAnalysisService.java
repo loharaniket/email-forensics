@@ -43,7 +43,7 @@ public class ContentAnalysisService {
     private final EmailParserService emailParserService;
     private final VisualArtifactRepository visualArtifactRepository;
     private final QrArtifactRepository qrArtifactRepository;
-    private final SocialEngineeringDetector socialEngineeringDetector;
+    private final GroqSocialEngineeringService groqSocialEngineeringService;
     private final PromptInjectionDetector promptInjectionDetector;
     private final MlClassifierService mlClassifierService;
 
@@ -54,7 +54,7 @@ public class ContentAnalysisService {
                                   EmailParserService emailParserService,
                                   VisualArtifactRepository visualArtifactRepository,
                                   QrArtifactRepository qrArtifactRepository,
-                                  SocialEngineeringDetector socialEngineeringDetector,
+                                  GroqSocialEngineeringService groqSocialEngineeringService,
                                   PromptInjectionDetector promptInjectionDetector,
                                   MlClassifierService mlClassifierService) {
         this.analysisResultRepository = analysisResultRepository;
@@ -64,7 +64,7 @@ public class ContentAnalysisService {
         this.emailParserService = emailParserService;
         this.visualArtifactRepository = visualArtifactRepository;
         this.qrArtifactRepository = qrArtifactRepository;
-        this.socialEngineeringDetector = socialEngineeringDetector;
+        this.groqSocialEngineeringService = groqSocialEngineeringService;
         this.promptInjectionDetector = promptInjectionDetector;
         this.mlClassifierService = mlClassifierService;
     }
@@ -86,12 +86,16 @@ public class ContentAnalysisService {
 
         Map<String, String> channelTexts = new LinkedHashMap<>();
 
+        if (parsedEmail.getSubject() != null && !parsedEmail.getSubject().isBlank()) {
+            channelTexts.put("SUBJECT", parsedEmail.getSubject());
+        }
+
         if (parsedEmail.getPlainTextBody() != null && !parsedEmail.getPlainTextBody().isBlank()) {
-            channelTexts.put("BODY_TEXT", parsedEmail.getPlainTextBody());
+            channelTexts.put("BODY_PLAIN", parsedEmail.getPlainTextBody());
         }
 
         if (parsedEmail.getExtractedText() != null && !parsedEmail.getExtractedText().isBlank()) {
-            channelTexts.put("HTML_TEXT", parsedEmail.getExtractedText());
+            channelTexts.put("BODY_HTML", parsedEmail.getExtractedText());
         }
 
         List<VisualArtifact> visualArtifacts = visualArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
@@ -113,16 +117,13 @@ public class ContentAnalysisService {
             channelTexts.put("QR_PAYLOAD", qrPayloadAggregator.toString());
         }
 
-        SocialEngineeringDetector.SocialEngineeringFindings seFindings =
-                socialEngineeringDetector.analyze(channelTexts);
+        GroqSocialEngineeringService.SocialEngineeringFindings seFindings =
+                groqSocialEngineeringService.analyze(channelTexts);
 
         PromptInjectionDetector.PromptInjectionFindings piFindings =
                 promptInjectionDetector.detect(channelTexts);
 
         StringBuilder combinedTextForMl = new StringBuilder();
-        if (parsedEmail.getSubject() != null && !parsedEmail.getSubject().isBlank()) {
-            combinedTextForMl.append(parsedEmail.getSubject()).append("\n");
-        }
         for (String text : channelTexts.values()) {
             combinedTextForMl.append(text).append("\n");
         }
@@ -158,7 +159,7 @@ public class ContentAnalysisService {
 
         AnalysisResult saved = analysisResultRepository.save(contentAnalysis);
 
-        return toDto(saved, piFindings.getMatches(), seFindings.getMatches());
+        return toDto(saved, piFindings.getMatches(), seFindings.getMatches(), seFindings.getStatus(), seFindings.getStatusExplanation());
     }
 
     @Transactional(readOnly = true)
@@ -184,12 +185,14 @@ public class ContentAnalysisService {
         List<PromptInjectionMatchDto> promptMatches = parsePromptMatchesJson(entity.getPromptMatchesJson());
         List<SocialEngineeringMatchDto> seMatches = parseSocialEngineeringMatchesJson(entity.getSocialEngineeringMatchesJson());
 
-        return Optional.of(toDto(entity, promptMatches, seMatches));
+        return Optional.of(toDto(entity, promptMatches, seMatches, "EVALUATED", null));
     }
 
     private ContentAnalysisDto toDto(AnalysisResult entity,
                                      List<PromptInjectionMatchDto> promptMatches,
-                                     List<SocialEngineeringMatchDto> seMatches) {
+                                     List<SocialEngineeringMatchDto> seMatches,
+                                     String seStatus,
+                                     String seExplanation) {
         ContentAnalysisDto dto = new ContentAnalysisDto();
         dto.setId(entity.getContentResultId());
         dto.setMlModelVersion(entity.getMlModelVersion());
@@ -205,6 +208,8 @@ public class ContentAnalysisService {
         dto.setPromptInjectionDetected(entity.isPromptInjectionDetected());
         dto.setPromptMatches(promptMatches != null ? promptMatches : Collections.emptyList());
         dto.setSocialEngineeringMatches(seMatches != null ? seMatches : Collections.emptyList());
+        dto.setSocialEngineeringStatus(seStatus != null ? seStatus : "EVALUATED");
+        dto.setSocialEngineeringExplanation(seExplanation);
         dto.setCreatedAt(entity.getContentCreatedAt());
         return dto;
     }

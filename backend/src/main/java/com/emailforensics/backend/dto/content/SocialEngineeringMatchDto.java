@@ -35,6 +35,14 @@ public class SocialEngineeringMatchDto {
         this.matchedPattern = matchedPattern;
     }
 
+    public String getMatchedText() {
+        return matchedPattern;
+    }
+
+    public void setMatchedText(String matchedText) {
+        this.matchedPattern = matchedText;
+    }
+
     public String getSourceChannel() {
         return sourceChannel;
     }
