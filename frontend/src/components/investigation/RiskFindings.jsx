@@ -5,10 +5,91 @@ import {
   Search
 } from 'lucide-react'
 
-export default function RiskFindings({ riskBreakdown }) {
+// The 6 forensic evidence channels evaluated in the email forensics pipeline
+const FORENSIC_CHANNELS = [
+  { key: 'HEADER', name: 'Headers', desc: 'Email header metadata (From, Subject, Date, Message-ID)' },
+  { key: 'AUTH', name: 'Auth', desc: 'SPF, DKIM, and DMARC protocol verification records' },
+  { key: 'ROUTE', name: 'Route', desc: 'Mail server delivery route and received hop timestamps' },
+  { key: 'URL', name: 'Links', desc: 'Extracted web links, domain normalization, and IP URLs' },
+  { key: 'CONTENT', name: 'Content', desc: 'Message body text, phishing keywords, and NLP signals' },
+  { key: 'VISUAL', name: 'Visual', desc: 'Extracted images, attachments, and QR code payloads' }
+]
+
+// The 7 Multi-Category Support risk categories evaluated in the email forensics pipeline
+const MULTI_CATEGORY_RISK_CATEGORIES = [
+  { key: 'IDENTITY', name: 'Identity', desc: 'Display name, sender domain & reply-to alignment' },
+  { key: 'AUTHENTICATION', name: 'Authentication', desc: 'SPF, DKIM & DMARC protocol verification failures' },
+  { key: 'URL', name: 'URL', desc: 'Lookalike domains, IP links, suspicious paths & query params' },
+  { key: 'INFRASTRUCTURE', name: 'Infrastructure', desc: 'Private IPs, routing delays & ASN reputation' },
+  { key: 'VISUAL', name: 'Visual', desc: 'Brand impersonation logos, hidden QR codes & malicious images' },
+  { key: 'CONTENT', name: 'Content', desc: 'Urgency, credential solicitation & social engineering language' },
+  { key: 'MACHINE_LEARNING', name: 'Machine Learning', desc: 'High-probability automated NLP classification signals' }
+]
+
+export default function RiskFindings({
+  riskBreakdown
+}) {
   const [riskSeverityFilter, setRiskSeverityFilter] = useState('ALL')
   const [riskCategoryFilter, setRiskCategoryFilter] = useState('ALL')
   const [riskSearch, setRiskSearch] = useState('')
+
+  // Backend is the single source of truth for all 6 forensic channel statuses
+  const getChannelStatus = (key) => {
+    if (Array.isArray(riskBreakdown?.channelStatuses)) {
+      const match = riskBreakdown.channelStatuses.find((c) => c.channel === key)
+      if (match) return match
+    }
+    const isEvaluated = Array.isArray(riskBreakdown?.evaluatedChannels)
+      ? riskBreakdown.evaluatedChannels.includes(key)
+      : false
+    return {
+      channel: key,
+      status: isEvaluated ? 'EVALUATED' : 'UNAVAILABLE',
+      evaluated: isEvaluated,
+      evidenceFound: isEvaluated,
+      details: isEvaluated ? 'Evidence verified' : 'No evidence found'
+    }
+  }
+
+  const isChannelAvailable = (key) => {
+    const cs = getChannelStatus(key)
+    return cs.status === 'EVALUATED' || Boolean(cs.evaluated) || Boolean(cs.evidenceFound)
+  }
+
+  const availableChannelCount = FORENSIC_CHANNELS.filter((ch) => isChannelAvailable(ch.key)).length
+
+  // Determines if a risk category is triggered (score > 0) from backend category scores/findings
+  const isCategoryTriggered = (categoryKey) => {
+    if (Array.isArray(riskBreakdown?.triggeredCategories) && riskBreakdown.triggeredCategories.length > 0) {
+      return riskBreakdown.triggeredCategories.includes(categoryKey)
+    }
+    if (Array.isArray(riskBreakdown?.categoryScores)) {
+      const match = riskBreakdown.categoryScores.find((c) => c.category === categoryKey)
+      if (match && typeof match.score === 'number') {
+        return match.score > 0
+      }
+    }
+    if (Array.isArray(riskBreakdown?.factors)) {
+      return riskBreakdown.factors.some((f) => f.category === categoryKey && f.weightPoints > 0)
+    }
+    return false
+  }
+
+  // Helper to get category score & finding count for tooltip details
+  const getCategoryDetails = (categoryKey) => {
+    const cat = Array.isArray(riskBreakdown?.categoryScores)
+      ? riskBreakdown.categoryScores.find((c) => c.category === categoryKey)
+      : null
+    const score = cat?.score ?? 0
+    const factorCount = cat?.factorCount ?? 0
+    return {
+      score,
+      factorCount,
+      triggered: score > 0
+    }
+  }
+
+  const triggeredCategoryCount = MULTI_CATEGORY_RISK_CATEGORIES.filter((c) => isCategoryTriggered(c.key)).length
 
   if (!riskBreakdown) {
     return (
@@ -150,10 +231,113 @@ export default function RiskFindings({ riskBreakdown }) {
             />
           </div>
 
-          <p className="text-xs text-[#667085] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC] leading-relaxed">
-            {riskBreakdown.confidenceExplanation ||
-              'An indication of how much supporting information is available across different email channels.'}
-          </p>
+          {/* Forensic Evidence Channels */}
+          <div className="pt-3 border-t border-[#E4E7EC] space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <span className="text-xs font-bold text-[#202938]">
+                Forensic evidence channels ({availableChannelCount} of 6 present)
+              </span>
+
+              {/* Simple Legend */}
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#15803D]">
+                  <span className="w-2 h-2 rounded-full bg-[#15803D]" />
+                  <span>Evidence present</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#667085]">
+                  <span className="w-2 h-2 rounded-full bg-[#D0D5DD]" />
+                  <span>Unavailable</span>
+                </span>
+              </div>
+            </div>
+
+            {/* 6 Channel Tags */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {FORENSIC_CHANNELS.map((ch) => {
+                const cs = getChannelStatus(ch.key)
+                const isAvailable = isChannelAvailable(ch.key)
+                const titleText = cs.details ? `${ch.key}: ${cs.details}` : `${ch.key} (${ch.desc})`
+                return (
+                  <span
+                    key={ch.key}
+                    id={`channel-tag-${ch.key.toLowerCase()}`}
+                    title={titleText}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      isAvailable
+                        ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] shadow-xs'
+                        : 'bg-[#F5F6F8] text-[#98A2B3] border-[#E4E7EC] opacity-60'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isAvailable ? 'bg-[#15803D]' : 'bg-[#D0D5DD]'
+                      }`}
+                    />
+                    <span className="font-mono tracking-wide">{ch.key}</span>
+                  </span>
+                )
+              })}
+            </div>
+
+            <p className="text-[11px] text-[#667085] leading-relaxed">
+              Highlighted tags indicate verified evidence found in this email message. Unavailable tags show channels where no data was detected.
+            </p>
+          </div>
+
+          {/* Multi-Category Support Risk Categories */}
+          <div className="pt-3 border-t border-[#E4E7EC] space-y-2.5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+              <span className="text-xs font-bold text-[#202938]">
+                Multi-category support ({triggeredCategoryCount} of 7 triggered)
+              </span>
+
+              {/* Simple Legend for Categories */}
+              <div className="flex items-center gap-3 text-[11px]">
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#15803D]">
+                  <span className="w-2 h-2 rounded-full bg-[#15803D]" />
+                  <span>Triggered (score &gt; 0)</span>
+                </span>
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#667085]">
+                  <span className="w-2 h-2 rounded-full bg-[#D0D5DD]" />
+                  <span>Not triggered</span>
+                </span>
+              </div>
+            </div>
+
+            {/* 7 Category Tags */}
+            <div className="flex flex-wrap gap-2 pt-1">
+              {MULTI_CATEGORY_RISK_CATEGORIES.map((cat) => {
+                const isTriggered = isCategoryTriggered(cat.key)
+                const details = getCategoryDetails(cat.key)
+                const titleText = isTriggered
+                  ? `${cat.name} (${cat.key}): Triggered with ${details.score} risk pts (${details.factorCount} findings)`
+                  : `${cat.name} (${cat.key}): Not triggered (score = 0)`
+                return (
+                  <span
+                    key={cat.key}
+                    id={`multicat-tag-${cat.key.toLowerCase()}`}
+                    title={titleText}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
+                      isTriggered
+                        ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] shadow-xs'
+                        : 'bg-[#F5F6F8] text-[#98A2B3] border-[#E4E7EC] opacity-60'
+                    }`}
+                  >
+                    <span
+                      className={`w-2 h-2 rounded-full ${
+                        isTriggered ? 'bg-[#15803D]' : 'bg-[#D0D5DD]'
+                      }`}
+                    />
+                    <span className="font-mono tracking-wide">{cat.key}</span>
+                  </span>
+                )
+              })}
+            </div>
+
+            <p className="text-[11px] text-[#667085] leading-relaxed">
+              Highlighted tags indicate risk categories with confirmed threat findings (score &gt; 0). Multi-category support evaluates cross-channel corroboration to strengthen confidence.
+            </p>
+          </div>
         </div>
       </div>
 

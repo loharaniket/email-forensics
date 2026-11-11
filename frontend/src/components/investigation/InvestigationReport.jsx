@@ -221,8 +221,64 @@ export default function InvestigationReport({
                   <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
                     Evidence Confidence Assessment
                   </td>
-                  <td className="p-2.5 text-[#202938] font-mono">
-                    {confidenceScore}% confidence ({confidenceLevel} confidence band)
+                  <td className="p-2.5 text-[#202938]">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="font-mono font-bold">{confidenceScore}%</span>
+                        <span className="text-xs text-[#667085]">({confidenceLevel} confidence band)</span>
+                      </div>
+
+                      {/* 6 Forensic Channel Tags */}
+                      {(riskBreakdown?.channelStatuses?.length > 0 || riskBreakdown?.evaluatedChannels?.length > 0) && (
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="text-[11px] font-medium text-[#667085]">Channels:</span>
+                          {['HEADER', 'AUTH', 'ROUTE', 'URL', 'CONTENT', 'VISUAL'].map((ch) => {
+                            const cs = riskBreakdown?.channelStatuses?.find((c) => c.channel === ch)
+                            const isPresent = cs
+                              ? (cs.status === 'EVALUATED' || Boolean(cs.evaluated) || Boolean(cs.evidenceFound))
+                              : Boolean(riskBreakdown?.evaluatedChannels?.includes(ch))
+                            return (
+                              <span
+                                key={ch}
+                                title={cs?.details || ch}
+                                className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                  isPresent
+                                    ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                                    : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
+                                }`}
+                              >
+                                {ch}
+                              </span>
+                            )
+                          })}
+                        </div>
+                      )}
+
+                      {/* 7 Multi-Category Support Tags */}
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <span className="text-[11px] font-medium text-[#667085]">Multi-Category:</span>
+                        {['IDENTITY', 'AUTHENTICATION', 'URL', 'INFRASTRUCTURE', 'VISUAL', 'CONTENT', 'MACHINE_LEARNING'].map((cat) => {
+                          const isTriggered = Array.isArray(riskBreakdown?.triggeredCategories)
+                            ? riskBreakdown.triggeredCategories.includes(cat)
+                            : Array.isArray(riskBreakdown?.categoryScores)
+                            ? Boolean(riskBreakdown.categoryScores.find((c) => c.category === cat)?.score > 0)
+                            : false
+                          return (
+                            <span
+                              key={cat}
+                              title={`${cat}: ${isTriggered ? 'Triggered (score > 0)' : 'Not triggered'}`}
+                              className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
+                                isTriggered
+                                  ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                                  : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
+                              }`}
+                            >
+                              {cat}
+                            </span>
+                          )
+                        })}
+                      </div>
+                    </div>
                   </td>
                 </tr>
                 <tr>

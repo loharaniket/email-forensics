@@ -8,6 +8,7 @@ import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.dto.infrastructure.IpArtifactDto;
+import com.emailforensics.backend.dto.risk.ChannelStatusDto;
 import com.emailforensics.backend.dto.risk.RiskBreakdownDto;
 import com.emailforensics.backend.dto.risk.RiskCategoryScoreDto;
 import com.emailforensics.backend.dto.risk.RiskFactorDto;
@@ -171,11 +172,13 @@ public class RiskScoringService {
         int deterministicScore = Math.min(100, Math.max(0, totalUncapped));
         String riskLevel = computeRiskLevel(deterministicScore);
 
-        int completeness = calculateCompleteness(headerAnalysis, hops, urls, visuals, contentOpt);
-        int corroboration = calculateCorroboration(categoryScores);
-        int confidenceScore = Math.min(100, Math.max(0, completeness + corroboration));
+        List<ChannelStatusDto> channelStatuses = evaluateChannelStatuses(headerAnalysis, hops, urls, visuals, contentOpt);
+        List<String> evaluatedChannels = extractEvaluatedChannels(channelStatuses);
+        int completeness = calculateCompleteness(evaluatedChannels);
+        int multiCategorySupport = calculateMultiCategorySupport(categoryScores);
+        int confidenceScore = Math.min(100, Math.max(0, completeness + multiCategorySupport));
         String confidenceLevel = computeConfidenceLevel(confidenceScore);
-        String confidenceExplanation = buildConfidenceExplanation(confidenceScore, confidenceLevel, completeness, corroboration, categoryScores);
+        String confidenceExplanation = buildConfidenceExplanation(confidenceScore, confidenceLevel, completeness, multiCategorySupport, categoryScores);
 
         String categoryScoresJson = formatCategoryScoresJson(categoryScores, categoryCounts);
 
@@ -207,7 +210,7 @@ public class RiskScoringService {
         List<RiskCategoryScoreDto> categoryScoreDtos = buildCategoryScoreDtos(categoryScores, categoryCounts);
         List<RiskFactorDto> factorDtos = toFactorDtos(savedFactors);
 
-        return new RiskBreakdownDto(
+        RiskBreakdownDto dto = new RiskBreakdownDto(
                 run.getId(),
                 deterministicScore,
                 riskLevel,
@@ -220,6 +223,17 @@ public class RiskScoringService {
                 categoryScoreDtos,
                 factorDtos
         );
+        List<String> triggeredCategories = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : categoryScores.entrySet()) {
+            if (entry.getValue() > 0) {
+                triggeredCategories.add(entry.getKey());
+            }
+        }
+
+        dto.setEvaluatedChannels(evaluatedChannels);
+        dto.setChannelStatuses(channelStatuses);
+        dto.setTriggeredCategories(triggeredCategories);
+        return dto;
     }
 
     @Transactional(readOnly = true)
@@ -240,7 +254,7 @@ public class RiskScoringService {
         List<RiskCategoryScoreDto> categoryScores = parseCategoryScoresJson(assessment.getCategoryScoresJson());
         List<RiskFactorDto> factorDtos = toFactorDtos(factors);
 
-        return new RiskBreakdownDto(
+        RiskBreakdownDto dto = new RiskBreakdownDto(
                 run.getId(),
                 assessment.getDeterministicRiskScore(),
                 assessment.getRiskLevel(),
@@ -253,6 +267,28 @@ public class RiskScoringService {
                 categoryScores,
                 factorDtos
         );
+        List<String> triggeredCategories = new ArrayList<>();
+        if (categoryScores != null) {
+            for (RiskCategoryScoreDto cat : categoryScores) {
+                if (cat.getScore() != null && cat.getScore() > 0) {
+                    triggeredCategories.add(cat.getCategory());
+                }
+            }
+        }
+        dto.setTriggeredCategories(triggeredCategories);
+
+        try {
+            HeaderAnalysisDto headerAnalysis = headerAnalysisService.getHeaderAnalysis(emailId);
+            List<ReceivedHopDto> hops = headerAnalysisService.getReceivedHops(emailId);
+            List<ExtractedUrlDto> urls = urlAnalysisService.getExtractedUrls(emailId);
+            List<VisualArtifactDto> visuals = visualAnalysisService.getVisualArtifacts(emailId);
+            Optional<ContentAnalysisDto> contentOpt = contentAnalysisService.getContentAnalysis(emailId);
+            List<ChannelStatusDto> channelStatuses = evaluateChannelStatuses(headerAnalysis, hops, urls, visuals, contentOpt);
+            dto.setChannelStatuses(channelStatuses);
+            dto.setEvaluatedChannels(extractEvaluatedChannels(channelStatuses));
+        } catch (Exception ignored) {
+        }
+        return dto;
     }
 
     private void collectIdentityFactors(HeaderAnalysisDto h, AnalysisRun run, List<RiskFactor> factors, Set<String> deduplicationKeys) {
@@ -548,32 +584,160 @@ public class RiskScoringService {
         }
     }
 
-    private int calculateCompleteness(HeaderAnalysisDto headerAnalysis, List<ReceivedHopDto> hops,
-                                     List<ExtractedUrlDto> urls, List<VisualArtifactDto> visuals,
-                                     Optional<ContentAnalysisDto> contentOpt) {
-        int completeness = 0;
+    /**
+     * Single source of truth for evaluating all 6 forensic channels.
+     * Evaluates whether analysis was executed and whether actual evidence/artifacts were found.
+     * Non-null but empty URL or VISUAL lists do NOT count as evidence present.
+     */
+    public List<ChannelStatusDto> evaluateChannelStatuses(HeaderAnalysisDto headerAnalysis,
+                                                          List<ReceivedHopDto> hops,
+                                                          List<ExtractedUrlDto> urls,
+                                                          List<VisualArtifactDto> visuals,
+                                                          Optional<ContentAnalysisDto> contentOpt) {
+        List<ChannelStatusDto> statuses = new ArrayList<>();
+
+        // 1. HEADER: Verified from email headers
+        boolean headerExecuted = headerAnalysis != null;
+        boolean headerFound = headerAnalysis != null;
+        int headerCount = headerFound ? 1 : 0;
+        statuses.add(new ChannelStatusDto(
+                "HEADER",
+                headerFound ? "EVALUATED" : "UNAVAILABLE",
+                headerFound,
+                headerExecuted,
+                headerFound,
+                headerCount,
+                headerFound ? "Header metadata verified" : "Header metadata unavailable"
+        ));
+
+        // 2. AUTH: SPF, DKIM, and DMARC verification
+        boolean authExecuted = headerAnalysis != null;
+        int authCount = 0;
         if (headerAnalysis != null) {
-            completeness += 10;
+            if (headerAnalysis.getReportedSpf() != null || headerAnalysis.getActiveSpfResult() != null || headerAnalysis.getSpfResult() != null) {
+                authCount++;
+            }
+            if (headerAnalysis.getReportedDkim() != null || headerAnalysis.getActiveDkimStatus() != null || headerAnalysis.getDkimResult() != null) {
+                authCount++;
+            }
+            if (headerAnalysis.getReportedDmarc() != null || headerAnalysis.getActiveDmarcStatus() != null || headerAnalysis.getDmarcResult() != null) {
+                authCount++;
+            }
         }
-        if (headerAnalysis != null && (headerAnalysis.getReportedSpf() != null || headerAnalysis.getReportedDkim() != null || headerAnalysis.getReportedDmarc() != null)) {
-            completeness += 10;
-        }
-        if (hops != null && !hops.isEmpty()) {
-            completeness += 10;
-        }
-        if (urls != null) {
-            completeness += 10;
-        }
-        if (contentOpt.isPresent()) {
-            completeness += 10;
-        }
-        if (visuals != null) {
-            completeness += 10;
-        }
-        return Math.min(60, completeness);
+        boolean authFound = authCount > 0;
+        statuses.add(new ChannelStatusDto(
+                "AUTH",
+                authFound ? "EVALUATED" : "UNAVAILABLE",
+                authFound,
+                authExecuted,
+                authFound,
+                authCount,
+                authFound ? authCount + " authentication checks verified" : "No authentication records found"
+        ));
+
+        // 3. ROUTE: Server transmission hops
+        boolean routeExecuted = hops != null;
+        int hopCount = (hops != null) ? hops.size() : 0;
+        boolean routeFound = hopCount > 0;
+        statuses.add(new ChannelStatusDto(
+                "ROUTE",
+                routeFound ? "EVALUATED" : "UNAVAILABLE",
+                routeFound,
+                routeExecuted,
+                routeFound,
+                hopCount,
+                routeFound ? hopCount + " routing hops analyzed" : "No routing hops found"
+        ));
+
+        // 4. URL: Extracted links from plain/html body (empty list != evidence present)
+        boolean urlExecuted = urls != null;
+        int urlCount = (urls != null) ? urls.size() : 0;
+        boolean urlFound = urlCount > 0;
+        statuses.add(new ChannelStatusDto(
+                "URL",
+                urlFound ? "EVALUATED" : "UNAVAILABLE",
+                urlFound,
+                urlExecuted,
+                urlFound,
+                urlCount,
+                urlFound ? urlCount + " extracted URLs analyzed" : "No URLs found in message"
+        ));
+
+        // 5. CONTENT: NLP / ML / Social engineering / Prompt injection
+        boolean contentExecuted = contentOpt != null && contentOpt.isPresent();
+        boolean contentFound = contentExecuted;
+        int contentCount = contentFound ? 1 : 0;
+        statuses.add(new ChannelStatusDto(
+                "CONTENT",
+                contentFound ? "EVALUATED" : "UNAVAILABLE",
+                contentFound,
+                contentExecuted,
+                contentFound,
+                contentCount,
+                contentFound ? "Message body content analyzed" : "Content analysis unavailable"
+        ));
+
+        // 6. VISUAL: Images, attachments, and QR codes (empty list != evidence present)
+        boolean visualExecuted = visuals != null;
+        int visualCount = (visuals != null) ? visuals.size() : 0;
+        boolean visualFound = visualCount > 0;
+        statuses.add(new ChannelStatusDto(
+                "VISUAL",
+                visualFound ? "EVALUATED" : "UNAVAILABLE",
+                visualFound,
+                visualExecuted,
+                visualFound,
+                visualCount,
+                visualFound ? visualCount + " visual artifacts analyzed" : "No visual artifacts found"
+        ));
+
+        return statuses;
     }
 
-    private int calculateCorroboration(Map<String, Integer> categoryScores) {
+    /**
+     * Extracts channel names for channels that have status EVALUATED (evidence present and evaluated).
+     */
+    public List<String> extractEvaluatedChannels(List<ChannelStatusDto> statuses) {
+        List<String> list = new ArrayList<>();
+        if (statuses != null) {
+            for (ChannelStatusDto s : statuses) {
+                if (s.isEvaluated()) {
+                    list.add(s.getChannel());
+                }
+            }
+        }
+        return list;
+    }
+
+    /**
+     * Calculates completeness points: exactly 10 points per successfully evaluated channel (up to 60).
+     */
+    public int calculateCompleteness(List<String> evaluatedChannels) {
+        int count = (evaluatedChannels != null) ? evaluatedChannels.size() : 0;
+        return Math.min(60, count * 10);
+    }
+
+    /**
+     * Overload for backward compatibility.
+     */
+    public int calculateCompleteness(HeaderAnalysisDto headerAnalysis, List<ReceivedHopDto> hops,
+                                     List<ExtractedUrlDto> urls, List<VisualArtifactDto> visuals,
+                                     Optional<ContentAnalysisDto> contentOpt) {
+        List<ChannelStatusDto> statuses = evaluateChannelStatuses(headerAnalysis, hops, urls, visuals, contentOpt);
+        return calculateCompleteness(extractEvaluatedChannels(statuses));
+    }
+
+    /**
+     * Overload for backward compatibility.
+     */
+    public List<String> determineEvaluatedChannels(HeaderAnalysisDto headerAnalysis, List<ReceivedHopDto> hops,
+                                                   List<ExtractedUrlDto> urls, List<VisualArtifactDto> visuals,
+                                                   Optional<ContentAnalysisDto> contentOpt) {
+        return extractEvaluatedChannels(evaluateChannelStatuses(headerAnalysis, hops, urls, visuals, contentOpt));
+    }
+
+    // Multi-Category Support calculation (renamed from calculateCorroboration)
+    private int calculateMultiCategorySupport(Map<String, Integer> categoryScores) {
         int triggeredCategories = 0;
         for (Map.Entry<String, Integer> entry : categoryScores.entrySet()) {
             if (entry.getValue() > 0) {
@@ -592,6 +756,11 @@ public class RiskScoringService {
         }
     }
 
+    // Retained for backward compatibility
+    private int calculateCorroboration(Map<String, Integer> categoryScores) {
+        return calculateMultiCategorySupport(categoryScores);
+    }
+
     private String computeConfidenceLevel(int score) {
         if (score >= 75) {
             return "HIGH";
@@ -603,7 +772,7 @@ public class RiskScoringService {
     }
 
     private String buildConfidenceExplanation(int confidenceScore, String confidenceLevel,
-                                             int completeness, int corroboration,
+                                             int completeness, int multiCategorySupport,
                                              Map<String, Integer> categoryScores) {
         int channelsEvaluated = completeness / 10;
         List<String> activeCats = new ArrayList<>();
@@ -619,8 +788,8 @@ public class RiskScoringService {
         }
 
         return "Evidence confidence is " + confidenceScore + "/100 (" + confidenceLevel + ") based on "
-                + channelsEvaluated + " forensic channels evaluated (" + completeness + " pts) and cross-channel corroboration ("
-                + corroboration + " pts) across " + activeCats.size() + " triggered categories (" + String.join(", ", activeCats) + ").";
+                + channelsEvaluated + " forensic channels evaluated (" + completeness + " pts) and multi-category support ("
+                + multiCategorySupport + " pts) across " + activeCats.size() + " triggered categories (" + String.join(", ", activeCats) + ").";
     }
 
     private List<RiskCategoryScoreDto> buildCategoryScoreDtos(Map<String, Integer> scores, Map<String, Integer> counts) {

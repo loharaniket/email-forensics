@@ -13,6 +13,25 @@ import {
   ArrowRight
 } from 'lucide-react'
 
+const FORENSIC_CHANNELS = [
+  { key: 'HEADER', name: 'Headers' },
+  { key: 'AUTH', name: 'Auth' },
+  { key: 'ROUTE', name: 'Route' },
+  { key: 'URL', name: 'Links' },
+  { key: 'CONTENT', name: 'Content' },
+  { key: 'VISUAL', name: 'Visual' }
+]
+
+const MULTI_CATEGORY_RISK_CATEGORIES = [
+  'IDENTITY',
+  'AUTHENTICATION',
+  'URL',
+  'INFRASTRUCTURE',
+  'VISUAL',
+  'CONTENT',
+  'MACHINE_LEARNING'
+]
+
 export default function InvestigationSummary({
   riskBreakdown,
   aiAssessment,
@@ -29,6 +48,34 @@ export default function InvestigationSummary({
   const riskLevel = riskBreakdown?.riskLevel || 'LOW'
   const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? 0
   const confidenceLevel = riskBreakdown?.confidenceLevel || 'LOW'
+
+  // Backend is the single source of truth for channel evaluation status
+  const isChannelPresent = (key) => {
+    if (Array.isArray(riskBreakdown?.channelStatuses)) {
+      const match = riskBreakdown.channelStatuses.find((c) => c.channel === key)
+      if (match) return match.status === 'EVALUATED' || Boolean(match.evaluated) || Boolean(match.evidenceFound)
+    }
+    return Array.isArray(riskBreakdown?.evaluatedChannels)
+      ? riskBreakdown.evaluatedChannels.includes(key)
+      : false
+  }
+
+  // Determines if a risk category is triggered (score > 0)
+  const isCategoryTriggered = (categoryKey) => {
+    if (Array.isArray(riskBreakdown?.triggeredCategories) && riskBreakdown.triggeredCategories.length > 0) {
+      return riskBreakdown.triggeredCategories.includes(categoryKey)
+    }
+    if (Array.isArray(riskBreakdown?.categoryScores)) {
+      const match = riskBreakdown.categoryScores.find((c) => c.category === categoryKey)
+      if (match && typeof match.score === 'number') {
+        return match.score > 0
+      }
+    }
+    if (Array.isArray(riskBreakdown?.factors)) {
+      return riskBreakdown.factors.some((f) => f.category === categoryKey && f.weightPoints > 0)
+    }
+    return false
+  }
 
   const threatClass = aiAssessment?.threatClassification || (
     riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'SUSPICIOUS' : 'BENIGN'
@@ -151,8 +198,59 @@ export default function InvestigationSummary({
               {confidenceScore}%
             </span>
           </div>
-          <p className="text-xs text-[#667085] mt-3">
-            How much supporting information is available.
+          <div className="mt-2.5 pt-2 border-t border-[#E4E7EC] space-y-2">
+            <div>
+              <div className="text-[11px] font-semibold text-[#667085] mb-1 flex items-center justify-between">
+                <span>Channels:</span>
+                <span className="text-[10px] text-[#98A2B3]">Active = green</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {FORENSIC_CHANNELS.map((ch) => {
+                  const isPresent = isChannelPresent(ch.key)
+                  return (
+                    <span
+                      key={ch.key}
+                      title={`${ch.key}: ${isPresent ? 'Evidence present' : 'Unavailable'}`}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
+                        isPresent
+                          ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                          : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
+                      }`}
+                    >
+                      {ch.key}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+
+            <div>
+              <div className="text-[11px] font-semibold text-[#667085] mb-1 flex items-center justify-between">
+                <span>Multi-Category:</span>
+                <span className="text-[10px] text-[#98A2B3]">Triggered = green</span>
+              </div>
+              <div className="flex flex-wrap gap-1">
+                {MULTI_CATEGORY_RISK_CATEGORIES.map((cat) => {
+                  const isTriggered = isCategoryTriggered(cat)
+                  return (
+                    <span
+                      key={cat}
+                      title={`${cat}: ${isTriggered ? 'Triggered (score > 0)' : 'Not triggered'}`}
+                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
+                        isTriggered
+                          ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
+                          : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
+                      }`}
+                    >
+                      {cat}
+                    </span>
+                  )
+                })}
+              </div>
+            </div>
+          </div>
+          <p className="text-xs text-[#667085] mt-2">
+            Multi-category support and channel completeness.
           </p>
         </div>
 

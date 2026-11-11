@@ -17,6 +17,9 @@ public class RiskBreakdownDto {
     private Instant evaluatedAt;
     private List<RiskCategoryScoreDto> categoryScores;
     private List<RiskFactorDto> factors;
+    private List<String> evaluatedChannels = new java.util.ArrayList<>();
+    private List<ChannelStatusDto> channelStatuses = new java.util.ArrayList<>();
+    private List<String> triggeredCategories = new java.util.ArrayList<>();
 
     public RiskBreakdownDto() {
     }
@@ -126,5 +129,29 @@ public class RiskBreakdownDto {
 
     public void setFactors(List<RiskFactorDto> factors) {
         this.factors = factors;
+    }
+
+    public List<String> getEvaluatedChannels() {
+        return evaluatedChannels;
+    }
+
+    public void setEvaluatedChannels(List<String> evaluatedChannels) {
+        this.evaluatedChannels = evaluatedChannels != null ? evaluatedChannels : new java.util.ArrayList<>();
+    }
+
+    public List<ChannelStatusDto> getChannelStatuses() {
+        return channelStatuses;
+    }
+
+    public void setChannelStatuses(List<ChannelStatusDto> channelStatuses) {
+        this.channelStatuses = channelStatuses != null ? channelStatuses : new java.util.ArrayList<>();
+    }
+
+    public List<String> getTriggeredCategories() {
+        return triggeredCategories;
+    }
+
+    public void setTriggeredCategories(List<String> triggeredCategories) {
+        this.triggeredCategories = triggeredCategories != null ? triggeredCategories : new java.util.ArrayList<>();
     }
 }
