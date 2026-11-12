@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Forensics - Settings</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      background-color: #F8FAFC;
+      color: #0F172A;
+      display: flex;
+      justify-content: center;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    .settings-container {
+      width: 100%;
+      max-width: 680px;
+      background: #FFFFFF;
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .settings-header {
+      padding: 24px 28px;
+      border-bottom: 1px solid #E2E8F0;
+      background-color: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .header-brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .brand-icon {
+      width: 40px;
+      height: 40px;
+      border-radius: 10px;
+      background: #2563EB;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 4px rgba(37, 99, 235, 0.25);
+    }
+
+    .brand-icon svg {
+      width: 22px;
+      height: 22px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+    }
+
+    .header-brand h1 {
+      font-size: 18px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .subtitle {
+      font-size: 12.5px;
+      color: #64748B;
+      margin-top: 2px;
+    }
+
+    .badge-version {
+      padding: 4px 10px;
+      border-radius: 20px;
+      background: #EFF6FF;
+      color: #2563EB;
+      font-size: 11px;
+      font-weight: 600;
+      border: 1px solid #BFDBFE;
+    }
+
+    .settings-main {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .settings-section {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .section-header h2 {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1E293B;
+    }
+
+    .section-header p {
+      font-size: 12.5px;
+      color: #64748B;
+      margin-top: 3px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .form-group label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #334155;
+    }
+
+    .input-with-btn {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="url"],
+    input[type="text"],
+    select.form-select {
+      flex: 1;
+      padding: 9px 12px;
+      border: 1px solid #CBD5E1;
+      border-radius: 6px;
+      font-size: 13.5px;
+      color: #0F172A;
+      background-color: #FFFFFF;
+      outline: none;
+      transition: border-color 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    select.form-select {
+      cursor: pointer;
+      appearance: auto;
+    }
+
+    input[type="url"]:focus,
+    input[type="text"]:focus,
+    select.form-select:focus {
+      border-color: #2563EB;
+      box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
+    }
+
+    .field-hint {
+      font-size: 11.5px;
+      color: #64748B;
+    }
+
+    .field-hint code {
+      background: #F1F5F9;
+      padding: 2px 4px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 11px;
+    }
+
+    .btn {
+      padding: 9px 16px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      white-space: nowrap;
+      border: none;
+    }
+
+    .btn-primary {
+      background: #2563EB;
+      color: #FFFFFF;
+      border: 1px solid #1D4ED8;
+    }
+
+    .btn-primary:hover {
+      background: #1D4ED8;
+    }
+
+    .btn-secondary {
+      background: #FFFFFF;
+      color: #475569;
+      border: 1px solid #CBD5E1;
+    }
+
+    .btn-secondary:hover {
+      background: #F1F5F9;
+      color: #0F172A;
+    }
+
+    .btn-large {
+      padding: 11px 24px;
+      font-size: 14px;
+    }
+
+    .test-result-box {
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12.5px;
+      line-height: 1.4;
+      margin-top: 4px;
+    }
+
+    .test-result-box.success {
+      background: #F0FDF4;
+      border: 1px solid #BBF7D0;
+      color: #15803D;
+    }
+
+    .test-result-box.error {
+      background: #FEF2F2;
+      border: 1px solid #FECACA;
+      color: #B91C1C;
+    }
+
+    .oauth-status-card {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 14px 16px;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      background: #F8FAFC;
+      gap: 16px;
+    }
+
+    .status-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #94A3B8;
+    }
+
+    .status-dot.online {
+      background: #16A34A;
+      box-shadow: 0 0 0 2px #DCFCE7;
+    }
+
+    .status-dot.offline {
+      background: #DC2626;
+      box-shadow: 0 0 0 2px #FEE2E2;
+    }
+
+    .status-title {
+      font-size: 13.5px;
+      font-weight: 600;
+      color: #1E293B;
+    }
+
+    .oauth-desc {
+      font-size: 12px;
+      color: #64748B;
+      margin-top: 3px;
+    }
+
+    .settings-actions {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding-top: 14px;
+      border-top: 1px solid #E2E8F0;
+    }
+
+    .save-status {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .save-status.success {
+      color: #16A34A;
+    }
+
+    .save-status.error {
+      color: #DC2626;
+    }
+
+    .settings-footer {
+      padding: 16px 28px;
+      border-top: 1px solid #E2E8F0;
+      background: #F8FAFC;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+      color: #64748B;
+    }
+  </style>
+</head>
+<body>
+  <div class="settings-container">
+    <header class="settings-header">
+      <div class="header-brand">
+        <div class="brand-icon">
+          <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
+        </div>
+        <div>
+          <h1>Email Forensics</h1>
+          <p class="subtitle">Extension Settings</p>
+        </div>
+      </div>
+      <div class="header-badges">
+        <span class="badge badge-version">v1.0.0</span>
+      </div>
+    </header>
+
+    <main class="settings-main">
+      <section class="settings-section">
+        <div class="section-header">
+          <h2>Backend Server</h2>
+          <p>Set the server address for email analysis.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="backend-url-input">Backend URL</label>
+          <div class="input-with-btn">
+            <input type="url" id="backend-url-input" placeholder="http://localhost:8080" spellcheck="false" autocomplete="off" />
+            <button type="button" class="btn btn-secondary" id="test-backend-btn">Test Connection</button>
+          </div>
+          <p class="field-hint">Default: <code>http://localhost:8080</code></p>
+          <div id="backend-test-result" class="test-result-box" style="display: none;"></div>
+        </div>
+
+        <div class="form-group">
+          <label for="dashboard-url-input">Dashboard URL</label>
+          <input type="url" id="dashboard-url-input" placeholder="http://localhost:5173" spellcheck="false" autocomplete="off" />
+          <p class="field-hint">Default: <code>http://localhost:5173</code></p>
+        </div>
+      </section>
+
+      <section class="settings-section">
+        <div class="section-header">
+          <h2>Google Sign-in</h2>
+          <p>Connect your Google account to read emails in Gmail.</p>
+        </div>
+
+        <div class="form-group">
+          <label>Extension ID</label>
+          <div class="input-with-btn">
+            <input type="text" id="extension-id-display" readonly value="Loading..." style="background: #F1F5F9; font-family: monospace; font-size: 13px;" />
+            <button type="button" class="btn btn-secondary" id="copy-ext-id-btn">Copy ID</button>
+          </div>
+          <p class="field-hint">Your extension identifier in Chrome.</p>
+        </div>
+
+        <div class="form-group">
+          <label>OAuth Redirect URI</label>
+          <div class="input-with-btn">
+            <input type="text" id="redirect-uri-display" readonly value="Loading..." style="background: #F1F5F9; font-family: monospace; font-size: 12px;" />
+            <button type="button" class="btn btn-secondary" id="copy-redirect-uri-btn">Copy URI</button>
+          </div>
+          <p class="field-hint">Add this under Authorized redirect URIs in Google Cloud Console.</p>
+        </div>
+
+        <div class="form-group">
+          <label for="auth-method-select">Sign-in Method</label>
+          <select id="auth-method-select" class="form-select">
+            <option value="web">Web Sign-in (Recommended)</option>
+            <option value="auto">Auto Detect</option>
+            <option value="chrome">Chrome Profile Sign-in</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label for="client-id-input">Google Client ID</label>
+          <input type="text" id="client-id-input" placeholder="237984168764-...apps.googleusercontent.com" spellcheck="false" autocomplete="off" />
+          <p class="field-hint">From Google Cloud Console: <code id="manifest-client-id-display">Loading...</code></p>
+        </div>
+
+        <div class="oauth-status-card">
+          <div class="oauth-status-info">
+            <div class="status-indicator">
+              <span class="status-dot" id="google-status-dot"></span>
+              <span class="status-title" id="google-status-title">Checking Google connection...</span>
+            </div>
+            <p class="oauth-desc" id="google-status-desc">Checking sign-in status.</p>
+          </div>
+          <div class="oauth-actions" style="display: flex; gap: 8px;">
+            <button type="button" class="btn btn-secondary" id="clear-cache-btn">Reset Sign-in</button>
+            <button type="button" class="btn btn-primary" id="google-auth-btn">Sign In with Google</button>
+          </div>
+        </div>
+      </section>
+
+      <div class="settings-actions">
+        <button type="button" class="btn btn-primary btn-large" id="save-settings-btn">Save Settings</button>
+        <div id="save-status-msg" class="save-status" style="display: none;"></div>
+      </div>
+    </main>
+
+    <footer class="settings-footer">
+      <span>Email Forensics Extension</span>
+    </footer>
+  </div>
+
+  <script src="options.js"></script>
+</body>
+</html>

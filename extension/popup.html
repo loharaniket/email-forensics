@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Email Forensics</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+
+    body {
+      width: 350px;
+      background-color: #FFFFFF;
+      color: #0F172A;
+      overflow-x: hidden;
+    }
+
+    .popup-header {
+      padding: 14px 16px;
+      background: #F8FAFC;
+      border-bottom: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .brand-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: 7px;
+      background: #2563EB;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .brand-icon svg {
+      width: 16px;
+      height: 16px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+    }
+
+    .brand-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .version-tag {
+      font-size: 10px;
+      font-weight: 600;
+      padding: 2px 6px;
+      border-radius: 10px;
+      background: #EFF6FF;
+      color: #2563EB;
+      border: 1px solid #BFDBFE;
+    }
+
+    .popup-content {
+      padding: 14px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-card {
+      background: #F8FAFC;
+      border: 1px solid #E2E8F0;
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 12px;
+    }
+
+    .status-label {
+      font-weight: 600;
+      color: #475569;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #94A3B8;
+    }
+
+    .status-dot.online {
+      background: #16A34A;
+      box-shadow: 0 0 0 2px #DCFCE7;
+    }
+
+    .status-dot.offline {
+      background: #DC2626;
+      box-shadow: 0 0 0 2px #FEE2E2;
+    }
+
+    .status-val {
+      font-weight: 600;
+      font-size: 11px;
+    }
+
+    .status-val.online { color: #16A34A; }
+    .status-val.offline { color: #DC2626; }
+
+    .context-box {
+      border: 1px solid #BFDBFE;
+      background: #EFF6FF;
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .context-heading {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #1D4ED8;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .context-desc {
+      font-size: 12px;
+      color: #1E3A8A;
+      line-height: 1.35;
+      word-break: break-word;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 9px 12px;
+      border-radius: 6px;
+      background: #2563EB;
+      color: #FFFFFF;
+      font-size: 12.5px;
+      font-weight: 600;
+      border: 1px solid #1D4ED8;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #1D4ED8;
+    }
+
+    .btn-primary:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    .btn-secondary {
+      width: 100%;
+      padding: 7px 12px;
+      border-radius: 6px;
+      background: #FFFFFF;
+      color: #475569;
+      font-size: 12px;
+      font-weight: 500;
+      border: 1px solid #CBD5E1;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+
+    .btn-secondary:hover {
+      background: #F1F5F9;
+      color: #0F172A;
+    }
+
+    .popup-footer {
+      padding: 10px 16px;
+      background: #F8FAFC;
+      border-top: 1px solid #E2E8F0;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 11px;
+    }
+
+    .footer-link {
+      color: #2563EB;
+      text-decoration: none;
+      font-weight: 500;
+      cursor: pointer;
+    }
+
+    .footer-link:hover {
+      text-decoration: underline;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-header">
+    <div class="brand-group">
+      <div class="brand-icon">
+        <svg viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <span class="brand-title">Email Forensics</span>
+    </div>
+    <span class="version-tag">v1.0.0</span>
+  </div>
+
+  <div class="popup-content">
+    <div class="status-card">
+      <div class="status-row">
+        <span class="status-label">
+          <span class="status-dot" id="google-dot"></span>
+          Google Account
+        </span>
+        <span class="status-val" id="google-text">Checking...</span>
+      </div>
+      <div class="status-row" style="margin-top: 4px;">
+        <span class="status-label">
+          <span class="status-dot" id="backend-dot"></span>
+          Backend API
+        </span>
+        <span class="status-val" id="backend-text">Checking...</span>
+      </div>
+    </div>
+
+    <div class="context-box" id="tab-context-box">
+      <div class="context-heading" id="tab-heading">Gmail Status</div>
+      <div class="context-desc" id="tab-desc">Detecting active Gmail tab...</div>
+      <button class="btn-primary" id="action-btn" style="display: none;">
+        <span>Analyze Open Email</span>
+      </button>
+    </div>
+
+    <button class="btn-secondary" id="open-dashboard-btn">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+      <span>Open Forensics Dashboard</span>
+    </button>
+  </div>
+
+  <div class="popup-footer">
+    <span class="footer-link" id="open-options-link">Extension Settings</span>
+    <span style="color: #94A3B8;">Manifest V3</span>
+  </div>
+
+  <script src="popup.js"></script>
+</body>
+</html>

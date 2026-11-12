@@ -1,0 +1,70 @@
+{
+  "manifest_version": 3,
+  "name": "Email Forensics - Gmail Analyzer",
+  "version": "1.0.0",
+  "description": "Deep digital email forensics and AI-powered threat assessment directly inside Gmail.",
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "permissions": [
+    "identity",
+    "storage",
+    "tabs",
+    "activeTab",
+    "declarativeNetRequest"
+  ],
+  "host_permissions": [
+    "https://mail.google.com/*",
+    "https://gmail.googleapis.com/*",
+    "http://localhost:8080/*",
+    "http://127.0.0.1:8080/*",
+    "http://localhost:5173/*"
+  ],
+  "optional_host_permissions": [
+    "https://*/*",
+    "http://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js",
+    "type": "module"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://mail.google.com/*"
+      ],
+      "js": [
+        "content.js"
+      ],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "Email Forensics",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "options_page": "options/options.html",
+  "oauth2": {
+    "client_id": "237984168764-v4b6hkleck4ole5sqj6jvkvf0v5u34nc.apps.googleusercontent.com",
+    "scopes": [
+      "https://www.googleapis.com/auth/gmail.readonly"
+    ]
+  },
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "icons/*"
+      ],
+      "matches": [
+        "https://mail.google.com/*"
+      ]
+    }
+  ]
+}
