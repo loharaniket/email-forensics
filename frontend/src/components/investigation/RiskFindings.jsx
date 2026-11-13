@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   ShieldAlert,
   ShieldCheck,
@@ -195,6 +195,66 @@ export default function RiskFindings({
           <p className="text-xs text-[#202938] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC] leading-relaxed">
             A score based on suspicious indicators found in the email.
           </p>
+
+          {/* Risk contribution by category */}
+          {riskBreakdown.categoryScores && riskBreakdown.categoryScores.length > 0 && (
+            <div className="pt-3 border-t border-[#E4E7EC] space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
+                <span className="text-xs font-bold text-[#202938]">
+                  Risk contribution by category
+                </span>
+                <span className="text-[11px] text-[#202938]">
+                  Click a category to filter findings
+                </span>
+              </div>
+
+              <div className="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-2">
+                {riskBreakdown.categoryScores.map((cat) => {
+                  const isSelected = riskCategoryFilter === cat.category
+                  const hasFindings = cat.score > 0
+                  return (
+                    <button
+                      key={cat.category}
+                      id={`cat-card-${cat.category.toLowerCase()}`}
+                      onClick={() =>
+                        setRiskCategoryFilter(isSelected ? 'ALL' : cat.category)
+                      }
+                      className={`p-2.5 rounded-lg border text-left transition-colors cursor-pointer ${
+                        isSelected
+                          ? 'bg-[#EFF6FF] border-[#2563EB] ring-1 ring-[#2563EB]'
+                          : hasFindings
+                          ? 'bg-[#F5F6F8] border-[#E4E7EC] hover:border-slate-300'
+                          : 'bg-white border-[#E4E7EC] hover:bg-slate-50 opacity-75'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-1">
+                        <span className="text-[10px] font-medium text-[#202938]">
+                          {cat.factorCount} {cat.factorCount === 1 ? 'finding' : 'findings'}
+                        </span>
+                        <span
+                          className={`text-xs font-mono font-bold ${
+                            hasFindings ? 'text-[#B42318]' : 'text-[#202938]'
+                          }`}
+                        >
+                          +{cat.score}
+                        </span>
+                      </div>
+                      <span
+                        className="text-[11px] font-semibold text-[#202938] block truncate"
+                        title={cat.displayName || cat.category}
+                      >
+                        {cat.displayName || cat.category}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+
+              <p className="text-[11px] text-[#202938] leading-relaxed">
+                Breakdown of points contributed across each multi-category detector. Click any category card to filter the triggered risk factors list below.
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Evidence Confidence Card */}
@@ -341,54 +401,6 @@ export default function RiskFindings({
         </div>
       </div>
 
-      {/* Category breakdown */}
-      {riskBreakdown.categoryScores && riskBreakdown.categoryScores.length > 0 && (
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
-            <h3 className="text-sm font-bold text-[#202938]">
-              Risk contribution by category
-            </h3>
-            <span className="text-xs text-[#202938]">
-              Click a category to filter findings
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-            {riskBreakdown.categoryScores.map((cat) => {
-              const isSelected = riskCategoryFilter === cat.category
-              const hasFindings = cat.score > 0
-              return (
-                <button
-                  key={cat.category}
-                  id={`cat-card-${cat.category.toLowerCase()}`}
-                  onClick={() =>
-                    setRiskCategoryFilter(isSelected ? 'ALL' : cat.category)
-                  }
-                  className={`p-3.5 rounded-xl border text-left transition-colors cursor-pointer ${
-                    isSelected
-                      ? 'bg-[#EFF6FF] border-[#2563EB]'
-                      : hasFindings
-                      ? 'bg-[#F5F6F8] border-[#E4E7EC] hover:border-slate-300'
-                      : 'bg-white border-[#E4E7EC] hover:bg-slate-50'
-                  }`}
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] text-[#202938]">
-                      {cat.factorCount} {cat.factorCount === 1 ? 'finding' : 'findings'}
-                    </span>
-                    <span className={`text-xs font-mono font-bold ${hasFindings ? 'text-[#B42318]' : 'text-[#202938]'}`}>
-                      +{cat.score}
-                    </span>
-                  </div>
-                  <span className="text-xs font-semibold text-[#202938] block truncate">
-                    {cat.displayName || cat.category}
-                  </span>
-                </button>
-              )
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Triggered Risk Factors List */}
       <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">

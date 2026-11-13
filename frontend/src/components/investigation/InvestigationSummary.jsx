@@ -188,66 +188,66 @@ export default function InvestigationSummary({
   }, [riskBreakdown?.factors, riskBreakdown?.categoryScores])
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* High-level score cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
         {/* Card 1: Classification */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-[#202938]">
             <span>Classification</span>
             <ShieldAlert className="h-4 w-4 text-[#202938]" />
           </div>
-          <div className="mt-4">
+          <div className="mt-3">
             {getThreatBadge(threatClass)}
           </div>
-          <p className="text-xs text-[#202938] mt-3">
+          <p className="text-xs text-[#202938] mt-2">
             Overall assessment based on indicators found.
           </p>
         </div>
 
         {/* Card 2: Risk Score */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-[#202938]">
             <span>Risk score</span>
             <span className={`text-xs px-2 py-0.5 rounded font-medium ${getRiskCardStyle(riskLevel)}`}>
               {riskLevel}
             </span>
           </div>
-          <div className="mt-3">
-            <span className="text-3xl font-bold text-[#202938] font-mono">
+          <div className="mt-2">
+            <span className="text-2xl font-bold text-[#202938] font-mono">
               {riskScore}
             </span>
-            <span className="text-sm text-[#202938] ml-1">/ 100</span>
+            <span className="text-xs text-[#202938] ml-1">/ 100</span>
           </div>
-          <p className="text-xs text-[#202938] mt-3">
+          <p className="text-xs text-[#202938] mt-2">
             A score based on suspicious indicators found.
           </p>
         </div>
 
         {/* Card 3: Evidence Confidence */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-4 flex flex-col justify-between">
           <div className="flex items-center justify-between text-xs text-[#202938]">
             <span>Evidence confidence</span>
             <span className="text-xs px-2 py-0.5 rounded font-medium bg-slate-100 text-[#202938]">
               {confidenceLevel}
             </span>
           </div>
-          <div className="mt-3">
-            <span className="text-3xl font-bold text-[#202938] font-mono">
+          <div className="mt-2">
+            <span className="text-2xl font-bold text-[#202938] font-mono">
               {confidenceScore}%
             </span>
           </div>
-          <p className="text-xs text-[#202938] mt-3">
+          <p className="text-xs text-[#202938] mt-2">
             Evaluation confidence based on available evidence.
           </p>
         </div>
 
         {/* Card 4: Sender Authentication */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
+        <div className="bg-white border border-[#E4E7EC] rounded-xl p-4 flex flex-col justify-between">
           <div className="text-xs text-[#202938]">
             <span>Sender authentication</span>
           </div>
-          <div className="mt-3 space-y-1.5">
+          <div className="mt-2 space-y-1">
             <div className="flex items-center justify-between text-xs">
               <span className="text-[#202938]">SPF</span>
               {getStatusPill(spfStatus)}
@@ -261,14 +261,14 @@ export default function InvestigationSummary({
               {getStatusPill(dmarcStatus)}
             </div>
           </div>
-          <p className="text-xs text-[#202938] mt-3">
+          <p className="text-xs text-[#202938] mt-2">
             Email sender verification checks.
           </p>
         </div>
       </div>
 
       {/* Quick counts */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5">
         <button
           onClick={() => onNavigateTab('urls')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
@@ -351,7 +351,7 @@ export default function InvestigationSummary({
       </div>
 
       {/* Automated assessment summary */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-3">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-[#2563EB]" />
@@ -398,7 +398,7 @@ export default function InvestigationSummary({
       </div>
 
       {/* Contributing findings */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-4 sm:p-5 space-y-3">
         <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
           <h2 className="text-sm font-bold text-[#202938]">
             Important findings ({topFindings.length})

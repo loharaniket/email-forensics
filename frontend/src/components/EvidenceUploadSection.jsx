@@ -1,5 +1,5 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   Upload,
   ShieldCheck,
@@ -11,8 +11,7 @@ import {
   CheckCircle2,
   FileText,
   Eye,
-  FolderOpen,
-  ExternalLink
+  Search
 } from 'lucide-react'
 import {
   uploadEvidence,
@@ -32,6 +31,7 @@ export default function EvidenceUploadSection() {
   const [uploadSuccess, setUploadSuccess] = useState(null)
   const [integrityState, setIntegrityState] = useState({})
   const [isVerifying, setIsVerifying] = useState({})
+  const [searchQuery, setSearchQuery] = useState('')
   const fileInputRef = useRef(null)
 
   const loadEvidence = useCallback(async () => {
@@ -203,323 +203,299 @@ export default function EvidenceUploadSection() {
     switch (st) {
       case 'QUEUED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FFFBEB] text-[#B45309] border border-amber-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#FFFBEB] text-[#B45309] border border-amber-200">
             In queue
           </span>
         )
       case 'RUNNING':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#EFF6FF] text-[#2563EB] border border-blue-100">
             Analyzing
           </span>
         )
       case 'COMPLETED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#F0FDF4] text-[#15803D] border border-green-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F0FDF4] text-[#15803D] border border-green-200">
             Completed
           </span>
         )
       case 'FAILED':
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#FEF2F2] text-[#B42318] border border-red-200">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-[#FEF2F2] text-[#B42318] border border-red-200">
             Failed
           </span>
         )
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#202938]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-[#202938]">
             {st}
           </span>
         )
     }
   }
 
-  return (
-    <div className="space-y-6">
-      {/* Upload email section */}
-      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
-        <div className="pb-4 border-b border-[#E4E7EC]">
-          <h2 className="text-base font-bold text-[#202938]">
-            Upload email
-          </h2>
-          <p className="text-sm text-[#202938] mt-0.5">
-            Choose an .eml email file to start the analysis.
-          </p>
-        </div>
+  const filteredEvidence = useMemo(() => {
+    if (!searchQuery.trim()) return evidenceList
+    const q = searchQuery.toLowerCase()
+    return evidenceList.filter(
+      (item) =>
+        (item.originalFilename && item.originalFilename.toLowerCase().includes(q)) ||
+        (item.subject && item.subject.toLowerCase().includes(q)) ||
+        (item.sha256Hash && item.sha256Hash.toLowerCase().includes(q)) ||
+        (item.latestStatus && item.latestStatus.toLowerCase().includes(q))
+    )
+  }, [evidenceList, searchQuery])
 
-        <form onSubmit={handleUpload} className="space-y-4">
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-            <div className="relative flex-1">
+  return (
+    <div className="h-full flex flex-col lg:flex-row gap-4 min-h-0 overflow-hidden">
+      {/* Left Column: Simple & Beginner-Friendly Upload Card */}
+      <section className="w-full lg:w-[380px] bg-white border border-[#E4E7EC] rounded-xl p-4 sm:p-5 flex flex-col justify-between shrink-0 overflow-y-auto">
+        <div className="space-y-4">
+          <div className="pb-3 border-b border-[#E4E7EC]">
+            <h2 className="text-sm font-bold text-[#202938]">
+              Upload email evidence
+            </h2>
+            <p className="text-xs text-[#202938] mt-0.5">
+              Select an .eml email file to start the forensic pipeline.
+            </p>
+          </div>
+
+          <form onSubmit={handleUpload} className="space-y-3">
+            {/* Simple File Selector Area */}
+            <div className="border-2 border-dashed border-[#BFDBFE] bg-[#F8FAFC] rounded-lg p-5 text-center flex flex-col items-center justify-center gap-2">
+              <Upload className="h-7 w-7 text-[#2563EB]" />
+              <div className="text-xs font-semibold text-[#202938]">
+                Select .eml email file
+              </div>
+              <p className="text-[11px] text-[#202938]">
+                RFC 5322 format up to 25 MB
+              </p>
               <input
                 id="evidence-file-input"
                 ref={fileInputRef}
                 type="file"
                 accept=".eml"
                 onChange={handleFileChange}
-                className="w-full text-xs text-[#202938] file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-xs file:font-medium file:bg-[#EFF6FF] file:text-[#2563EB] hover:file:bg-blue-100 bg-[#F5F6F8] border border-[#E4E7EC] rounded-lg p-2 cursor-pointer focus:outline-none focus:border-[#2563EB]"
+                className="w-full text-xs text-[#202938] file:mr-2 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-[#EFF6FF] file:text-[#2563EB] hover:file:bg-blue-100 bg-white border border-[#E4E7EC] rounded-md p-1.5 cursor-pointer focus:outline-none focus:border-[#2563EB]"
               />
             </div>
+
+            {selectedFile && (
+              <div className="flex items-center gap-2 text-xs text-[#202938] bg-[#F5F6F8] p-2.5 rounded-lg border border-[#E4E7EC]">
+                <FileText className="h-4 w-4 text-[#2563EB] shrink-0" />
+                <span className="truncate flex-1 font-medium">{selectedFile.name}</span>
+                <span className="shrink-0 text-[11px]">({formatBytes(selectedFile.size)})</span>
+              </div>
+            )}
+
+            {uploadError && (
+              <div className="p-3 rounded-lg bg-[#FEF2F2] border border-[#FEE2E2] text-xs text-[#B42318] flex items-center gap-2">
+                <AlertTriangle className="h-4 w-4 text-[#B42318] shrink-0" />
+                <span>{uploadError}</span>
+              </div>
+            )}
+
+            {uploadSuccess && (
+              uploadSuccess.duplicate ? (
+                <div id="duplicate-evidence-banner" className="p-3 rounded-lg bg-[#EFF6FF] border border-blue-200 text-xs text-[#202938] space-y-2">
+                  <div className="flex items-center gap-1.5 font-semibold text-[#2563EB]">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Email already stored</span>
+                  </div>
+                  <p className="text-[11px] text-[#202938] leading-relaxed">
+                    An identical file is already in the database.
+                  </p>
+                  <button
+                    type="button"
+                    id="view-duplicate-evidence-btn"
+                    onClick={() => navigate(`/evidence/${uploadSuccess.evidenceId}`)}
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    <span>View analysis results</span>
+                  </button>
+                </div>
+              ) : (
+                <div className="p-3 rounded-lg bg-[#F0FDF4] border border-[#DCFCE7] text-xs text-[#202938] space-y-2">
+                  <div className="flex items-center gap-1.5 font-semibold text-[#15803D]">
+                    <CheckCircle2 className="h-4 w-4" />
+                    <span>Uploaded successfully</span>
+                  </div>
+                  <div className="text-[11px] text-[#202938] truncate">
+                    {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
+                  </div>
+                  {uploadSuccess.evidenceId && (
+                    <button
+                      id="inspect-uploaded-evidence-btn"
+                      type="button"
+                      onClick={() => navigate(`/evidence/${uploadSuccess.evidenceId}`)}
+                      className="flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-medium bg-[#15803D] hover:bg-green-800 text-white transition-colors cursor-pointer"
+                    >
+                      <Eye className="h-3.5 w-3.5" />
+                      <span>Open analysis</span>
+                    </button>
+                  )}
+                </div>
+              )
+            )}
 
             <button
               id="upload-evidence-btn"
               type="button"
               onClick={handleUpload}
               disabled={isUploading}
-              className="flex items-center justify-center gap-2 px-5 py-2.5 rounded-lg text-sm font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer shrink-0"
+              className="w-full flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
             >
               {isUploading ? (
                 <>
-                  <RefreshCw className="h-4 w-4 animate-spin" />
-                  <span>Uploading email...</span>
+                  <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                  <span>Uploading &amp; analyzing email...</span>
                 </>
               ) : (
                 <>
-                  <Upload className="h-4 w-4" />
-                  <span>Upload email</span>
+                  <Upload className="h-3.5 w-3.5" />
+                  <span>Upload &amp; Analyze</span>
                 </>
               )}
             </button>
-          </div>
-
-          {selectedFile && (
-            <div className="flex items-center gap-2.5 text-xs text-[#202938] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC]">
-              <FileText className="h-4 w-4 text-[#2563EB]" />
-              <span>Selected file: <strong className="text-[#202938] font-medium">{selectedFile.name}</strong></span>
-              <span>({formatBytes(selectedFile.size)})</span>
-            </div>
-          )}
-
-          {uploadError && (
-            <div className="p-3.5 rounded-lg bg-[#FEF2F2] border border-[#FEE2E2] text-xs text-[#B42318] flex items-center gap-2.5">
-              <AlertTriangle className="h-4 w-4 text-[#B42318] shrink-0" />
-              <span>{uploadError}</span>
-            </div>
-          )}
-
-          {uploadSuccess && (
-            uploadSuccess.duplicate ? (
-              <div id="duplicate-evidence-banner" className="p-4 md:p-5 rounded-lg bg-[#EFF6FF] border border-blue-200 text-xs text-[#202938] space-y-3">
-                <div className="flex items-center gap-2 font-semibold text-[#2563EB]">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span className="text-sm">This email was already uploaded</span>
-                </div>
-
-                <p className="text-xs text-[#202938] leading-relaxed">
-                  An identical file is already stored. The application will use the existing copy.
-                </p>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#202938] bg-white p-3 rounded-lg border border-blue-100">
-                  <div>
-                    <span className="font-medium text-[#202938]">Filename: </span>
-                    {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
-                  </div>
-                  <div>
-                    <span className="font-medium text-[#202938]">Status: </span>
-                    {uploadSuccess.status}
-                  </div>
-
-                  <div className="sm:col-span-2 break-all text-[11px] pt-1">
-                    <span className="font-medium text-[#202938]">SHA-256: </span>
-                    <span className="font-mono text-[#202938]">{uploadSuccess.hash}</span>
-                  </div>
-                </div>
-
-                <div className="pt-2 flex flex-wrap items-center gap-3">
-                  <button
-                    type="button"
-                    id="view-duplicate-evidence-btn"
-                    onClick={() => navigate(`/evidence/${uploadSuccess.evidenceId}`)}
-                    className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
-                  >
-                    <Eye className="h-3.5 w-3.5" />
-                    <span>View existing analysis results</span>
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <div className="p-4 rounded-lg bg-[#F0FDF4] border border-[#DCFCE7] text-xs text-[#202938] space-y-2">
-                <div className="flex items-center gap-2 font-semibold text-[#15803D]">
-                  <CheckCircle2 className="h-4 w-4" />
-                  <span className="text-sm">Email uploaded successfully</span>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#202938]">
-                  <div>
-                    <span className="font-medium text-[#202938]">Filename: </span>
-                    {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
-                  </div>
-                  <div>
-                    <span className="font-medium text-[#202938]">Status: </span>
-                    {uploadSuccess.status}
-                  </div>
-                  <div className="sm:col-span-2 break-all bg-white p-2.5 rounded-lg border border-green-100 font-mono text-[11px]">
-                    <span className="font-medium text-[#202938]">SHA-256: </span>
-                    {uploadSuccess.hash}
-                  </div>
-                </div>
-                {uploadSuccess.evidenceId && (
-                  <div className="pt-2">
-                    <button
-                      id="inspect-uploaded-evidence-btn"
-                      type="button"
-                      onClick={() => navigate(`/evidence/${uploadSuccess.evidenceId}`)}
-                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg text-xs font-medium bg-[#15803D] hover:bg-green-800 text-white transition-colors cursor-pointer"
-                    >
-                      <Eye className="h-3.5 w-3.5" />
-                      <span>View analysis</span>
-                    </button>
-                  </div>
-                )}
-              </div>
-            )
-          )}
-        </form>
-      </section>
-
-      {/* Uploaded files section */}
-      <section className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
-        <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
-          <div className="flex items-center gap-2">
-            <h2 className="text-base font-bold text-[#202938]">
-              Uploaded files ({evidenceList.length})
-            </h2>
-          </div>
-          <button
-            onClick={loadEvidence}
-            className="flex items-center gap-1.5 text-xs text-[#202938] transition-colors cursor-pointer"
-          >
-            <RefreshCw className="h-3.5 w-3.5" />
-            <span>Refresh</span>
-          </button>
+          </form>
         </div>
 
+
+      </section>
+
+      {/* Right Column: Clean & Minimal Recent Cases Table with Contained Scroll */}
+      <section className="flex-1 min-w-0 bg-white border border-[#E4E7EC] rounded-xl p-4 sm:p-5 flex flex-col min-h-0">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-[#E4E7EC] shrink-0">
+          <div className="flex items-center gap-2">
+            <h2 className="text-sm font-bold text-[#202938]">
+              Recent investigated cases
+            </h2>
+            <span className="px-1.5 py-0.2 rounded-md text-[11px] font-mono font-semibold bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+              {evidenceList.length}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Search className="h-3.5 w-3.5 absolute left-2.5 top-2 text-[#202938]" />
+              <input
+                type="text"
+                placeholder="Search files..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-8 pr-2.5 py-1 text-xs bg-[#F5F6F8] border border-[#E4E7EC] rounded-md outline-none focus:border-[#2563EB] text-[#202938] w-40 sm:w-52"
+              />
+            </div>
+            <button
+              onClick={loadEvidence}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-[#202938] bg-white border border-[#E4E7EC] rounded-md hover:bg-slate-50 transition-colors cursor-pointer"
+              title="Refresh case list"
+            >
+              <RefreshCw className="h-3 w-3" />
+              <span>Refresh</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Content list / table with contained internal scroll */}
         {isLoading ? (
           <div className="p-8 text-center text-xs text-[#202938]">
-            Loading files...
+            Loading cases...
           </div>
-        ) : evidenceList.length === 0 ? (
-          <div className="border border-dashed border-[#E4E7EC] rounded-xl p-8 text-center bg-[#F5F6F8] space-y-2">
-            <FileText className="h-8 w-8 text-[#202938] mx-auto" />
+        ) : filteredEvidence.length === 0 ? (
+          <div className="flex-1 flex flex-col items-center justify-center p-8 text-center text-xs text-[#202938] border border-dashed border-[#E4E7EC] rounded-lg mt-3">
+            <FileText className="h-8 w-8 text-[#202938] mb-2" />
             <h3 className="text-sm font-semibold text-[#202938]">
-              No email files uploaded yet.
+              No email cases found
             </h3>
-            <p className="text-xs text-[#202938] max-w-sm mx-auto">
-              Upload an .eml file to begin.
+            <p className="text-xs text-[#202938] mt-1">
+              {searchQuery ? 'Try clearing your search query.' : 'Upload an .eml email file on the left to begin.'}
             </p>
           </div>
         ) : (
-          <div className="space-y-3">
-            {evidenceList.map((item) => {
-              const integrity = integrityState[item.id]
-              const verifying = isVerifying[item.id]
+          <div className="flex-1 overflow-y-auto mt-2">
+            <table className="w-full text-left text-xs border-collapse">
+              <thead>
+                <tr className="border-b border-[#E4E7EC] text-[11px] text-[#202938] bg-[#F8FAFC] sticky top-0 z-10">
+                  <th className="p-2.5 font-semibold">File &amp; Subject</th>
+                  <th className="p-2.5 font-semibold">Status</th>
+                  <th className="p-2.5 font-semibold">Date</th>
+                  <th className="p-2.5 font-semibold text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E4E7EC]">
+                {filteredEvidence.map((item) => {
+                  const integrity = integrityState[item.id]
+                  const verifying = isVerifying[item.id]
 
-              return (
-                <div
-                  key={item.id}
-                  className="bg-[#F5F6F8] border border-[#E4E7EC] rounded-xl p-4 md:p-5 space-y-3 transition-colors hover:border-slate-300"
-                >
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-[#E4E7EC]">
-                    <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-[#2563EB] shrink-0" />
-                      <span className="text-sm font-semibold text-[#202938]">
-                        {item.originalFilename}
-                      </span>
-                      <span className="text-xs text-[#202938]">
-                        ({formatBytes(item.fileSizeBytes)})
-                      </span>
-                    </div>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#202938]">Status:</span>
-                      {getStatusBadge(item.latestStatus)}
-                    </div>
-                  </div>
-
-                  {item.subject && (
-                    <div className="text-xs text-[#202938] font-medium truncate">
-                      Subject: {item.subject}
-                    </div>
-                  )}
-
-                  <div className="space-y-2 text-xs">
-                    <div className="flex items-start gap-2 bg-white p-2.5 rounded-lg border border-[#E4E7EC]">
-                      <Hash className="h-3.5 w-3.5 text-[#202938] shrink-0 mt-0.5" />
-                      <div className="flex-1 break-all font-mono text-[11px]">
-                        <span className="text-[#202938]">SHA-256: </span>
-                        <span className="text-[#202938] select-all">{item.sha256Hash}</span>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#202938] pt-1">
-                      <div className="flex flex-wrap items-center gap-4">
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5 text-[#202938]" />
-                          <span>Uploaded: {new Date(item.uploadedAt).toLocaleString()}</span>
-                        </div>
-                        {item.sentDate && (
-                          <span>Sent: {new Date(item.sentDate).toLocaleString()}</span>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          id={`inspect-btn-${item.id}`}
-                          onClick={() => navigate(`/evidence/${item.id}`)}
-                          className="inspect-artifact-btn flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
-                        >
-                          <Eye className="h-3.5 w-3.5" />
-                          <span>View results</span>
-                        </button>
-
-                        <button
-                          id={`verify-btn-${item.id}`}
-                          onClick={() => handleVerifyIntegrity(item.id)}
-                          disabled={verifying}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors disabled:opacity-50 cursor-pointer"
-                        >
-                          <ShieldCheck className={`h-3.5 w-3.5 text-[#202938] ${verifying ? 'animate-spin' : ''}`} />
-                          <span>{verifying ? 'Checking...' : 'Check file integrity'}</span>
-                        </button>
-
-                        <button
-                          id={`download-btn-${item.id}`}
-                          onClick={() => handleDownload(item.id, item.originalFilename)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
-                        >
-                          <Download className="h-3.5 w-3.5 text-[#202938]" />
-                          <span>Download original</span>
-                        </button>
-                      </div>
-                    </div>
-
-                    {integrity && (
-                      <div
-                        className={`p-3 rounded-lg text-xs flex items-center justify-between border ${
-                          integrity.intact
-                            ? 'bg-[#F0FDF4] border-[#DCFCE7] text-[#15803D]'
-                            : 'bg-[#FEF2F2] border-[#FEE2E2] text-[#B42318]'
-                        }`}
-                      >
-                        <div className="flex items-center gap-2">
-                          {integrity.intact ? (
-                            <CheckCircle2 className="h-4 w-4 text-[#15803D] shrink-0" />
-                          ) : (
-                            <AlertTriangle className="h-4 w-4 text-[#B42318] shrink-0" />
-                          )}
-                          <span>
-                            {integrity.intact
-                              ? 'File integrity verified: The stored file matches the original record.'
-                              : `File integrity check failed: ${integrity.error || 'Hash mismatch detected.'}`}
+                  return (
+                    <tr key={item.id} className="hover:bg-slate-50 transition-colors">
+                      <td className="p-2.5 max-w-[220px] sm:max-w-[320px]">
+                        <div className="flex items-center gap-1.5">
+                          <FileText className="h-3.5 w-3.5 text-[#2563EB] shrink-0" />
+                          <span className="font-semibold text-[#202938] truncate" title={item.originalFilename}>
+                            {item.originalFilename}
+                          </span>
+                          <span className="text-[10px] text-[#202938] shrink-0 font-mono">
+                            ({formatBytes(item.fileSizeBytes)})
                           </span>
                         </div>
-                        <span className="text-[11px] text-[#202938] font-mono">
-                          {new Date(integrity.checkedAt).toLocaleTimeString()}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
+                        {item.subject && (
+                          <div className="text-[11px] text-[#202938] truncate mt-0.5" title={item.subject}>
+                            {item.subject}
+                          </div>
+                        )}
+                      </td>
+
+                      <td className="p-2.5 whitespace-nowrap">
+                        {getStatusBadge(item.latestStatus)}
+                      </td>
+
+                      <td className="p-2.5 text-[#202938] whitespace-nowrap text-[11px]">
+                        {new Date(item.uploadedAt).toLocaleDateString()}
+                      </td>
+
+                      <td className="p-2.5 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            id={`inspect-btn-${item.id}`}
+                            onClick={() => navigate(`/evidence/${item.id}`)}
+                            className="inspect-artifact-btn flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer"
+                            title="Open investigation results"
+                          >
+                            <Eye className="h-3 w-3" />
+                            <span>View</span>
+                          </button>
+
+                          <button
+                            id={`verify-btn-${item.id}`}
+                            onClick={() => handleVerifyIntegrity(item.id)}
+                            disabled={verifying}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border border-[#E4E7EC] bg-white hover:bg-slate-50 text-[#202938] transition-colors cursor-pointer ${
+                              integrity?.intact ? 'border-green-300 text-[#15803D]' : ''
+                            }`}
+                            title="Verify SHA-256 evidence integrity"
+                          >
+                            <ShieldCheck className={`h-3 w-3 ${verifying ? 'animate-spin' : ''}`} />
+                            <span className="hidden xl:inline">{verifying ? 'Checking' : integrity?.intact ? 'Verified' : 'Verify'}</span>
+                          </button>
+
+                          <button
+                            id={`download-btn-${item.id}`}
+                            onClick={() => handleDownload(item.id, item.originalFilename)}
+                            className="p-1 rounded text-[#202938] hover:bg-slate-100 transition-colors cursor-pointer"
+                            title="Download original .eml file"
+                          >
+                            <Download className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  )
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </section>

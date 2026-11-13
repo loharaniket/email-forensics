@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import {
@@ -440,154 +440,74 @@ export default function InvestigationPage() {
   const flags = headerAnalysis?.identityMismatchFlags || []
 
   return (
-    <div className="min-h-screen bg-[#F5F6F8] text-[#202938] flex flex-col">
+    <div className="h-screen bg-[#F5F6F8] text-[#202938] flex flex-col overflow-hidden">
       <Navbar />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto p-6 md:p-8 space-y-6">
-        {/* Header section */}
-        <InvestigationHeader
-          detail={detail}
-          parsed={parsed}
-          copiedKey={copiedKey}
-          copyValue={copyValue}
-          onPrint={() => {
-            setActiveTab('report')
-            setTimeout(() => window.print(), 300)
-          }}
-          onDownloadOriginal={() =>
-            downloadOriginalEvidence(detail.evidenceId, detail.originalFilename)
-          }
-          formatBytes={formatBytes}
-        />
+      {/* Compact Top Header Toolbar */}
+      <InvestigationHeader
+        detail={detail}
+        parsed={parsed}
+        copiedKey={copiedKey}
+        copyValue={copyValue}
+        onPrint={() => {
+          setActiveTab('report')
+          setTimeout(() => window.print(), 300)
+        }}
+        onDownloadOriginal={() =>
+          downloadOriginalEvidence(detail.evidenceId, detail.originalFilename)
+        }
+        formatBytes={formatBytes}
+      />
 
-        {/* Tab Navigation Bar */}
-        <div
+      {/* Main Studio Workspace: Sidebar + Dedicated Scrollable Content Pane */}
+      <div className="flex-1 flex overflow-hidden">
+        {/* Left Navigation Sidebar */}
+        <aside
           id="investigation-tabs-nav"
-          className="no-print flex flex-wrap items-center gap-1.5 border-b border-[#E4E7EC] pb-2 text-xs"
+          className="no-print w-56 lg:w-60 bg-white border-r border-[#E4E7EC] flex flex-col shrink-0 overflow-y-auto p-2 space-y-0.5 text-xs select-none"
         >
+          {/* Section: Overview */}
+          <div className="px-2 pt-2 pb-1 text-[10px] font-bold text-[#475467] uppercase tracking-wider">
+            Overview
+          </div>
+
           <button
             id="tab-overview"
             onClick={() => setActiveTab('overview')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
               activeTab === 'overview'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
             }`}
           >
-            <Activity className="h-3.5 w-3.5" />
-            <span>Summary</span>
-          </button>
-
-          <button
-            id="tab-headers"
-            onClick={() => setActiveTab('headers')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'headers'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Mail className="h-3.5 w-3.5" />
-            <span>Sender checks</span>
-          </button>
-
-          <button
-            id="tab-hops"
-            onClick={() => setActiveTab('hops')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'hops'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Server className="h-3.5 w-3.5" />
-            <span>Mail route ({hops.length})</span>
-          </button>
-
-          <button
-            id="tab-urls"
-            onClick={() => setActiveTab('urls')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'urls'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Link2 className="h-3.5 w-3.5" />
-            <span>Links ({urls.length})</span>
-          </button>
-
-          <button
-            id="tab-infrastructure"
-            onClick={() => setActiveTab('infrastructure')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'infrastructure'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Network className="h-3.5 w-3.5" />
-            <span>IP addresses ({infrastructure.length})</span>
-          </button>
-
-          <button
-            id="tab-qr"
-            onClick={() => setActiveTab('qr')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'qr'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <QrCode className="h-3.5 w-3.5" />
-            <span>QR codes ({qrCodes.length || visuals.reduce((acc, v) => acc + (v.qrArtifacts?.length || 0), 0)})</span>
-          </button>
-
-          <button
-            id="tab-content"
-            onClick={() => setActiveTab('content')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'content'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Brain className="h-3.5 w-3.5" />
-            <span>Message content</span>
+            <span className="flex items-center gap-2">
+              <Activity className="h-3.5 w-3.5 shrink-0" />
+              <span>Summary</span>
+            </span>
           </button>
 
           <button
             id="tab-risk"
             onClick={() => setActiveTab('risk')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
               activeTab === 'risk'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
             }`}
           >
-            <ShieldAlert className="h-3.5 w-3.5" />
-            <span>Risk score</span>
+            <span className="flex items-center gap-2">
+              <ShieldAlert className="h-3.5 w-3.5 shrink-0" />
+              <span>Risk score</span>
+            </span>
             {riskBreakdown && (
-              <span className="px-1.5 py-0.2 rounded text-[11px] font-mono font-semibold bg-white border border-[#E4E7EC] text-[#202938]">
+              <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono font-semibold ${
+                riskBreakdown.deterministicRiskScore >= 70
+                  ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200'
+                  : riskBreakdown.deterministicRiskScore >= 40
+                  ? 'bg-[#FFFBEB] text-[#B45309] border border-amber-200'
+                  : 'bg-[#F0FDF4] text-[#15803D] border border-green-200'
+              }`}>
                 {riskBreakdown.deterministicRiskScore}/100
-              </span>
-            )}
-          </button>
-
-          <button
-            id="tab-correlations"
-            onClick={() => setActiveTab('correlations')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'correlations'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
-            }`}
-          >
-            <Layers className="h-3.5 w-3.5" />
-            <span>Correlations</span>
-            {correlations.length > 0 && (
-              <span className="px-1.5 py-0.2 rounded text-[11px] font-mono font-semibold bg-white border border-[#E4E7EC] text-[#202938]">
-                {correlations.length}
               </span>
             )}
           </button>
@@ -595,56 +515,207 @@ export default function InvestigationPage() {
           <button
             id="tab-ai"
             onClick={() => setActiveTab('ai')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
               activeTab === 'ai'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5" />
-            <span>Automated assessment</span>
+            <span className="flex items-center gap-2">
+              <Sparkles className="h-3.5 w-3.5 shrink-0 text-[#2563EB]" />
+              <span>AI Assessment</span>
+            </span>
+            {aiAssessment?.threatClassification && (
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-white border border-[#E4E7EC] text-[#202938]">
+                {aiAssessment.threatClassification.includes('MALICIOUS') ? 'MAL' : 'OK'}
+              </span>
+            )}
+          </button>
+
+          {/* Section: Evidence Channels */}
+          <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-[#475467] uppercase tracking-wider">
+            Evidence Channels
+          </div>
+
+          <button
+            id="tab-headers"
+            onClick={() => setActiveTab('headers')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'headers'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Mail className="h-3.5 w-3.5 shrink-0" />
+              <span>Sender checks</span>
+            </span>
           </button>
 
           <button
-            id="tab-body"
-            onClick={() => setActiveTab('body')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
-              activeTab === 'body'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
+            id="tab-hops"
+            onClick={() => setActiveTab('hops')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'hops'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
             }`}
           >
-            <FileText className="h-3.5 w-3.5" />
-            <span>Message text</span>
+            <span className="flex items-center gap-2">
+              <Server className="h-3.5 w-3.5 shrink-0" />
+              <span>Mail route</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+              {hops.length}
+            </span>
+          </button>
+
+          <button
+            id="tab-urls"
+            onClick={() => setActiveTab('urls')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'urls'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Link2 className="h-3.5 w-3.5 shrink-0" />
+              <span>Links</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+              {urls.length}
+            </span>
+          </button>
+
+          <button
+            id="tab-infrastructure"
+            onClick={() => setActiveTab('infrastructure')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'infrastructure'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Network className="h-3.5 w-3.5 shrink-0" />
+              <span>IP addresses</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+              {infrastructure.length}
+            </span>
           </button>
 
           <button
             id="tab-attachments"
             onClick={() => setActiveTab('attachments')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
               activeTab === 'attachments'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
             }`}
           >
-            <Paperclip className="h-3.5 w-3.5" />
-            <span>Attachments ({attachments.length})</span>
+            <span className="flex items-center gap-2">
+              <Paperclip className="h-3.5 w-3.5 shrink-0" />
+              <span>Attachments</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+              {attachments.length}
+            </span>
+          </button>
+
+          <button
+            id="tab-qr"
+            onClick={() => setActiveTab('qr')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'qr'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <QrCode className="h-3.5 w-3.5 shrink-0" />
+              <span>QR codes</span>
+            </span>
+            <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+              {qrCodes.length || visuals.reduce((acc, v) => acc + (v.qrArtifacts?.length || 0), 0)}
+            </span>
+          </button>
+
+          <button
+            id="tab-content"
+            onClick={() => setActiveTab('content')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'content'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Brain className="h-3.5 w-3.5 shrink-0" />
+              <span>Content signals</span>
+            </span>
+          </button>
+
+          <button
+            id="tab-body"
+            onClick={() => setActiveTab('body')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'body'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <FileText className="h-3.5 w-3.5 shrink-0" />
+              <span>Message text</span>
+            </span>
+          </button>
+
+          {/* Section: Analysis & Export */}
+          <div className="px-2 pt-3 pb-1 text-[10px] font-bold text-[#475467] uppercase tracking-wider">
+            Analysis & Report
+          </div>
+
+          <button
+            id="tab-correlations"
+            onClick={() => setActiveTab('correlations')}
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
+              activeTab === 'correlations'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
+            }`}
+          >
+            <span className="flex items-center gap-2">
+              <Layers className="h-3.5 w-3.5 shrink-0" />
+              <span>Correlations</span>
+            </span>
+            {correlations.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded text-[10px] font-mono bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
+                {correlations.length}
+              </span>
+            )}
           </button>
 
           <button
             id="tab-report"
             onClick={() => setActiveTab('report')}
-            className={`flex items-center gap-1.5 px-3.5 py-2 rounded-lg font-medium transition-colors cursor-pointer ${
+            className={`flex items-center justify-between px-2.5 py-2 rounded-md font-medium transition-colors cursor-pointer w-full text-left ${
               activeTab === 'report'
-                ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                : 'text-[#202938] hover:bg-slate-100'
+                ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
+                : 'text-[#202938] hover:bg-slate-50'
             }`}
           >
-            <FileCheck className="h-3.5 w-3.5" />
-            <span>Investigation report</span>
+            <span className="flex items-center gap-2">
+              <FileCheck className="h-3.5 w-3.5 shrink-0" />
+              <span>Full report</span>
+            </span>
           </button>
-        </div>
+        </aside>
 
+        {/* Right Content Area: Results begin directly at y = 0 */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-6 bg-[#F5F6F8]">
+          <div className="max-w-6xl mx-auto space-y-4">
         {/* Tab Content Panes */}
         {activeTab === 'overview' && (
           <InvestigationSummary
@@ -786,7 +857,9 @@ export default function InvestigationPage() {
             formatSeconds={formatSeconds}
           />
         )}
-      </main>
+          </div>
+        </main>
+      </div>
     </div>
   )
 }
