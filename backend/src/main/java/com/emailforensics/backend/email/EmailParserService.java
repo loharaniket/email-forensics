@@ -3,6 +3,7 @@ package com.emailforensics.backend.email;
 import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.InlineImageMetaDto;
 import com.emailforensics.backend.dto.email.ParsedEmailDto;
+import com.emailforensics.backend.visual.QrDecodingService;
 import jakarta.mail.Address;
 import jakarta.mail.BodyPart;
 import jakarta.mail.Message;
@@ -14,6 +15,7 @@ import jakarta.mail.internet.InternetAddress;
 import jakarta.mail.internet.MimeMessage;
 import jakarta.mail.internet.MimeUtility;
 import org.jsoup.Jsoup;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.io.ByteArrayOutputStream;
@@ -41,6 +43,17 @@ public class EmailParserService {
             ".tar", ".gz", ".wsf", ".cpl", ".msi", ".dll", ".com",
             ".pif", ".reg", ".vbe", ".vba", ".ws"
     );
+
+    private final QrDecodingService qrDecodingService;
+
+    public EmailParserService() {
+        this.qrDecodingService = null;
+    }
+
+    @Autowired
+    public EmailParserService(QrDecodingService qrDecodingService) {
+        this.qrDecodingService = qrDecodingService;
+    }
 
     public ParsedEmailDto parse(InputStream inputStream) {
         ParsedEmailDto result = new ParsedEmailDto();
@@ -157,6 +170,14 @@ public class EmailParserService {
                 }
             }
 
+            String cleanContentType = "application/octet-stream";
+            if (contentType != null) {
+                int semi = contentType.indexOf(';');
+                cleanContentType = (semi >= 0 ? contentType.substring(0, semi) : contentType).trim().toLowerCase();
+            }
+
+            boolean isImage = cleanContentType.startsWith("image/") || isImageFilename(filename);
+
             boolean isAttachment = Part.ATTACHMENT.equalsIgnoreCase(disposition)
                     || (filename != null && !filename.trim().isEmpty() && !Part.INLINE.equalsIgnoreCase(disposition));
 
@@ -167,6 +188,14 @@ public class EmailParserService {
 
             if (Part.INLINE.equalsIgnoreCase(disposition) && filename != null) {
                 handleAttachment(part, filename, contentType, true, dto);
+                return;
+            }
+
+            if (isImage) {
+                String safeName = (filename != null && !filename.trim().isEmpty())
+                        ? filename.trim()
+                        : "image_" + (dto.getAttachments().size() + 1) + ".png";
+                handleAttachment(part, safeName, contentType, true, dto);
                 return;
             }
 
@@ -244,6 +273,24 @@ public class EmailParserService {
                 contentId = cidHeader[0].replaceAll("[<>]", "").trim();
             }
 
+            boolean qrDetected = false;
+            String qrPayload = null;
+            String qrPayloadType = null;
+            String qrNormalizedUrl = null;
+
+            if (qrDecodingService != null && (cleanContentType.startsWith("image/") || isImageFilename(safeFilename))) {
+                try {
+                    List<QrDecodingService.DecodedQrPayload> qrs = qrDecodingService.decodeQrCodes(bytes);
+                    if (qrs != null && !qrs.isEmpty()) {
+                        qrDetected = true;
+                        qrPayload = qrs.get(0).getPayload();
+                        qrPayloadType = qrs.get(0).getPayloadType();
+                        qrNormalizedUrl = qrs.get(0).getNormalizedUrl();
+                    }
+                } catch (Exception ignored) {
+                }
+            }
+
             AttachmentMetaDto meta = new AttachmentMetaDto(
                     safeFilename,
                     cleanContentType,
@@ -251,7 +298,11 @@ public class EmailParserService {
                     sha256,
                     inline,
                     contentId,
-                    risky
+                    risky,
+                    qrDetected,
+                    qrPayload,
+                    qrPayloadType,
+                    qrNormalizedUrl
             );
             dto.getAttachments().add(meta);
 
@@ -301,6 +352,14 @@ public class EmailParserService {
             }
         }
         return false;
+    }
+
+    private boolean isImageFilename(String filename) {
+        if (filename == null) return false;
+        String lower = filename.toLowerCase();
+        return lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg")
+                || lower.endsWith(".gif") || lower.endsWith(".webp") || lower.endsWith(".bmp")
+                || lower.endsWith(".tiff") || lower.endsWith(".ico");
     }
 
     private String truncateText(String text) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react'
+﻿import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import {
   Upload,
@@ -227,7 +227,7 @@ export default function EvidenceUploadSection() {
         )
       default:
         return (
-          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#667085]">
+          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#202938]">
             {st}
           </span>
         )
@@ -242,7 +242,7 @@ export default function EvidenceUploadSection() {
           <h2 className="text-base font-bold text-[#202938]">
             Upload email
           </h2>
-          <p className="text-sm text-[#667085] mt-0.5">
+          <p className="text-sm text-[#202938] mt-0.5">
             Choose an .eml email file to start the analysis.
           </p>
         </div>
@@ -282,7 +282,7 @@ export default function EvidenceUploadSection() {
           </div>
 
           {selectedFile && (
-            <div className="flex items-center gap-2.5 text-xs text-[#667085] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC]">
+            <div className="flex items-center gap-2.5 text-xs text-[#202938] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC]">
               <FileText className="h-4 w-4 text-[#2563EB]" />
               <span>Selected file: <strong className="text-[#202938] font-medium">{selectedFile.name}</strong></span>
               <span>({formatBytes(selectedFile.size)})</span>
@@ -304,11 +304,11 @@ export default function EvidenceUploadSection() {
                   <span className="text-sm">This email was already uploaded</span>
                 </div>
 
-                <p className="text-xs text-[#667085] leading-relaxed">
+                <p className="text-xs text-[#202938] leading-relaxed">
                   An identical file is already stored. The application will use the existing copy.
                 </p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#667085] bg-white p-3 rounded-lg border border-blue-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#202938] bg-white p-3 rounded-lg border border-blue-100">
                   <div>
                     <span className="font-medium text-[#202938]">Filename: </span>
                     {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
@@ -320,7 +320,7 @@ export default function EvidenceUploadSection() {
 
                   <div className="sm:col-span-2 break-all text-[11px] pt-1">
                     <span className="font-medium text-[#202938]">SHA-256: </span>
-                    <span className="font-mono text-[#667085]">{uploadSuccess.hash}</span>
+                    <span className="font-mono text-[#202938]">{uploadSuccess.hash}</span>
                   </div>
                 </div>
 
@@ -342,7 +342,7 @@ export default function EvidenceUploadSection() {
                   <CheckCircle2 className="h-4 w-4" />
                   <span className="text-sm">Email uploaded successfully</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#667085]">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-xs text-[#202938]">
                   <div>
                     <span className="font-medium text-[#202938]">Filename: </span>
                     {uploadSuccess.filename} ({formatBytes(uploadSuccess.size)})
@@ -385,7 +385,7 @@ export default function EvidenceUploadSection() {
           </div>
           <button
             onClick={loadEvidence}
-            className="flex items-center gap-1.5 text-xs text-[#667085] hover:text-[#202938] transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 text-xs text-[#202938] transition-colors cursor-pointer"
           >
             <RefreshCw className="h-3.5 w-3.5" />
             <span>Refresh</span>
@@ -393,16 +393,16 @@ export default function EvidenceUploadSection() {
         </div>
 
         {isLoading ? (
-          <div className="p-8 text-center text-xs text-[#667085]">
+          <div className="p-8 text-center text-xs text-[#202938]">
             Loading files...
           </div>
         ) : evidenceList.length === 0 ? (
           <div className="border border-dashed border-[#E4E7EC] rounded-xl p-8 text-center bg-[#F5F6F8] space-y-2">
-            <FileText className="h-8 w-8 text-[#98A2B3] mx-auto" />
+            <FileText className="h-8 w-8 text-[#202938] mx-auto" />
             <h3 className="text-sm font-semibold text-[#202938]">
               No email files uploaded yet.
             </h3>
-            <p className="text-xs text-[#667085] max-w-sm mx-auto">
+            <p className="text-xs text-[#202938] max-w-sm mx-auto">
               Upload an .eml file to begin.
             </p>
           </div>
@@ -423,13 +423,13 @@ export default function EvidenceUploadSection() {
                       <span className="text-sm font-semibold text-[#202938]">
                         {item.originalFilename}
                       </span>
-                      <span className="text-xs text-[#667085]">
+                      <span className="text-xs text-[#202938]">
                         ({formatBytes(item.fileSizeBytes)})
                       </span>
                     </div>
 
                     <div className="flex items-center gap-2">
-                      <span className="text-xs text-[#667085]">Status:</span>
+                      <span className="text-xs text-[#202938]">Status:</span>
                       {getStatusBadge(item.latestStatus)}
                     </div>
                   </div>
@@ -442,17 +442,17 @@ export default function EvidenceUploadSection() {
 
                   <div className="space-y-2 text-xs">
                     <div className="flex items-start gap-2 bg-white p-2.5 rounded-lg border border-[#E4E7EC]">
-                      <Hash className="h-3.5 w-3.5 text-[#98A2B3] shrink-0 mt-0.5" />
+                      <Hash className="h-3.5 w-3.5 text-[#202938] shrink-0 mt-0.5" />
                       <div className="flex-1 break-all font-mono text-[11px]">
-                        <span className="text-[#667085]">SHA-256: </span>
+                        <span className="text-[#202938]">SHA-256: </span>
                         <span className="text-[#202938] select-all">{item.sha256Hash}</span>
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#667085] pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-3 text-xs text-[#202938] pt-1">
                       <div className="flex flex-wrap items-center gap-4">
                         <div className="flex items-center gap-1">
-                          <Clock className="h-3.5 w-3.5 text-[#98A2B3]" />
+                          <Clock className="h-3.5 w-3.5 text-[#202938]" />
                           <span>Uploaded: {new Date(item.uploadedAt).toLocaleString()}</span>
                         </div>
                         {item.sentDate && (
@@ -476,7 +476,7 @@ export default function EvidenceUploadSection() {
                           disabled={verifying}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors disabled:opacity-50 cursor-pointer"
                         >
-                          <ShieldCheck className={`h-3.5 w-3.5 text-[#667085] ${verifying ? 'animate-spin' : ''}`} />
+                          <ShieldCheck className={`h-3.5 w-3.5 text-[#202938] ${verifying ? 'animate-spin' : ''}`} />
                           <span>{verifying ? 'Checking...' : 'Check file integrity'}</span>
                         </button>
 
@@ -485,7 +485,7 @@ export default function EvidenceUploadSection() {
                           onClick={() => handleDownload(item.id, item.originalFilename)}
                           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium bg-white hover:bg-slate-50 text-[#202938] border border-[#E4E7EC] transition-colors cursor-pointer"
                         >
-                          <Download className="h-3.5 w-3.5 text-[#667085]" />
+                          <Download className="h-3.5 w-3.5 text-[#202938]" />
                           <span>Download original</span>
                         </button>
                       </div>
@@ -511,7 +511,7 @@ export default function EvidenceUploadSection() {
                               : `File integrity check failed: ${integrity.error || 'Hash mismatch detected.'}`}
                           </span>
                         </div>
-                        <span className="text-[11px] text-[#667085] font-mono">
+                        <span className="text-[11px] text-[#202938] font-mono">
                           {new Date(integrity.checkedAt).toLocaleTimeString()}
                         </span>
                       </div>

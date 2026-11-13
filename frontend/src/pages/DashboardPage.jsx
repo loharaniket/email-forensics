@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import Navbar from '../components/Navbar'
 import EvidenceUploadSection from '../components/EvidenceUploadSection'
 import { Shield, Sparkles, Network, FileCheck } from 'lucide-react'
@@ -20,7 +20,7 @@ export default function DashboardPage() {
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#202938]">
                 Email Forensics &amp; Threat Investigation
               </h1>
-              <p className="text-sm text-[#667085] leading-relaxed">
+              <p className="text-sm text-[#202938] leading-relaxed">
                 Upload raw RFC 5322 <span className="font-mono text-xs bg-slate-100 px-1.5 py-0.5 rounded text-[#202938]">.eml</span> files
                 to automatically analyze authentication headers, server hops, URLs, IP addresses, visual attachments, QR codes,
                 behavioral phishing patterns, historical correlations, and AI threat assessments.
@@ -33,7 +33,7 @@ export default function DashboardPage() {
                   <FileCheck className="h-4 w-4 text-[#2563EB]" />
                   <span>Integrity</span>
                 </div>
-                <p className="text-[#667085] text-[11px]">SHA-256 evidence hashing</p>
+                <p className="text-[#202938] text-[11px]">SHA-256 evidence hashing</p>
               </div>
 
               <div className="p-3 bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg text-xs space-y-1">
@@ -41,7 +41,7 @@ export default function DashboardPage() {
                   <Network className="h-4 w-4 text-[#15803D]" />
                   <span>Network</span>
                 </div>
-                <p className="text-[#667085] text-[11px]">Hop routing &amp; URL intel</p>
+                <p className="text-[#202938] text-[11px]">Hop routing &amp; URL intel</p>
               </div>
 
               <div className="p-3 bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg text-xs space-y-1">
@@ -49,7 +49,7 @@ export default function DashboardPage() {
                   <Sparkles className="h-4 w-4 text-[#7C3AED]" />
                   <span>AI Grounded</span>
                 </div>
-                <p className="text-[#667085] text-[11px]">Evidence-grounded report</p>
+                <p className="text-[#202938] text-[11px]">Evidence-grounded report</p>
               </div>
 
               <div className="p-3 bg-[#F8FAFC] border border-[#E4E7EC] rounded-lg text-xs space-y-1">
@@ -57,7 +57,7 @@ export default function DashboardPage() {
                   <Shield className="h-4 w-4 text-[#B45309]" />
                   <span>Explainable</span>
                 </div>
-                <p className="text-[#667085] text-[11px]">Deterministic risk scoring</p>
+                <p className="text-[#202938] text-[11px]">Deterministic risk scoring</p>
               </div>
             </div>
           </div>

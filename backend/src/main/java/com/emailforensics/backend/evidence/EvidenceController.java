@@ -4,6 +4,7 @@ import com.emailforensics.backend.content.ContentAnalysisService;
 import com.emailforensics.backend.correlation.CorrelationService;
 import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.correlation.CorrelationMatchDto;
+import com.emailforensics.backend.dto.email.AttachmentMetaDto;
 import com.emailforensics.backend.dto.email.InvestigationDetailDto;
 import com.emailforensics.backend.dto.evidence.EvidenceIntegrityResponse;
 import com.emailforensics.backend.dto.evidence.EvidenceStatusResponse;
@@ -117,6 +118,12 @@ public class EvidenceController {
     @GetMapping("/evidence/{emailId}/investigation")
     public ResponseEntity<InvestigationDetailDto> getInvestigationDetail(@PathVariable UUID emailId) {
         InvestigationDetailDto response = evidenceService.getInvestigationDetail(emailId);
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/evidence/{emailId}/attachments")
+    public ResponseEntity<List<AttachmentMetaDto>> getAttachments(@PathVariable UUID emailId) {
+        List<AttachmentMetaDto> response = evidenceService.getEvidenceAttachments(emailId);
         return ResponseEntity.ok(response);
     }
 

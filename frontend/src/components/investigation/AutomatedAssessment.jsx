@@ -1,13 +1,11 @@
-import React, { useState } from 'react'
+﻿import React from 'react'
 import {
   Sparkles,
   RefreshCw,
   CheckCircle2,
   AlertTriangle,
   Tag,
-  ShieldCheck,
-  ChevronDown,
-  ChevronRight
+  ShieldCheck
 } from 'lucide-react'
 
 export default function AutomatedAssessment({
@@ -15,8 +13,6 @@ export default function AutomatedAssessment({
   isAiGenerating,
   onRegenerate
 }) {
-  const [showTechnicalDetails, setShowTechnicalDetails] = useState(false)
-
   const isLiveAi = aiAssessment?.status === 'LIVE_AI'
   const isFailed = aiAssessment?.status === 'ASSESSMENT_FAILED'
 
@@ -38,7 +34,7 @@ export default function AutomatedAssessment({
               </span>
 
               {aiAssessment && (
-                <span className="text-xs px-2.5 py-0.5 rounded bg-slate-100 text-[#667085] border border-[#E4E7EC]">
+                <span className="text-xs px-2.5 py-0.5 rounded bg-slate-100 text-[#202938] border border-[#E4E7EC]">
                   {aiAssessment.threatClassification || 'Assessed'}
                 </span>
               )}
@@ -47,7 +43,7 @@ export default function AutomatedAssessment({
             <h2 className="text-lg font-bold text-[#202938]">
               {aiAssessment ? aiAssessment.threatClassification : 'Generating assessment...'}
             </h2>
-            <p className="text-xs text-[#667085]">
+            <p className="text-xs text-[#202938]">
               Objective explanation based on extracted technical evidence and indicator findings.
             </p>
           </div>
@@ -68,9 +64,9 @@ export default function AutomatedAssessment({
           <div className="p-3.5 rounded-lg bg-[#F0FDF4] border border-[#DCFCE7] text-xs text-[#15803D] flex items-start gap-2.5">
             <CheckCircle2 className="h-4 w-4 shrink-0 mt-0.5" />
             <div>
-              <span className="font-semibold block">AI model assessment completed</span>
-              <p className="text-[11px] text-[#667085] mt-0.5">
-                Generated using {aiAssessment.provider} ({aiAssessment.modelName}). All findings were cross-referenced with extracted evidence.
+              <span className="font-semibold block">Automated assessment completed</span>
+              <p className="text-[11px] text-[#202938] mt-0.5">
+                All findings were cross-referenced with extracted evidence.
               </p>
             </div>
           </div>
@@ -80,17 +76,17 @@ export default function AutomatedAssessment({
           <div className="p-3.5 rounded-lg bg-[#FFFBEB] border border-amber-200 text-xs text-[#B42318] space-y-1">
             <div className="flex items-center gap-2 font-semibold">
               <AlertTriangle className="h-4 w-4 shrink-0 text-[#B45309]" />
-              <span>AI service unavailable — rule-based fallback used</span>
+              <span>Assessment service unavailable — rule-based fallback used</span>
             </div>
-            <p className="text-[11px] text-[#667085]">
-              The remote AI model call failed ({aiAssessment.errorMessage || 'Provider unreachable'}). A rule-based assessment was used instead.
+            <p className="text-[11px] text-[#202938]">
+              A deterministic rule-based assessment was used instead.
             </p>
           </div>
         )}
 
         {/* Assessment summary narrative */}
         <div className="space-y-2 pt-1">
-          <h3 className="text-xs font-bold uppercase tracking-wider text-[#667085]">
+          <h3 className="text-xs font-bold uppercase tracking-wider text-[#202938]">
             Assessment summary
           </h3>
           <p className="text-sm text-[#202938] leading-relaxed bg-[#F5F6F8] p-4 rounded-lg border border-[#E4E7EC]">
@@ -119,7 +115,7 @@ export default function AutomatedAssessment({
                 ))}
               </ul>
             ) : (
-              <p className="text-xs text-[#667085]">No specific key indicators listed.</p>
+              <p className="text-xs text-[#202938]">No specific key indicators listed.</p>
             )}
           </div>
 
@@ -144,64 +140,13 @@ export default function AutomatedAssessment({
                 ))}
               </div>
             ) : (
-              <p className="text-xs text-[#667085]">No specific evidence references cited.</p>
+              <p className="text-xs text-[#202938]">No specific evidence references cited.</p>
             )}
           </div>
         </div>
 
-        {/* Limitations and caveats */}
-        {aiAssessment?.limitationsAndCaveats && (
-          <div className="p-4 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC] text-xs space-y-1">
-            <span className="font-semibold text-[#202938] block">Limitations and caveats</span>
-            <p className="text-[#667085] leading-relaxed">
-              {aiAssessment.limitationsAndCaveats}
-            </p>
-          </div>
-        )}
 
-        {/* Expandable Technical Model Details */}
-        <div className="pt-3 border-t border-[#E4E7EC]">
-          <button
-            onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-            className="flex items-center justify-between w-full text-xs font-medium text-[#667085] hover:text-[#202938] cursor-pointer"
-          >
-            <span>Technical assessment details</span>
-            {showTechnicalDetails ? (
-              <ChevronDown className="h-4 w-4" />
-            ) : (
-              <ChevronRight className="h-4 w-4" />
-            )}
-          </button>
 
-          {showTechnicalDetails && aiAssessment && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-3 p-4 bg-[#F5F6F8] rounded-lg border border-[#E4E7EC] text-xs">
-              <div>
-                <span className="text-[#667085] block text-[11px]">Provider / Model:</span>
-                <span className="font-medium text-[#202938] mt-0.5 block truncate">
-                  {aiAssessment.provider} {aiAssessment.modelName ? `(${aiAssessment.modelName})` : ''}
-                </span>
-              </div>
-              <div>
-                <span className="text-[#667085] block text-[11px]">Tokens used:</span>
-                <span className="font-medium text-[#202938] mt-0.5 block">
-                  {aiAssessment.tokensUsed != null ? aiAssessment.tokensUsed : 0}
-                </span>
-              </div>
-              <div>
-                <span className="text-[#667085] block text-[11px]">Generation latency:</span>
-                <span className="font-medium text-[#202938] mt-0.5 block">
-                  {aiAssessment.generationTimeMs != null ? `${aiAssessment.generationTimeMs} ms` : '—'}
-                </span>
-              </div>
-              <div>
-                <span className="text-[#667085] block text-[11px]">Prompt version:</span>
-                <span className="font-medium text-[#202938] mt-0.5 block">
-                  {aiAssessment.promptVersion || '1.0'}
-                </span>
-              </div>
-            </div>
-          )}
-        </div>
       </div>
     </div>
   )

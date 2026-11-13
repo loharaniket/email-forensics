@@ -70,6 +70,11 @@ export const getEvidenceInfrastructure = async (emailId) => {
   return response.data;
 };
 
+export const getEvidenceAttachments = async (emailId) => {
+  const response = await client.get(`/evidence/${emailId}/attachments`);
+  return response.data;
+};
+
 export const getEvidenceVisuals = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/images`);
   return response.data;

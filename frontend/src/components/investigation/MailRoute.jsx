@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+﻿import React, { useState } from 'react'
 import {
   Server,
   Clock,
@@ -22,31 +22,31 @@ export default function MailRoute({ hops, formatSeconds }) {
     <div className="space-y-6">
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="p-5 rounded-xl bg-white border border-[#E4E7EC]">
-          <span className="text-xs text-[#667085] block">Total mail route hops</span>
+          <span className="text-xs text-[#202938] block">Total mail route hops</span>
           <span className="text-2xl font-bold text-[#202938] mt-1 block font-mono">
             {hops?.length || 0}
           </span>
-          <span className="text-xs text-[#667085] mt-1 block">Servers traversed</span>
+          <span className="text-xs text-[#202938] mt-1 block">Servers traversed</span>
         </div>
 
         <div className="p-5 rounded-xl bg-white border border-[#E4E7EC]">
-          <span className="text-xs text-[#667085] block">Total transit delay</span>
+          <span className="text-xs text-[#202938] block">Total transit delay</span>
           <span className="text-2xl font-bold text-[#202938] mt-1 block font-mono">
             {totalTransitDelaySeconds > 0
               ? formatSeconds(totalTransitDelaySeconds)
               : '0s (Immediate)'}
           </span>
-          <span className="text-xs text-[#667085] mt-1 block">Accumulated delay</span>
+          <span className="text-xs text-[#202938] mt-1 block">Accumulated delay</span>
         </div>
 
         <div className="p-5 rounded-xl bg-white border border-[#E4E7EC]">
-          <span className="text-xs text-[#667085] block">Originating server</span>
+          <span className="text-xs text-[#202938] block">Originating server</span>
           <span className="text-sm font-semibold text-[#202938] mt-2 block truncate font-mono">
             {hops && hops.length > 0
               ? hops[0].fromHost || hops[0].hopIp || 'Unknown'
               : 'N/A'}
           </span>
-          <span className="text-xs text-[#667085] mt-1 block">First hop</span>
+          <span className="text-xs text-[#202938] mt-1 block">First hop</span>
         </div>
       </div>
 
@@ -58,7 +58,7 @@ export default function MailRoute({ hops, formatSeconds }) {
         </div>
 
         {!hops || hops.length === 0 ? (
-          <div className="p-8 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] text-center text-xs text-[#667085]">
+          <div className="p-8 rounded-xl bg-[#F5F6F8] border border-[#E4E7EC] text-center text-xs text-[#202938]">
             No Received headers were found in this email message.
           </div>
         ) : (
@@ -76,7 +76,7 @@ export default function MailRoute({ hops, formatSeconds }) {
                         ? 'bg-[#EFF6FF] border-blue-300 text-[#2563EB]'
                         : isLast
                         ? 'bg-[#F0FDF4] border-green-300 text-[#15803D]'
-                        : 'bg-white border-[#E4E7EC] text-[#667085]'
+                        : 'bg-white border-[#E4E7EC] text-[#202938]'
                     }`}
                   >
                     {hop.hopOrder || idx + 1}
@@ -100,8 +100,8 @@ export default function MailRoute({ hops, formatSeconds }) {
                         )}
                       </div>
 
-                      <div className="flex items-center gap-2 text-xs text-[#667085]">
-                        <Clock className="h-3.5 w-3.5 text-[#98A2B3]" />
+                      <div className="flex items-center gap-2 text-xs text-[#202938]">
+                        <Clock className="h-3.5 w-3.5 text-[#202938]" />
                         <span>
                           {(() => {
                             const tVal = hop.hopTimestamp || hop.timestamp
@@ -124,21 +124,21 @@ export default function MailRoute({ hops, formatSeconds }) {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 text-xs">
                       <div>
-                        <span className="text-[#667085] block">Sending server:</span>
+                        <span className="text-[#202938] block">Sending server:</span>
                         <span className="font-mono text-[#202938] font-semibold break-all">
                           {hop.fromHost || 'Unknown'}
                         </span>
                       </div>
 
                       <div>
-                        <span className="text-[#667085] block">Receiving server:</span>
+                        <span className="text-[#202938] block">Receiving server:</span>
                         <span className="font-mono text-[#202938] font-semibold break-all">
                           {hop.byHost || 'Unknown'}
                         </span>
                       </div>
 
                       <div>
-                        <span className="text-[#667085] block">IP address:</span>
+                        <span className="text-[#202938] block">IP address:</span>
                         <span className="font-mono text-[#2563EB] font-semibold break-all">
                           {hop.hopIp || '(No IP in header)'}
                         </span>
@@ -146,7 +146,7 @@ export default function MailRoute({ hops, formatSeconds }) {
 
                       {hop.protocol && (
                         <div>
-                          <span className="text-[#667085] block">Protocol / Transport:</span>
+                          <span className="text-[#202938] block">Protocol / Transport:</span>
                           <span className="font-mono text-[#202938]">
                             {hop.protocol}
                           </span>
@@ -155,7 +155,7 @@ export default function MailRoute({ hops, formatSeconds }) {
 
                       {hop.tlsCipher && (
                         <div className="sm:col-span-2">
-                          <span className="text-[#667085] block">TLS encryption:</span>
+                          <span className="text-[#202938] block">TLS encryption:</span>
                           <span className="font-mono text-xs text-[#15803D]">
                             {hop.tlsCipher}
                           </span>
@@ -167,7 +167,7 @@ export default function MailRoute({ hops, formatSeconds }) {
                       <div className="pt-2 border-t border-[#E4E7EC]">
                         <button
                           onClick={() => toggleHopExpand(hop.hopOrder)}
-                          className="flex items-center gap-1.5 text-xs text-[#667085] hover:text-[#202938] cursor-pointer"
+                          className="flex items-center gap-1.5 text-xs text-[#202938] cursor-pointer"
                         >
                           {isExpanded ? (
                             <ChevronDown className="h-3.5 w-3.5" />

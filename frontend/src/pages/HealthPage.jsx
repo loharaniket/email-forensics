@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react'
+﻿import React, { useState, useEffect, useCallback } from 'react'
 import Navbar from '../components/Navbar'
 import { fetchHealth, truncateDatabaseAndEvidence } from '../api/health'
 import {
@@ -88,7 +88,7 @@ export default function HealthPage() {
               <h1 className="text-2xl font-bold tracking-tight text-[#202938]">
                 Service status
               </h1>
-              <p className="text-sm text-[#667085] mt-1 max-w-xl">
+              <p className="text-sm text-[#202938] mt-1 max-w-xl">
                 Check whether the application can connect to its backend service.
               </p>
             </div>
@@ -100,7 +100,7 @@ export default function HealthPage() {
                 className={`px-3.5 py-2 rounded-lg text-xs font-medium border transition-colors cursor-pointer ${
                   autoRefresh
                     ? 'bg-[#EFF6FF] border-blue-200 text-[#2563EB]'
-                    : 'bg-white border-[#E4E7EC] text-[#667085] hover:bg-slate-50'
+                    : 'bg-white border-[#E4E7EC] text-[#202938] hover:bg-slate-50'
                 }`}
               >
                 Auto-refresh: {autoRefresh ? 'On (5s)' : 'Off'}
@@ -137,9 +137,9 @@ export default function HealthPage() {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
             <div className="bg-[#F5F6F8] p-5 rounded-xl border border-[#E4E7EC]">
-              <div className="flex items-center justify-between text-xs text-[#667085]">
+              <div className="flex items-center justify-between text-xs text-[#202938]">
                 <span>Connection status</span>
-                <Server className="h-4 w-4 text-[#98A2B3]" />
+                <Server className="h-4 w-4 text-[#202938]" />
               </div>
               <div className="mt-3 flex items-center gap-2">
                 {healthData ? (
@@ -161,9 +161,9 @@ export default function HealthPage() {
             </div>
 
             <div className="bg-[#F5F6F8] p-5 rounded-xl border border-[#E4E7EC]">
-              <div className="flex items-center justify-between text-xs text-[#667085]">
+              <div className="flex items-center justify-between text-xs text-[#202938]">
                 <span>Response time</span>
-                <Clock className="h-4 w-4 text-[#98A2B3]" />
+                <Clock className="h-4 w-4 text-[#202938]" />
               </div>
               <div className="mt-3">
                 <span className="text-xl font-bold font-mono text-[#202938]">
@@ -173,9 +173,9 @@ export default function HealthPage() {
             </div>
 
             <div className="bg-[#F5F6F8] p-5 rounded-xl border border-[#E4E7EC]">
-              <div className="flex items-center justify-between text-xs text-[#667085]">
+              <div className="flex items-center justify-between text-xs text-[#202938]">
                 <span>Last checked</span>
-                <Activity className="h-4 w-4 text-[#98A2B3]" />
+                <Activity className="h-4 w-4 text-[#202938]" />
               </div>
               <div className="mt-3">
                 <span className="text-sm font-medium text-[#202938]">
@@ -197,7 +197,7 @@ export default function HealthPage() {
                     <h3 className="text-sm font-semibold text-[#15803D]">
                       Backend service connected successfully
                     </h3>
-                    <p className="text-xs text-[#667085]">
+                    <p className="text-xs text-[#202938]">
                       All backend services are responding normally.
                     </p>
                   </div>
@@ -291,7 +291,7 @@ export default function HealthPage() {
           <div className="mt-8 pt-4 border-t border-[#E4E7EC]">
             <button
               onClick={() => setShowTechnicalDetails(!showTechnicalDetails)}
-              className="flex items-center justify-between w-full text-xs font-medium text-[#667085] hover:text-[#202938] cursor-pointer"
+              className="flex items-center justify-between w-full text-xs font-medium text-[#202938] cursor-pointer"
             >
               <span>Technical connection details</span>
               {showTechnicalDetails ? (
@@ -304,11 +304,11 @@ export default function HealthPage() {
             {showTechnicalDetails && (
               <div className="mt-3 p-4 bg-[#F5F6F8] rounded-lg border border-[#E4E7EC] font-mono text-xs text-[#202938] space-y-2">
                 <div className="flex items-center justify-between">
-                  <span className="text-[#667085]">Endpoint:</span>
+                  <span className="text-[#202938]">Endpoint:</span>
                   <span>GET /api/v1/health</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-[#667085]">Payload:</span>
+                  <span className="text-[#202938]">Payload:</span>
                   <span>{JSON.stringify(healthData || { error })}</span>
                 </div>
               </div>

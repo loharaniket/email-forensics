@@ -9,12 +9,22 @@ public class AttachmentMetaDto {
     private boolean inline;
     private String contentId;
     private boolean riskyExtension;
+    private boolean qrDetected;
+    private String qrPayload;
+    private String qrPayloadType;
+    private String qrNormalizedUrl;
 
     public AttachmentMetaDto() {
     }
 
     public AttachmentMetaDto(String filename, String mimeType, Long sizeBytes, String sha256Hash,
                              boolean inline, String contentId, boolean riskyExtension) {
+        this(filename, mimeType, sizeBytes, sha256Hash, inline, contentId, riskyExtension, false, null, null, null);
+    }
+
+    public AttachmentMetaDto(String filename, String mimeType, Long sizeBytes, String sha256Hash,
+                             boolean inline, String contentId, boolean riskyExtension,
+                             boolean qrDetected, String qrPayload, String qrPayloadType, String qrNormalizedUrl) {
         this.filename = filename;
         this.mimeType = mimeType;
         this.sizeBytes = sizeBytes;
@@ -22,6 +32,10 @@ public class AttachmentMetaDto {
         this.inline = inline;
         this.contentId = contentId;
         this.riskyExtension = riskyExtension;
+        this.qrDetected = qrDetected;
+        this.qrPayload = qrPayload;
+        this.qrPayloadType = qrPayloadType;
+        this.qrNormalizedUrl = qrNormalizedUrl;
     }
 
     public String getFilename() {
@@ -78,5 +92,37 @@ public class AttachmentMetaDto {
 
     public void setRiskyExtension(boolean riskyExtension) {
         this.riskyExtension = riskyExtension;
+    }
+
+    public boolean isQrDetected() {
+        return qrDetected;
+    }
+
+    public void setQrDetected(boolean qrDetected) {
+        this.qrDetected = qrDetected;
+    }
+
+    public String getQrPayload() {
+        return qrPayload;
+    }
+
+    public void setQrPayload(String qrPayload) {
+        this.qrPayload = qrPayload;
+    }
+
+    public String getQrPayloadType() {
+        return qrPayloadType;
+    }
+
+    public void setQrPayloadType(String qrPayloadType) {
+        this.qrPayloadType = qrPayloadType;
+    }
+
+    public String getQrNormalizedUrl() {
+        return qrNormalizedUrl;
+    }
+
+    public void setQrNormalizedUrl(String qrNormalizedUrl) {
+        this.qrNormalizedUrl = qrNormalizedUrl;
     }
 }

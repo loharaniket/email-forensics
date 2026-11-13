@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { Shield, LayoutDashboard, Activity } from 'lucide-react'
 
@@ -17,7 +17,7 @@ export default function Navbar() {
               <span className="text-base font-semibold tracking-tight text-[#202938] block leading-tight">
                 Email Forensics
               </span>
-              <span className="text-xs text-[#667085] hidden sm:block">
+              <span className="text-xs text-[#202938] hidden sm:block">
                 Automated forensic investigation dashboard
               </span>
             </div>
@@ -30,7 +30,7 @@ export default function Navbar() {
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === '/' || location.pathname.startsWith('/evidence')
                   ? 'bg-[#EFF6FF] text-[#2563EB]'
-                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
+                  : 'text-[#202938] hover:bg-slate-50'
               }`}
             >
               <LayoutDashboard className="h-4 w-4" />
@@ -43,7 +43,7 @@ export default function Navbar() {
               className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 location.pathname === '/health'
                   ? 'bg-[#EFF6FF] text-[#2563EB]'
-                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
+                  : 'text-[#202938] hover:bg-slate-50'
               }`}
             >
               <Activity className="h-4 w-4" />

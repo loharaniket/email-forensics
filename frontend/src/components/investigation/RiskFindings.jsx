@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo } from 'react'
 import {
   ShieldAlert,
   ShieldCheck,
@@ -93,7 +93,7 @@ export default function RiskFindings({
 
   if (!riskBreakdown) {
     return (
-      <div className="p-8 text-center text-xs text-[#667085] bg-white rounded-xl border border-[#E4E7EC]">
+      <div className="p-8 text-center text-xs text-[#202938] bg-white rounded-xl border border-[#E4E7EC]">
         Calculating risk and findings...
       </div>
     )
@@ -171,8 +171,8 @@ export default function RiskFindings({
             >
               {riskScore}
             </span>
-            <span className="text-base text-[#98A2B3]">/ 100</span>
-            <span className="text-xs text-[#667085] ml-auto">
+            <span className="text-base text-[#202938]">/ 100</span>
+            <span className="text-xs text-[#202938] ml-auto">
               Uncapped score: <strong>{riskBreakdown.totalUncappedScore || riskScore} pts</strong>
             </span>
           </div>
@@ -192,7 +192,7 @@ export default function RiskFindings({
             />
           </div>
 
-          <p className="text-xs text-[#667085] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC] leading-relaxed">
+          <p className="text-xs text-[#202938] bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC] leading-relaxed">
             A score based on suspicious indicators found in the email.
           </p>
         </div>
@@ -221,7 +221,7 @@ export default function RiskFindings({
             >
               {confidenceScore}
             </span>
-            <span className="text-base text-[#98A2B3]">/ 100</span>
+            <span className="text-base text-[#202938]">/ 100</span>
           </div>
 
           <div className="w-full bg-[#F5F6F8] rounded-full h-2.5 overflow-hidden border border-[#E4E7EC]">
@@ -244,7 +244,7 @@ export default function RiskFindings({
                   <span className="w-2 h-2 rounded-full bg-[#15803D]" />
                   <span>Evidence present</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-[#667085]">
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#202938]">
                   <span className="w-2 h-2 rounded-full bg-[#D0D5DD]" />
                   <span>Unavailable</span>
                 </span>
@@ -265,7 +265,7 @@ export default function RiskFindings({
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       isAvailable
                         ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] shadow-xs'
-                        : 'bg-[#F5F6F8] text-[#98A2B3] border-[#E4E7EC] opacity-60'
+                        : 'bg-[#F5F6F8] text-[#202938] border-[#E4E7EC] opacity-60'
                     }`}
                   >
                     <span
@@ -279,7 +279,7 @@ export default function RiskFindings({
               })}
             </div>
 
-            <p className="text-[11px] text-[#667085] leading-relaxed">
+            <p className="text-[11px] text-[#202938] leading-relaxed">
               Highlighted tags indicate verified evidence found in this email message. Unavailable tags show channels where no data was detected.
             </p>
           </div>
@@ -297,7 +297,7 @@ export default function RiskFindings({
                   <span className="w-2 h-2 rounded-full bg-[#15803D]" />
                   <span>Triggered (score &gt; 0)</span>
                 </span>
-                <span className="inline-flex items-center gap-1.5 font-medium text-[#667085]">
+                <span className="inline-flex items-center gap-1.5 font-medium text-[#202938]">
                   <span className="w-2 h-2 rounded-full bg-[#D0D5DD]" />
                   <span>Not triggered</span>
                 </span>
@@ -320,7 +320,7 @@ export default function RiskFindings({
                     className={`inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-semibold border transition-all ${
                       isTriggered
                         ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0] shadow-xs'
-                        : 'bg-[#F5F6F8] text-[#98A2B3] border-[#E4E7EC] opacity-60'
+                        : 'bg-[#F5F6F8] text-[#202938] border-[#E4E7EC] opacity-60'
                     }`}
                   >
                     <span
@@ -334,7 +334,7 @@ export default function RiskFindings({
               })}
             </div>
 
-            <p className="text-[11px] text-[#667085] leading-relaxed">
+            <p className="text-[11px] text-[#202938] leading-relaxed">
               Highlighted tags indicate risk categories with confirmed threat findings (score &gt; 0). Multi-category support evaluates cross-channel corroboration to strengthen confidence.
             </p>
           </div>
@@ -348,7 +348,7 @@ export default function RiskFindings({
             <h3 className="text-sm font-bold text-[#202938]">
               Risk contribution by category
             </h3>
-            <span className="text-xs text-[#667085]">
+            <span className="text-xs text-[#202938]">
               Click a category to filter findings
             </span>
           </div>
@@ -373,10 +373,10 @@ export default function RiskFindings({
                   }`}
                 >
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-[11px] text-[#667085]">
+                    <span className="text-[11px] text-[#202938]">
                       {cat.factorCount} {cat.factorCount === 1 ? 'finding' : 'findings'}
                     </span>
-                    <span className={`text-xs font-mono font-bold ${hasFindings ? 'text-[#B42318]' : 'text-[#667085]'}`}>
+                    <span className={`text-xs font-mono font-bold ${hasFindings ? 'text-[#B42318]' : 'text-[#202938]'}`}>
                       +{cat.score}
                     </span>
                   </div>
@@ -398,7 +398,7 @@ export default function RiskFindings({
           </h3>
 
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs text-[#667085]">Severity:</span>
+            <span className="text-xs text-[#202938]">Severity:</span>
             {['ALL', 'CRITICAL', 'HIGH', 'MEDIUM', 'LOW'].map((sev) => (
               <button
                 key={sev}
@@ -407,7 +407,7 @@ export default function RiskFindings({
                 className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors cursor-pointer ${
                   riskSeverityFilter === sev
                     ? 'bg-[#EFF6FF] text-[#2563EB] font-semibold'
-                    : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
+                    : 'text-[#202938] hover:bg-slate-50'
                 }`}
               >
                 {sev === 'ALL' ? 'All' : sev.charAt(0) + sev.slice(1).toLowerCase()}
@@ -418,7 +418,7 @@ export default function RiskFindings({
 
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="relative flex-1 max-w-md">
-            <Search className="h-4 w-4 absolute left-3 top-2.5 text-[#98A2B3]" />
+            <Search className="h-4 w-4 absolute left-3 top-2.5 text-[#202938]" />
             <input
               id="risk-factor-search-input"
               type="text"
@@ -467,12 +467,12 @@ export default function RiskFindings({
             <h4 className="text-sm font-bold text-[#15803D]">
               No suspicious indicators detected
             </h4>
-            <p className="text-xs text-[#667085] max-w-md mx-auto">
+            <p className="text-xs text-[#202938] max-w-md mx-auto">
               All evaluated email indicators are within safe thresholds.
             </p>
           </div>
         ) : filteredFactors.length === 0 ? (
-          <div className="p-8 text-center text-xs text-[#667085] bg-[#F5F6F8] rounded-xl border border-[#E4E7EC]">
+          <div className="p-8 text-center text-xs text-[#202938] bg-[#F5F6F8] rounded-xl border border-[#E4E7EC]">
             No risk factors match your search filters.
           </div>
         ) : (
@@ -501,7 +501,7 @@ export default function RiskFindings({
                     <span className="font-mono text-[#202938] font-bold">
                       {factor.factorCode}
                     </span>
-                    <span className="text-[11px] bg-white text-[#667085] px-2 py-0.5 rounded border border-[#E4E7EC]">
+                    <span className="text-[11px] bg-white text-[#202938] px-2 py-0.5 rounded border border-[#E4E7EC]">
                       {factor.category}
                     </span>
                   </div>
@@ -511,7 +511,7 @@ export default function RiskFindings({
                   </p>
 
                   {factor.evidenceReference && (
-                    <div className="pt-1 text-[11px] font-mono text-[#667085]">
+                    <div className="pt-1 text-[11px] font-mono text-[#202938]">
                       Reference: <span className="text-[#202938]">{factor.evidenceReference}</span>
                     </div>
                   )}

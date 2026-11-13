@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo } from 'react'
 import {
   Brain,
   ShieldCheck,
@@ -52,7 +52,7 @@ export default function MessageContent({
     return (
       <div className="space-y-4">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
-          <div className="flex items-center gap-2 text-xs text-[#667085]">
+          <div className="flex items-center gap-2 text-xs text-[#202938]">
             <Info className="h-4 w-4 text-[#2563EB]" />
             <span>Isolated message preview</span>
           </div>
@@ -64,7 +64,7 @@ export default function MessageContent({
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 bodyMode === 'extracted'
                   ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
+                  : 'text-[#202938] hover:bg-slate-50'
               }`}
             >
               Extracted text
@@ -75,7 +75,7 @@ export default function MessageContent({
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 bodyMode === 'plain'
                   ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
+                  : 'text-[#202938] hover:bg-slate-50'
               }`}
             >
               Plain text
@@ -86,7 +86,7 @@ export default function MessageContent({
               className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors cursor-pointer ${
                 bodyMode === 'html'
                   ? 'bg-[#EFF6FF] text-[#2563EB] border border-blue-100'
-                  : 'text-[#667085] hover:text-[#202938] hover:bg-slate-50'
+                  : 'text-[#202938] hover:bg-slate-50'
               }`}
             >
               HTML source
@@ -110,7 +110,7 @@ export default function MessageContent({
   // Content & ML Analysis Mode
   if (!contentAnalysis) {
     return (
-      <div className="p-8 text-center text-xs text-[#667085] bg-white rounded-xl border border-[#E4E7EC]">
+      <div className="p-8 text-center text-xs text-[#202938] bg-white rounded-xl border border-[#E4E7EC]">
         No content analysis data available for this email.
       </div>
     )
@@ -132,14 +132,14 @@ export default function MessageContent({
               <h3 className="text-sm font-bold text-[#202938]">
                 Machine learning classification
               </h3>
-              <p className="text-xs text-[#667085]">
+              <p className="text-xs text-[#202938]">
                 Model: {contentAnalysis.mlModelVersion || 'Logistic regression baseline'}
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="text-xs text-[#667085]">
+            <span className="text-xs text-[#202938]">
               Status: <span className="text-[#15803D] font-medium">{contentAnalysis.mlStatus}</span>
             </span>
           </div>
@@ -147,7 +147,7 @@ export default function MessageContent({
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center pt-1">
           <div className="space-y-1">
-            <span className="text-xs text-[#667085] block">
+            <span className="text-xs text-[#202938] block">
               Predicted classification
             </span>
             <div
@@ -157,7 +157,7 @@ export default function MessageContent({
                   ? 'bg-[#FEF2F2] border-red-200 text-[#B42318]'
                   : predictedLabel === 'BENIGN'
                   ? 'bg-[#F0FDF4] border-green-200 text-[#15803D]'
-                  : 'bg-slate-100 border-[#E4E7EC] text-[#667085]'
+                  : 'bg-slate-100 border-[#E4E7EC] text-[#202938]'
               }`}
             >
               {predictedLabel === 'PHISHING' && (
@@ -172,7 +172,7 @@ export default function MessageContent({
 
           <div className="md:col-span-2 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#667085]">Phishing probability score</span>
+              <span className="text-[#202938]">Phishing probability score</span>
               <span
                 className={`font-mono font-bold ${
                   probability >= 0.7
@@ -202,7 +202,7 @@ export default function MessageContent({
                 }}
               />
             </div>
-            <span className="text-[11px] text-[#667085] block">
+            <span className="text-[11px] text-[#202938] block">
               Estimated based on words and phrases in the subject and message text.
             </span>
           </div>
@@ -241,7 +241,7 @@ export default function MessageContent({
                     "{m.matchedPattern || m.matchedText}"
                   </div>
                   {m.explanation && (
-                    <p className="text-xs text-[#667085]">{m.explanation}</p>
+                    <p className="text-xs text-[#202938]">{m.explanation}</p>
                   )}
                 </div>
               ))}
@@ -257,7 +257,7 @@ export default function MessageContent({
               <span className="font-bold text-[#15803D] block">
                 No prompt injection detected
               </span>
-              <span className="text-[#667085]">
+              <span className="text-[#202938]">
                 Scanned message text and QR payloads without finding instructions targeting AI tools.
               </span>
             </div>
@@ -271,7 +271,7 @@ export default function MessageContent({
           <h2 className="text-sm font-bold text-[#202938]">
             Suspicious language indicators
           </h2>
-          <p className="text-xs text-[#667085] mt-0.5">
+          <p className="text-xs text-[#202938] mt-0.5">
             Indicators detected across subject lines, body text, and embedded QR codes.
           </p>
         </div>
@@ -292,13 +292,13 @@ export default function MessageContent({
                 className={`text-[11px] px-2 py-0.5 rounded font-medium ${
                   urgencyDetected
                     ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200 font-semibold'
-                    : 'bg-white text-[#667085] border border-[#E4E7EC]'
+                    : 'bg-white text-[#202938] border border-[#E4E7EC]'
                 }`}
               >
                 {urgencyDetected ? 'Detected' : 'Clear'}
               </span>
             </div>
-            <p className="text-xs text-[#667085]">
+            <p className="text-xs text-[#202938]">
               Urgent or threatening language, deadlines or account suspensions.
             </p>
           </div>
@@ -318,13 +318,13 @@ export default function MessageContent({
                 className={`text-[11px] px-2 py-0.5 rounded font-medium ${
                   credentialRequestDetected
                     ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200 font-semibold'
-                    : 'bg-white text-[#667085] border border-[#E4E7EC]'
+                    : 'bg-white text-[#202938] border border-[#E4E7EC]'
                 }`}
               >
                 {credentialRequestDetected ? 'Detected' : 'Clear'}
               </span>
             </div>
-            <p className="text-xs text-[#667085]">
+            <p className="text-xs text-[#202938]">
               Requests for passwords, login details, or verification codes.
             </p>
           </div>
@@ -344,13 +344,13 @@ export default function MessageContent({
                 className={`text-[11px] px-2 py-0.5 rounded font-medium ${
                   paymentInstructionDetected
                     ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200 font-semibold'
-                    : 'bg-white text-[#667085] border border-[#E4E7EC]'
+                    : 'bg-white text-[#202938] border border-[#E4E7EC]'
                 }`}
               >
                 {paymentInstructionDetected ? 'Detected' : 'Clear'}
               </span>
             </div>
-            <p className="text-xs text-[#667085]">
+            <p className="text-xs text-[#202938]">
               Requests for money, invoice changes, or wire transfers.
             </p>
           </div>
@@ -370,13 +370,13 @@ export default function MessageContent({
                 className={`text-[11px] px-2 py-0.5 rounded font-medium ${
                   impersonationDetected
                     ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200 font-semibold'
-                    : 'bg-white text-[#667085] border border-[#E4E7EC]'
+                    : 'bg-white text-[#202938] border border-[#E4E7EC]'
                 }`}
               >
                 {impersonationDetected ? 'Detected' : 'Clear'}
               </span>
             </div>
-            <p className="text-xs text-[#667085]">
+            <p className="text-xs text-[#202938]">
               Someone pretending to be another person or organisation.
             </p>
           </div>
@@ -396,13 +396,13 @@ export default function MessageContent({
                 className={`text-[11px] px-2 py-0.5 rounded font-medium ${
                   secrecyDetected
                     ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200 font-semibold'
-                    : 'bg-white text-[#667085] border border-[#E4E7EC]'
+                    : 'bg-white text-[#202938] border border-[#E4E7EC]'
                 }`}
               >
                 {secrecyDetected ? 'Detected' : 'Clear'}
               </span>
             </div>
-            <p className="text-xs text-[#667085]">
+            <p className="text-xs text-[#202938]">
               Requests to hide information or bypass normal procedures.
             </p>
           </div>
@@ -455,7 +455,7 @@ export default function MessageContent({
           </div>
 
           {filteredMatches.length === 0 ? (
-            <p className="text-xs text-[#667085] py-2">
+            <p className="text-xs text-[#202938] py-2">
               No matching phrases found for the selected filter.
             </p>
           ) : (
@@ -468,7 +468,7 @@ export default function MessageContent({
                   <div className="space-y-0.5 flex-1">
                     <div className="flex items-center gap-2">
                       <span className="font-semibold text-[#202938]">{m.category}</span>
-                      <span className="text-[11px] text-[#667085] bg-white px-2 py-0.5 rounded border border-[#E4E7EC]">
+                      <span className="text-[11px] text-[#202938] bg-white px-2 py-0.5 rounded border border-[#E4E7EC]">
                         {m.sourceChannel}
                       </span>
                     </div>
@@ -476,7 +476,7 @@ export default function MessageContent({
                       "{m.matchedText || m.matchedPattern}"
                     </p>
                     {m.explanation && (
-                      <p className="text-[11px] text-[#667085]">{m.explanation}</p>
+                      <p className="text-[11px] text-[#202938]">{m.explanation}</p>
                     )}
                   </div>
                 </div>

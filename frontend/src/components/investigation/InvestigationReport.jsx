@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 
 export default function InvestigationReport({
   detail = {},
@@ -106,8 +106,8 @@ export default function InvestigationReport({
       <div className="no-print flex flex-col sm:flex-row items-center justify-between gap-3 p-4 rounded-xl bg-white border border-[#E4E7EC] text-xs">
         <div className="flex items-center gap-2">
           <span className="font-semibold text-[#202938]">Investigation Report</span>
-          <span className="text-[#98A2B3]">•</span>
-          <span className="text-[#667085]">
+          <span className="text-[#202938]">•</span>
+          <span className="text-[#202938]">
             NIST SP 800-86 aligned forensic examination report. Ready for print or PDF export.
           </span>
         </div>
@@ -128,7 +128,7 @@ export default function InvestigationReport({
         
         {/* Document Classification & Official Header */}
         <div className="border-b-2 border-[#202938] pb-5 space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E4E7EC] pb-2 text-[10px] tracking-wider uppercase font-mono text-[#667085]">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-[#E4E7EC] pb-2 text-[10px] tracking-wider uppercase font-mono text-[#202938]">
             <span>CONFIDENTIAL // DIGITAL FORENSIC EVIDENCE REPORT</span>
             <span>NIST SP 800-86 &amp; ISO/IEC 27037 METHODOLOGY</span>
           </div>
@@ -141,22 +141,22 @@ export default function InvestigationReport({
               <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-[#202938]">
                 Forensic Examination Report
               </h1>
-              <p className="text-xs text-[#667085]">
+              <p className="text-xs text-[#202938]">
                 Electronic Mail Evidence Attribution, Header Routing &amp; Threat Indicator Analysis
               </p>
             </div>
 
             <div className="sm:text-right space-y-1 text-xs">
               <div className="font-mono text-[#202938]">
-                <span className="text-[#667085]">Report ID: </span>
+                <span className="text-[#202938]">Report ID: </span>
                 <span className="font-bold">{reportId}</span>
               </div>
               <div className="font-mono text-[#202938]">
-                <span className="text-[#667085]">Date of Report: </span>
+                <span className="text-[#202938]">Date of Report: </span>
                 <span>{reportDate}</span>
               </div>
               <div className="font-mono text-[#202938]">
-                <span className="text-[#667085]">Evidence ID: </span>
+                <span className="text-[#202938]">Evidence ID: </span>
                 <span className="text-[11px]">{emailId || 'N/A'}</span>
               </div>
             </div>
@@ -165,19 +165,19 @@ export default function InvestigationReport({
           {/* Email Evidence Metadata Table */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-px bg-[#E4E7EC] border border-[#E4E7EC] text-xs pt-0 rounded overflow-hidden">
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Original File</span>
+              <span className="text-[#202938] text-[10px] uppercase tracking-wider block font-medium">Original File</span>
               <span className="font-bold font-mono text-[#202938] block truncate" title={detail.originalFilename}>{detail.originalFilename || 'evidence.eml'}</span>
             </div>
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">SHA-256 Hash</span>
+              <span className="text-[#202938] text-[10px] uppercase tracking-wider block font-medium">SHA-256 Hash</span>
               <span className="font-semibold font-mono text-[#202938] block truncate text-[11px]" title={verifiedHash}>{verifiedHash}</span>
             </div>
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Uploaded At</span>
+              <span className="text-[#202938] text-[10px] uppercase tracking-wider block font-medium">Uploaded At</span>
               <span className="font-semibold text-[#202938] block">{uploadDateDisplay}</span>
             </div>
             <div className="bg-white p-2.5 space-y-0.5">
-              <span className="text-[#667085] text-[10px] uppercase tracking-wider block font-medium">Analysis Pipeline</span>
+              <span className="text-[#202938] text-[10px] uppercase tracking-wider block font-medium">Analysis Pipeline</span>
               <span className="font-semibold text-[#202938] block font-mono">{reportData?.pipelineVersion || 'v1.0.0'}</span>
             </div>
           </div>
@@ -199,7 +199,7 @@ export default function InvestigationReport({
             <table className="w-full text-left text-xs border-collapse">
               <tbody className="divide-y divide-[#E4E7EC]">
                 <tr>
-                  <td className="w-1/3 p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="w-1/3 p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Deterministic Risk Score
                   </td>
                   <td className="p-2.5 text-[#202938] font-bold font-mono">
@@ -207,20 +207,20 @@ export default function InvestigationReport({
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Evidence Confidence Assessment
                   </td>
                   <td className="p-2.5 text-[#202938]">
                     <div className="flex flex-col gap-2">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="font-mono font-bold">{confidenceScore}%</span>
-                        <span className="text-xs text-[#667085]">({confidenceLevel} confidence band)</span>
+                        <span className="text-xs text-[#202938]">({confidenceLevel} confidence band)</span>
                       </div>
 
                       {/* 6 Forensic Channel Tags */}
                       {(riskBreakdown?.channelStatuses?.length > 0 || riskBreakdown?.evaluatedChannels?.length > 0) && (
                         <div className="flex flex-wrap items-center gap-1.5">
-                          <span className="text-[11px] font-medium text-[#667085]">Channels:</span>
+                          <span className="text-[11px] font-medium text-[#202938]">Channels:</span>
                           {['HEADER', 'AUTH', 'ROUTE', 'URL', 'CONTENT', 'VISUAL'].map((ch) => {
                             const cs = riskBreakdown?.channelStatuses?.find((c) => c.channel === ch)
                             const isPresent = cs
@@ -233,7 +233,7 @@ export default function InvestigationReport({
                                 className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
                                   isPresent
                                     ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
-                                    : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
+                                    : 'bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC] opacity-50'
                                 }`}
                               >
                                 {ch}
@@ -245,7 +245,7 @@ export default function InvestigationReport({
 
                       {/* 7 Multi-Category Support Tags */}
                       <div className="flex flex-wrap items-center gap-1.5">
-                        <span className="text-[11px] font-medium text-[#667085]">Multi-Category:</span>
+                        <span className="text-[11px] font-medium text-[#202938]">Multi-Category:</span>
                         {['IDENTITY', 'AUTHENTICATION', 'URL', 'INFRASTRUCTURE', 'VISUAL', 'CONTENT', 'MACHINE_LEARNING'].map((cat) => {
                           const isTriggered = Array.isArray(riskBreakdown?.triggeredCategories)
                             ? riskBreakdown.triggeredCategories.includes(cat)
@@ -259,7 +259,7 @@ export default function InvestigationReport({
                               className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold ${
                                 isTriggered
                                   ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
-                                  : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
+                                  : 'bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC] opacity-50'
                               }`}
                             >
                               {cat}
@@ -271,18 +271,18 @@ export default function InvestigationReport({
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Classification Verdict
                   </td>
                   <td className="p-2.5 text-[#202938] font-semibold">
                     {predictedLabel === 'PHISHING' ? 'PHISHING EMAIL' : predictedLabel === 'BENIGN' ? 'LEGITIMATE / BENIGN' : predictedLabel}
-                    <span className="ml-2 font-normal text-xs text-[#667085]">
+                    <span className="ml-2 font-normal text-xs text-[#202938]">
                       ({(probability * 100).toFixed(1)}% statistical model probability)
                     </span>
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Primary Threat Attributes
                   </td>
                   <td className="p-2.5 text-[#202938]">
@@ -323,7 +323,7 @@ export default function InvestigationReport({
             <table className="w-full text-left text-xs border-collapse">
               <tbody className="divide-y divide-[#E4E7EC]">
                 <tr>
-                  <td className="w-1/3 p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="w-1/3 p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Evidence Reference Number
                   </td>
                   <td className="p-2.5 font-mono text-[#202938]">
@@ -331,7 +331,7 @@ export default function InvestigationReport({
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Original Ingested File Name
                   </td>
                   <td className="p-2.5 font-semibold text-[#202938]">
@@ -339,7 +339,7 @@ export default function InvestigationReport({
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Preserved File Size
                   </td>
                   <td className="p-2.5 text-[#202938]">
@@ -347,7 +347,7 @@ export default function InvestigationReport({
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Intake &amp; Preservation Timestamp
                   </td>
                   <td className="p-2.5 text-[#202938] font-mono">
@@ -355,7 +355,7 @@ export default function InvestigationReport({
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Primary SHA-256 Digest
                   </td>
                   <td className="p-2.5 font-mono text-[11px] text-[#202938] break-all select-all">
@@ -373,7 +373,7 @@ export default function InvestigationReport({
                   </tr>
                 )}
                 <tr>
-                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">
+                  <td className="p-2.5 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">
                     Chain of Custody Integrity Status
                   </td>
                   <td className="p-2.5 font-semibold text-[#202938]">
@@ -381,7 +381,7 @@ export default function InvestigationReport({
                       ? 'INTEGRITY VERIFIED — Cryptographic digest matches custody baseline.'
                       : `STATUS: ${currentIntegrityStatus}`}
                     {integrityTimestamp && (
-                      <span className="block text-[11px] font-normal text-[#667085] mt-0.5">
+                      <span className="block text-[11px] font-normal text-[#202938] mt-0.5">
                         Verified at: {formatUtcDate(integrityTimestamp)}
                       </span>
                     )}
@@ -404,39 +404,39 @@ export default function InvestigationReport({
             <table className="w-full text-left text-xs border-collapse">
               <tbody className="divide-y divide-[#E4E7EC]">
                 <tr>
-                  <td className="w-1/4 p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Subject Line</td>
+                  <td className="w-1/4 p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Subject Line</td>
                   <td className="p-2 font-semibold text-[#202938] col-span-3">{parsed?.subject || '(No Subject)'}</td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Header From</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Header From</td>
                   <td className="p-2 font-mono text-[#202938] break-all">
                     {parsed?.from || '(None specified)'}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Sent Date (UTC)</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Sent Date (UTC)</td>
                   <td className="p-2 font-mono text-[#202938]">{sentDateDisplay}</td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Envelope Return-Path</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Envelope Return-Path</td>
                   <td className="p-2 font-mono text-[#202938] break-all">
                     {parsed?.returnPath || headerAnalysis?.returnPath || '(None specified)'}
                   </td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Reply-To Address</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Reply-To Address</td>
                   <td className="p-2 font-mono text-[#202938] break-all">{replyToDisplay}</td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Message-ID</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Message-ID</td>
                   <td className="p-2 font-mono text-[#202938] break-all">{parsed?.messageId || '(None specified)'}</td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Sender Domain</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Sender Domain</td>
                   <td className="p-2 font-mono text-[#2563EB]">{headerAnalysis?.fromDomain || 'N/A'}</td>
                 </tr>
                 <tr>
-                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#667085] border-r border-[#E4E7EC]">Originating Transit IP</td>
+                  <td className="p-2 bg-[#F8FAFC] font-medium text-[#202938] border-r border-[#E4E7EC]">Originating Transit IP</td>
                   <td className="p-2 font-mono text-[#202938]">{parsed?.originatingIp || '(Not detected)'}</td>
                 </tr>
               </tbody>
@@ -445,13 +445,13 @@ export default function InvestigationReport({
 
           {/* Authentication Protocols Evaluation */}
           <div className="pt-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-[#667085] block mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-[#202938] block mb-2">
               Sender Authentication Protocol Validation
             </span>
 
             <div className="border border-[#E4E7EC] rounded overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">Protocol</th>
                     <th className="p-2 font-semibold">Reported Result</th>
@@ -468,7 +468,7 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono">
                       {headerAnalysis?.activeSpfResult || 'Not performed'}
                     </td>
-                    <td className="p-2 text-[#667085] text-[11px]">
+                    <td className="p-2 text-[#202938] text-[11px]">
                       Relay: {headerAnalysis?.activeSpfRelayIp || 'N/A'}
                       {headerAnalysis?.activeSpfRecord ? ` | Record: ${headerAnalysis.activeSpfRecord}` : ''}
                     </td>
@@ -481,7 +481,7 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono">
                       {headerAnalysis?.activeDkimStatus || 'Not performed'}
                     </td>
-                    <td className="p-2 text-[#667085] text-[11px]">
+                    <td className="p-2 text-[#202938] text-[11px]">
                       Selector: {headerAnalysis?.activeDkimSelector || 'N/A'} | Domain: {headerAnalysis?.dkimDomain || 'N/A'}
                     </td>
                   </tr>
@@ -493,7 +493,7 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono">
                       {headerAnalysis?.activeDmarcStatus || 'Not performed'}
                     </td>
-                    <td className="p-2 text-[#667085] text-[11px]">
+                    <td className="p-2 text-[#202938] text-[11px]">
                       Policy: {headerAnalysis?.activeDmarcPolicy || 'N/A'}
                     </td>
                   </tr>
@@ -503,7 +503,7 @@ export default function InvestigationReport({
                       {headerAnalysis?.reportedArc || 'NONE'}
                     </td>
                     <td className="p-2 font-mono">N/A</td>
-                    <td className="p-2 text-[#667085] text-[11px]">
+                    <td className="p-2 text-[#202938] text-[11px]">
                       {headerAnalysis?.reportedArc ? 'ARC validation sealed' : 'No ARC headers present'}
                     </td>
                   </tr>
@@ -528,7 +528,7 @@ export default function InvestigationReport({
           {hops && hops.length > 0 ? (
             <div className="border border-[#E4E7EC] rounded overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">Hop</th>
                     <th className="p-2 font-semibold">Sending Server (from)</th>
@@ -554,7 +554,7 @@ export default function InvestigationReport({
                       <td className="p-2 font-mono text-[11px] text-[#202938]">
                         {safeFormatSeconds(hop.delaySeconds)}
                       </td>
-                      <td className="p-2 font-mono text-[11px] text-[#667085]">
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">
                         {formatUtcDate(hop.hopTimestamp || hop.timestamp)}
                       </td>
                     </tr>
@@ -563,7 +563,7 @@ export default function InvestigationReport({
               </table>
             </div>
           ) : (
-            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#202938] bg-[#F8FAFC]">
               No Received header transmission hops recorded for this message.
             </div>
           )}
@@ -580,7 +580,7 @@ export default function InvestigationReport({
           {urls && urls.length > 0 ? (
             <div className="border border-[#E4E7EC] rounded overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">#</th>
                     <th className="p-2 font-semibold">Destination Domain</th>
@@ -593,12 +593,12 @@ export default function InvestigationReport({
                 <tbody className="divide-y divide-[#E4E7EC]">
                   {urls.map((u, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2 font-mono text-[11px] text-[#667085]">{idx + 1}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">{idx + 1}</td>
                       <td className="p-2 font-mono font-bold text-[#2563EB]">{u.domain || 'N/A'}</td>
                       <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[260px] truncate" title={u.rawUrl || u.normalizedUrl}>
                         {u.normalizedUrl || u.rawUrl}
                       </td>
-                      <td className="p-2 text-[11px] text-[#667085] max-w-[120px] truncate" title={u.anchorText}>
+                      <td className="p-2 text-[11px] text-[#202938] max-w-[120px] truncate" title={u.anchorText}>
                         {u.anchorText || '(Direct URL)'}
                       </td>
                       <td className="p-2 text-[11px]">
@@ -607,7 +607,7 @@ export default function InvestigationReport({
                         ) : u.isIpUrl ? (
                           <span className="font-semibold text-[#B45309]">IP LITERAL</span>
                         ) : (
-                          <span className="text-[#667085]">None</span>
+                          <span className="text-[#202938]">None</span>
                         )}
                       </td>
                       <td className="p-2 font-mono font-semibold text-[#202938]">
@@ -619,7 +619,7 @@ export default function InvestigationReport({
               </table>
             </div>
           ) : (
-            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#202938] bg-[#F8FAFC]">
               No external hyperlinks or URL indicators extracted from message body.
             </div>
           )}
@@ -636,7 +636,7 @@ export default function InvestigationReport({
           {infrastructure && infrastructure.length > 0 ? (
             <div className="border border-[#E4E7EC] rounded overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">#</th>
                     <th className="p-2 font-semibold">IP Address</th>
@@ -648,20 +648,20 @@ export default function InvestigationReport({
                 <tbody className="divide-y divide-[#E4E7EC]">
                   {infrastructure.map((item, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
-                      <td className="p-2 font-mono text-[11px] text-[#667085]">{idx + 1}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">{idx + 1}</td>
                       <td className="p-2 font-mono font-bold text-[#202938]">{item.ipAddress}</td>
-                      <td className="p-2 text-[#667085]">{item.sourceContext || 'Email Header'}</td>
+                      <td className="p-2 text-[#202938]">{item.sourceContext || 'Email Header'}</td>
                       <td className="p-2 font-mono text-[11px]">
                         {item.isPrivate ? 'Private / RFC 1918 Scope' : 'Public Internet Address'}
                       </td>
-                      <td className="p-2 text-[#667085] font-mono text-[11px]">{item.lookupStatus || 'PROCESSED'}</td>
+                      <td className="p-2 text-[#202938] font-mono text-[11px]">{item.lookupStatus || 'PROCESSED'}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
           ) : (
-            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#202938] bg-[#F8FAFC]">
               No IP addresses cataloged from network headers.
             </div>
           )}
@@ -679,7 +679,7 @@ export default function InvestigationReport({
           {attachments && attachments.length > 0 ? (
             <div className="border border-[#E4E7EC] rounded overflow-hidden mb-3">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">File Name</th>
                     <th className="p-2 font-semibold">Content Type</th>
@@ -692,13 +692,13 @@ export default function InvestigationReport({
                   {attachments.map((att, idx) => (
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-2 font-semibold text-[#202938]">{att.filename}</td>
-                      <td className="p-2 font-mono text-[11px] text-[#667085]">{att.mimeType || 'application/octet-stream'}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">{att.mimeType || 'application/octet-stream'}</td>
                       <td className="p-2 font-mono text-[11px] text-[#202938]">{safeFormatBytes(att.sizeBytes)}</td>
                       <td className="p-2 font-semibold text-xs">
                         {att.riskyExtension ? (
                           <span className="text-[#B42318]">HIGH RISK EXTENSION</span>
                         ) : (
-                          <span className="text-[#667085]">Standard</span>
+                          <span className="text-[#202938]">Standard</span>
                         )}
                       </td>
                       <td className="p-2 font-mono text-[11px] text-[#202938] break-all select-all">
@@ -710,7 +710,7 @@ export default function InvestigationReport({
               </table>
             </div>
           ) : (
-            <div className="p-3 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+            <div className="p-3 border border-[#E4E7EC] rounded text-xs text-[#202938] bg-[#F8FAFC]">
               No file attachments accompanied this email message.
             </div>
           )}
@@ -718,13 +718,13 @@ export default function InvestigationReport({
           {/* Visual Artifacts & QR Codes */}
           {visuals && visuals.length > 0 && (
             <div className="pt-2 space-y-2">
-              <span className="text-xs font-bold uppercase tracking-wider text-[#667085] block">
+              <span className="text-xs font-bold uppercase tracking-wider text-[#202938] block">
                 Visual Artifacts &amp; Decoded QR Payloads ({visuals.length} Visuals)
               </span>
 
               <div className="border border-[#E4E7EC] rounded overflow-hidden">
                 <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                  <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                     <tr>
                       <th className="p-2 font-semibold">Image File</th>
                       <th className="p-2 font-semibold">MIME Type</th>
@@ -748,7 +748,7 @@ export default function InvestigationReport({
                             <span className="break-all">{v.filename || `Visual #${idx + 1}`}</span>
                           </div>
                         </td>
-                        <td className="p-2 font-mono text-[11px] text-[#667085]">{v.contentType || 'image/*'}</td>
+                        <td className="p-2 font-mono text-[11px] text-[#202938]">{v.contentType || 'image/*'}</td>
                         <td className="p-2 font-mono text-[11px]">{safeFormatBytes(v.fileSizeBytes || v.byteSize || 0)}</td>
                         <td className="p-2 font-mono text-[11px] text-[#202938] break-all">
                           {v.qrArtifacts && v.qrArtifacts.length > 0 ? (
@@ -758,7 +758,7 @@ export default function InvestigationReport({
                               </div>
                             ))
                           ) : (
-                            <span className="text-[#667085]">No barcode / QR detected</span>
+                            <span className="text-[#202938]">No barcode / QR detected</span>
                           )}
                         </td>
                       </tr>
@@ -780,7 +780,7 @@ export default function InvestigationReport({
 
           <div className="border border-[#E4E7EC] rounded overflow-hidden">
             <table className="w-full text-left text-xs border-collapse">
-              <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+              <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                 <tr>
                   <th className="p-2 font-semibold w-1/3">Behavioral Heuristic Category</th>
                   <th className="p-2 font-semibold w-1/4">Evaluation Result</th>
@@ -793,7 +793,7 @@ export default function InvestigationReport({
                   <td className="p-2 font-bold font-mono">
                     {urgencyDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
                   </td>
-                  <td className="p-2 text-[#667085]">
+                  <td className="p-2 text-[#202938]">
                     {urgencyDetected ? 'Language engineered to induce immediate action or bypass standard verification controls.' : 'No excessive urgency detected.'}
                   </td>
                 </tr>
@@ -802,7 +802,7 @@ export default function InvestigationReport({
                   <td className="p-2 font-bold font-mono">
                     {credentialRequestDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
                   </td>
-                  <td className="p-2 text-[#667085]">
+                  <td className="p-2 text-[#202938]">
                     {credentialRequestDetected ? 'Explicit solicitation of login credentials, account secrets, or MFA verification tokens.' : 'No credential requests detected.'}
                   </td>
                 </tr>
@@ -811,7 +811,7 @@ export default function InvestigationReport({
                   <td className="p-2 font-bold font-mono">
                     {paymentInstructionDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
                   </td>
-                  <td className="p-2 text-[#667085]">
+                  <td className="p-2 text-[#202938]">
                     {paymentInstructionDetected ? 'Payment instructions, banking account changes, or invoice redirect demands identified.' : 'No financial transaction requests detected.'}
                   </td>
                 </tr>
@@ -820,7 +820,7 @@ export default function InvestigationReport({
                   <td className="p-2 font-bold font-mono">
                     {impersonationDetected ? 'INDICATOR PRESENT' : 'NEGATIVE'}
                   </td>
-                  <td className="p-2 text-[#667085]">
+                  <td className="p-2 text-[#202938]">
                     {impersonationDetected ? 'Sender header identity discrepancies matching VIP or executive impersonation patterns.' : 'No executive impersonation patterns flagged.'}
                   </td>
                 </tr>
@@ -829,7 +829,7 @@ export default function InvestigationReport({
                   <td className="p-2 font-bold font-mono">
                     {promptInjectionDetected ? 'INJECTION DETECTED' : 'CLEAN'}
                   </td>
-                  <td className="p-2 text-[#667085]">
+                  <td className="p-2 text-[#202938]">
                     {promptInjectionDetected ? 'Payload matches heuristic signatures designed to subvert automated LLM/AI parsing pipelines.' : 'No prompt injection signatures discovered.'}
                   </td>
                 </tr>
@@ -849,7 +849,7 @@ export default function InvestigationReport({
           {factors && factors.length > 0 ? (
             <div className="border border-[#E4E7EC] rounded overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">Severity</th>
                     <th className="p-2 font-semibold">Category</th>
@@ -864,7 +864,7 @@ export default function InvestigationReport({
                       <td className="p-2 font-bold font-mono text-[11px]">
                         {f.severity || 'LOW'}
                       </td>
-                      <td className="p-2 text-[#667085] text-[11px]">{f.category || 'GENERAL'}</td>
+                      <td className="p-2 text-[#202938] text-[11px]">{f.category || 'GENERAL'}</td>
                       <td className="p-2 font-mono text-[11px] text-[#202938]">{f.factorCode}</td>
                       <td className="p-2 font-mono font-bold text-[#B42318]">
                         +{f.scoreImpact != null ? f.scoreImpact : f.weightPoints != null ? f.weightPoints : 0} pts
@@ -872,7 +872,7 @@ export default function InvestigationReport({
                       <td className="p-2 text-[#202938]">
                         <div>{f.explanation}</div>
                         {f.evidenceReference && (
-                          <div className="text-[11px] font-mono text-[#667085] mt-0.5">
+                          <div className="text-[11px] font-mono text-[#202938] mt-0.5">
                             Reference: {f.evidenceReference}
                           </div>
                         )}
@@ -883,7 +883,7 @@ export default function InvestigationReport({
               </table>
             </div>
           ) : (
-            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#667085] bg-[#F8FAFC]">
+            <div className="p-4 border border-[#E4E7EC] rounded text-xs text-[#202938] bg-[#F8FAFC]">
               No deterministic threat factors were triggered during rule evaluation.
             </div>
           )}
@@ -900,7 +900,7 @@ export default function InvestigationReport({
 
             <div className="border border-[#E4E7EC] rounded overflow-hidden">
               <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#667085] uppercase">
+                <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">Matched Evidence</th>
                     <th className="p-2 font-semibold">Subject / Title</th>
@@ -914,7 +914,7 @@ export default function InvestigationReport({
                     <tr key={idx} className="hover:bg-slate-50">
                       <td className="p-2 font-bold font-mono text-[#2563EB]">{c.matchedEmailFilename || 'Prior Evidence'}</td>
                       <td className="p-2 text-[#202938]">{c.matchedEmailSubject || 'Untitled'}</td>
-                      <td className="p-2 font-mono text-[11px] text-[#667085]">{c.indicatorType}</td>
+                      <td className="p-2 font-mono text-[11px] text-[#202938]">{c.indicatorType}</td>
                       <td className="p-2 font-mono text-[11px] text-[#202938] max-w-[200px] truncate" title={c.normalizedIndicatorValue}>
                         {c.normalizedIndicatorValue}
                       </td>
@@ -938,7 +938,7 @@ export default function InvestigationReport({
 
             <div className="p-4 rounded border border-[#E4E7EC] bg-[#F8FAFC] space-y-3 text-xs leading-relaxed text-[#202938]">
               <div>
-                <span className="font-bold block uppercase text-[10px] text-[#667085] tracking-wider mb-1">
+                <span className="font-bold block uppercase text-[10px] text-[#202938] tracking-wider mb-1">
                   Executive Assessment Narrative
                 </span>
                 <p>
@@ -948,10 +948,10 @@ export default function InvestigationReport({
 
               {aiAssessment.limitationsAndCaveats && (
                 <div className="pt-2 border-t border-[#E4E7EC]">
-                  <span className="font-bold block uppercase text-[10px] text-[#667085] tracking-wider mb-1">
+                  <span className="font-bold block uppercase text-[10px] text-[#202938] tracking-wider mb-1">
                     Limitations &amp; Analytical Caveats
                   </span>
-                  <p className="text-[#667085]">
+                  <p className="text-[#202938]">
                     {aiAssessment.limitationsAndCaveats}
                   </p>
                 </div>

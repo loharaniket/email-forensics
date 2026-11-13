@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import {
   ShieldAlert,
   ShieldCheck,
@@ -13,25 +13,6 @@ import {
   ArrowRight
 } from 'lucide-react'
 
-const FORENSIC_CHANNELS = [
-  { key: 'HEADER', name: 'Headers' },
-  { key: 'AUTH', name: 'Auth' },
-  { key: 'ROUTE', name: 'Route' },
-  { key: 'URL', name: 'Links' },
-  { key: 'CONTENT', name: 'Content' },
-  { key: 'VISUAL', name: 'Visual' }
-]
-
-const MULTI_CATEGORY_RISK_CATEGORIES = [
-  'IDENTITY',
-  'AUTHENTICATION',
-  'URL',
-  'INFRASTRUCTURE',
-  'VISUAL',
-  'CONTENT',
-  'MACHINE_LEARNING'
-]
-
 export default function InvestigationSummary({
   riskBreakdown,
   aiAssessment,
@@ -42,40 +23,14 @@ export default function InvestigationSummary({
   qrCodes = [],
   hops,
   infrastructure,
-  onNavigateTab
+  onNavigateTab,
+  isAiGenerating = false,
+  onGenerateAi
 }) {
   const riskScore = riskBreakdown?.deterministicRiskScore ?? 0
   const riskLevel = riskBreakdown?.riskLevel || 'LOW'
   const confidenceScore = riskBreakdown?.evidenceConfidenceScore ?? 0
   const confidenceLevel = riskBreakdown?.confidenceLevel || 'LOW'
-
-  // Backend is the single source of truth for channel evaluation status
-  const isChannelPresent = (key) => {
-    if (Array.isArray(riskBreakdown?.channelStatuses)) {
-      const match = riskBreakdown.channelStatuses.find((c) => c.channel === key)
-      if (match) return match.status === 'EVALUATED' || Boolean(match.evaluated) || Boolean(match.evidenceFound)
-    }
-    return Array.isArray(riskBreakdown?.evaluatedChannels)
-      ? riskBreakdown.evaluatedChannels.includes(key)
-      : false
-  }
-
-  // Determines if a risk category is triggered (score > 0)
-  const isCategoryTriggered = (categoryKey) => {
-    if (Array.isArray(riskBreakdown?.triggeredCategories) && riskBreakdown.triggeredCategories.length > 0) {
-      return riskBreakdown.triggeredCategories.includes(categoryKey)
-    }
-    if (Array.isArray(riskBreakdown?.categoryScores)) {
-      const match = riskBreakdown.categoryScores.find((c) => c.category === categoryKey)
-      if (match && typeof match.score === 'number') {
-        return match.score > 0
-      }
-    }
-    if (Array.isArray(riskBreakdown?.factors)) {
-      return riskBreakdown.factors.some((f) => f.category === categoryKey && f.weightPoints > 0)
-    }
-    return false
-  }
 
   const threatClass = aiAssessment?.threatClassification || (
     riskLevel === 'CRITICAL' || riskLevel === 'HIGH' ? 'SUSPICIOUS' : 'BENIGN'
@@ -143,10 +98,94 @@ export default function InvestigationSummary({
     if (s === 'SOFTFAIL' || s === 'NEUTRAL' || s === 'QUARANTINE') {
       return <span className="px-2 py-0.5 rounded text-xs font-medium bg-[#FFFBEB] text-[#B45309] border border-amber-200">{s.toLowerCase()}</span>
     }
-    return <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#667085] border border-[#E4E7EC]">{s.toLowerCase()}</span>
+    return <span className="px-2 py-0.5 rounded text-xs font-medium bg-slate-100 text-[#202938] border border-[#E4E7EC]">{s.toLowerCase()}</span>
   }
 
-  const topFindings = riskBreakdown?.factors || []
+  // Deduplicate findings by risk category so each category is shown at most once in Summary
+  const topFindings = useMemo(() => {
+    const factors = riskBreakdown?.factors || []
+    const categoryScores = riskBreakdown?.categoryScores || []
+
+    const catScoreMap = new Map()
+    for (const cs of categoryScores) {
+      if (cs.category) {
+        catScoreMap.set(cs.category, cs)
+      }
+    }
+
+    const severityRank = { CRITICAL: 4, HIGH: 3, MEDIUM: 2, LOW: 1 }
+
+    // Group factors by category
+    const grouped = new Map()
+    for (const factor of factors) {
+      const cat = factor.category || 'GENERAL'
+      if (!grouped.has(cat)) {
+        grouped.set(cat, [])
+      }
+      grouped.get(cat).push(factor)
+    }
+
+    const results = []
+    for (const [cat, catFactors] of grouped.entries()) {
+      // Sort factors within this category to find the most critical one
+      const sortedFactors = [...catFactors].sort((a, b) => {
+        const scoreA = a.weightPoints ?? a.scoreImpact ?? 0
+        const scoreB = b.weightPoints ?? b.scoreImpact ?? 0
+        if (scoreB !== scoreA) return scoreB - scoreA
+        const sevA = severityRank[a.severity] || 0
+        const sevB = severityRank[b.severity] || 0
+        return sevB - sevA
+      })
+
+      const topFactor = sortedFactors[0]
+      const catScoreInfo = catScoreMap.get(cat)
+
+      const totalCategoryScore = catScoreInfo?.score ?? catFactors.reduce(
+        (sum, f) => sum + (f.weightPoints ?? f.scoreImpact ?? 0), 0
+      )
+
+      results.push({
+        category: cat,
+        categoryDisplayName: catScoreInfo?.displayName || cat,
+        primaryFactor: topFactor,
+        factorCount: catFactors.length,
+        totalScore: totalCategoryScore,
+        severity: topFactor?.severity || 'LOW',
+        code: topFactor?.factorCode || topFactor?.factorName || topFactor?.factorType || cat,
+        title: topFactor?.factorName || topFactor?.factorCode || catScoreInfo?.displayName || cat,
+        description: topFactor?.explanation || topFactor?.description || 'Risk indicators detected in this category.',
+      })
+    }
+
+    // Fallback if factors array was empty but categoryScores had triggered items
+    if (results.length === 0 && categoryScores.length > 0) {
+      for (const cs of categoryScores) {
+        if (cs.score > 0) {
+          results.push({
+            category: cs.category,
+            categoryDisplayName: cs.displayName || cs.category,
+            primaryFactor: null,
+            factorCount: cs.factorCount || 1,
+            totalScore: cs.score,
+            severity: cs.score >= 40 ? 'CRITICAL' : cs.score >= 25 ? 'HIGH' : cs.score >= 10 ? 'MEDIUM' : 'LOW',
+            code: cs.category,
+            title: cs.displayName || cs.category,
+            description: `Suspicious indicators detected in ${cs.displayName || cs.category}.`,
+          })
+        }
+      }
+    }
+
+    // Sort categories by total score descending, then by severity
+    results.sort((a, b) => {
+      if (b.totalScore !== a.totalScore) return b.totalScore - a.totalScore
+      const sevA = severityRank[a.severity] || 0
+      const sevB = severityRank[b.severity] || 0
+      return sevB - sevA
+    })
+
+    return results
+  }, [riskBreakdown?.factors, riskBreakdown?.categoryScores])
 
   return (
     <div className="space-y-6">
@@ -154,21 +193,21 @@ export default function InvestigationSummary({
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         {/* Card 1: Classification */}
         <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-[#667085]">
+          <div className="flex items-center justify-between text-xs text-[#202938]">
             <span>Classification</span>
-            <ShieldAlert className="h-4 w-4 text-[#98A2B3]" />
+            <ShieldAlert className="h-4 w-4 text-[#202938]" />
           </div>
           <div className="mt-4">
             {getThreatBadge(threatClass)}
           </div>
-          <p className="text-xs text-[#667085] mt-3">
+          <p className="text-xs text-[#202938] mt-3">
             Overall assessment based on indicators found.
           </p>
         </div>
 
         {/* Card 2: Risk Score */}
         <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-[#667085]">
+          <div className="flex items-center justify-between text-xs text-[#202938]">
             <span>Risk score</span>
             <span className={`text-xs px-2 py-0.5 rounded font-medium ${getRiskCardStyle(riskLevel)}`}>
               {riskLevel}
@@ -178,18 +217,18 @@ export default function InvestigationSummary({
             <span className="text-3xl font-bold text-[#202938] font-mono">
               {riskScore}
             </span>
-            <span className="text-sm text-[#98A2B3] ml-1">/ 100</span>
+            <span className="text-sm text-[#202938] ml-1">/ 100</span>
           </div>
-          <p className="text-xs text-[#667085] mt-3">
+          <p className="text-xs text-[#202938] mt-3">
             A score based on suspicious indicators found.
           </p>
         </div>
 
         {/* Card 3: Evidence Confidence */}
         <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
-          <div className="flex items-center justify-between text-xs text-[#667085]">
+          <div className="flex items-center justify-between text-xs text-[#202938]">
             <span>Evidence confidence</span>
-            <span className="text-xs px-2 py-0.5 rounded font-medium bg-slate-100 text-[#667085]">
+            <span className="text-xs px-2 py-0.5 rounded font-medium bg-slate-100 text-[#202938]">
               {confidenceLevel}
             </span>
           </div>
@@ -198,96 +237,45 @@ export default function InvestigationSummary({
               {confidenceScore}%
             </span>
           </div>
-          <div className="mt-2.5 pt-2 border-t border-[#E4E7EC] space-y-2">
-            <div>
-              <div className="text-[11px] font-semibold text-[#667085] mb-1 flex items-center justify-between">
-                <span>Channels:</span>
-                <span className="text-[10px] text-[#98A2B3]">Active = green</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {FORENSIC_CHANNELS.map((ch) => {
-                  const isPresent = isChannelPresent(ch.key)
-                  return (
-                    <span
-                      key={ch.key}
-                      title={`${ch.key}: ${isPresent ? 'Evidence present' : 'Unavailable'}`}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
-                        isPresent
-                          ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
-                          : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
-                      }`}
-                    >
-                      {ch.key}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div className="text-[11px] font-semibold text-[#667085] mb-1 flex items-center justify-between">
-                <span>Multi-Category:</span>
-                <span className="text-[10px] text-[#98A2B3]">Triggered = green</span>
-              </div>
-              <div className="flex flex-wrap gap-1">
-                {MULTI_CATEGORY_RISK_CATEGORIES.map((cat) => {
-                  const isTriggered = isCategoryTriggered(cat)
-                  return (
-                    <span
-                      key={cat}
-                      title={`${cat}: ${isTriggered ? 'Triggered (score > 0)' : 'Not triggered'}`}
-                      className={`px-1.5 py-0.5 rounded text-[10px] font-mono font-bold transition-all ${
-                        isTriggered
-                          ? 'bg-[#F0FDF4] text-[#15803D] border border-[#BBF7D0]'
-                          : 'bg-[#F5F6F8] text-[#98A2B3] border border-[#E4E7EC] opacity-50'
-                      }`}
-                    >
-                      {cat}
-                    </span>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-          <p className="text-xs text-[#667085] mt-2">
-            Multi-category support and channel completeness.
+          <p className="text-xs text-[#202938] mt-3">
+            Evaluation confidence based on available evidence.
           </p>
         </div>
 
         {/* Card 4: Sender Authentication */}
         <div className="bg-white border border-[#E4E7EC] rounded-xl p-5 flex flex-col justify-between">
-          <div className="text-xs text-[#667085]">
+          <div className="text-xs text-[#202938]">
             <span>Sender authentication</span>
           </div>
           <div className="mt-3 space-y-1.5">
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#667085]">SPF</span>
+              <span className="text-[#202938]">SPF</span>
               {getStatusPill(spfStatus)}
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#667085]">DKIM</span>
+              <span className="text-[#202938]">DKIM</span>
               {getStatusPill(dkimStatus)}
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="text-[#667085]">DMARC</span>
+              <span className="text-[#202938]">DMARC</span>
               {getStatusPill(dmarcStatus)}
             </div>
           </div>
-          <p className="text-xs text-[#667085] mt-3">
+          <p className="text-xs text-[#202938] mt-3">
             Email sender verification checks.
           </p>
         </div>
       </div>
 
       {/* Quick counts */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <button
           onClick={() => onNavigateTab('urls')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
-          <div className="flex items-center justify-between text-[#667085]">
+          <div className="flex items-center justify-between text-[#202938]">
             <span className="text-xs">Links</span>
-            <Link2 className="h-4 w-4 text-[#98A2B3]" />
+            <Link2 className="h-4 w-4 text-[#202938]" />
           </div>
           <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
             {urls?.length || 0}
@@ -298,28 +286,12 @@ export default function InvestigationSummary({
         </button>
 
         <button
-          onClick={() => onNavigateTab('visuals')}
-          className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
-        >
-          <div className="flex items-center justify-between text-[#667085]">
-            <span className="text-xs">Images</span>
-            <ImageIcon className="h-4 w-4 text-[#98A2B3]" />
-          </div>
-          <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
-            {visuals?.length || 0}
-          </div>
-          <span className="text-xs text-[#2563EB] mt-1 inline-flex items-center gap-1 font-medium">
-            View images <ArrowRight className="h-3 w-3" />
-          </span>
-        </button>
-
-        <button
           onClick={() => onNavigateTab('qr')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
-          <div className="flex items-center justify-between text-[#667085]">
+          <div className="flex items-center justify-between text-[#202938]">
             <span className="text-xs">QR codes</span>
-            <QrCode className="h-4 w-4 text-[#98A2B3]" />
+            <QrCode className="h-4 w-4 text-[#202938]" />
           </div>
           <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
             {qrCodes?.length || visuals?.reduce((acc, v) => acc + (v.qrArtifacts?.length || 0), 0) || 0}
@@ -333,9 +305,9 @@ export default function InvestigationSummary({
           onClick={() => onNavigateTab('attachments')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
-          <div className="flex items-center justify-between text-[#667085]">
+          <div className="flex items-center justify-between text-[#202938]">
             <span className="text-xs">Attachments</span>
-            <Paperclip className="h-4 w-4 text-[#98A2B3]" />
+            <Paperclip className="h-4 w-4 text-[#202938]" />
           </div>
           <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
             {attachments?.length || 0}
@@ -349,9 +321,9 @@ export default function InvestigationSummary({
           onClick={() => onNavigateTab('hops')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
-          <div className="flex items-center justify-between text-[#667085]">
+          <div className="flex items-center justify-between text-[#202938]">
             <span className="text-xs">Mail route hops</span>
-            <Server className="h-4 w-4 text-[#98A2B3]" />
+            <Server className="h-4 w-4 text-[#202938]" />
           </div>
           <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
             {hops?.length || 0}
@@ -365,9 +337,9 @@ export default function InvestigationSummary({
           onClick={() => onNavigateTab('infrastructure')}
           className="bg-white hover:bg-slate-50 border border-[#E4E7EC] rounded-xl p-4 text-left transition-colors cursor-pointer"
         >
-          <div className="flex items-center justify-between text-[#667085]">
+          <div className="flex items-center justify-between text-[#202938]">
             <span className="text-xs">IP addresses</span>
-            <Network className="h-4 w-4 text-[#98A2B3]" />
+            <Network className="h-4 w-4 text-[#202938]" />
           </div>
           <div className="text-2xl font-bold text-[#202938] mt-2 font-mono">
             {infrastructure?.length || 0}
@@ -379,28 +351,51 @@ export default function InvestigationSummary({
       </div>
 
       {/* Automated assessment summary */}
-      {aiAssessment && (
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-3">
-          <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
-            <div className="flex items-center gap-2">
-              <Sparkles className="h-4 w-4 text-[#2563EB]" />
-              <h2 className="text-sm font-bold text-[#202938]">
-                {aiAssessment.status === 'LIVE_AI' ? 'Automated assessment' : 'Rule-based assessment'}
-              </h2>
-            </div>
-            <button
-              onClick={() => onNavigateTab('ai')}
-              className="text-xs text-[#2563EB] hover:underline font-medium inline-flex items-center gap-1"
-            >
-              <span>View full assessment</span>
-              <ArrowRight className="h-3 w-3" />
-            </button>
+      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-3">
+        <div className="flex items-center justify-between pb-3 border-b border-[#E4E7EC]">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-[#2563EB]" />
+            <h2 className="text-sm font-bold text-[#202938]">
+              {aiAssessment?.status === 'LIVE_AI'
+                ? 'Automated assessment'
+                : aiAssessment?.status
+                ? 'Rule-based assessment'
+                : 'Automated assessment'}
+            </h2>
           </div>
-          <p className="text-sm text-[#202938] leading-relaxed">
-            {aiAssessment.assessmentSummary || 'No assessment summary available.'}
-          </p>
+          <button
+            onClick={() => onNavigateTab('ai')}
+            className="text-xs text-[#2563EB] hover:underline font-medium inline-flex items-center gap-1 cursor-pointer"
+          >
+            <span>View full assessment</span>
+            <ArrowRight className="h-3 w-3" />
+          </button>
         </div>
-      )}
+
+        {aiAssessment?.summaryExplanation || aiAssessment?.assessmentSummary ? (
+          <p className="text-sm text-[#202938] leading-relaxed">
+            {aiAssessment.summaryExplanation || aiAssessment.assessmentSummary}
+          </p>
+        ) : isAiGenerating ? (
+          <p className="text-sm text-[#202938] leading-relaxed animate-pulse">
+            Generating automated assessment summary...
+          </p>
+        ) : (
+          <div className="flex items-center justify-between gap-4">
+            <p className="text-sm text-[#202938] leading-relaxed">
+              No assessment summary generated yet.
+            </p>
+            {onGenerateAi && (
+              <button
+                onClick={onGenerateAi}
+                className="px-3 py-1.5 rounded-lg text-xs font-medium bg-[#2563EB] hover:bg-blue-700 text-white transition-colors cursor-pointer shrink-0"
+              >
+                Generate assessment
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Contributing findings */}
       <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-4">
@@ -418,27 +413,47 @@ export default function InvestigationSummary({
         </div>
 
         {topFindings.length === 0 ? (
-          <p className="text-xs text-[#667085]">No significant suspicious findings were detected.</p>
+          <p className="text-xs text-[#202938]">No significant suspicious findings were detected.</p>
         ) : (
           <div className="space-y-3">
-            {topFindings.slice(0, 5).map((factor, idx) => (
+            {topFindings.map((finding, idx) => (
               <div
-                key={idx}
+                key={finding.category || idx}
                 className="p-3.5 rounded-lg bg-[#F5F6F8] border border-[#E4E7EC] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
               >
                 <div className="space-y-1 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="font-semibold text-[#202938]">{factor.factorName || factor.factorType}</span>
-                    <span className="px-2 py-0.5 rounded text-[11px] font-medium bg-white text-[#667085] border border-[#E4E7EC]">
-                      {factor.category || 'General'}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="font-semibold text-[#202938]">
+                      {finding.title}
                     </span>
+                    <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-white text-[#202938] border border-[#E4E7EC]">
+                      {finding.category}
+                    </span>
+                    {finding.severity && (
+                      <span
+                        className={`px-2 py-0.5 rounded text-[10px] font-semibold ${
+                          finding.severity === 'CRITICAL'
+                            ? 'bg-[#FEF2F2] text-[#B42318] border border-red-200'
+                            : finding.severity === 'HIGH' || finding.severity === 'MEDIUM'
+                            ? 'bg-[#FFFBEB] text-[#B45309] border border-amber-200'
+                            : 'bg-[#F0FDF4] text-[#15803D] border border-green-200'
+                        }`}
+                      >
+                        {finding.severity}
+                      </span>
+                    )}
+                    {finding.factorCount > 1 && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-[#EFF6FF] text-[#2563EB] border border-blue-200">
+                        {finding.factorCount} findings
+                      </span>
+                    )}
                   </div>
-                  <p className="text-[#667085]">{factor.description}</p>
+                  <p className="text-[#202938] leading-relaxed">{finding.description}</p>
                 </div>
 
                 <div className="flex items-center gap-2 shrink-0">
                   <span className="font-mono text-xs font-semibold text-[#B42318]">
-                    +{factor.scoreImpact} pts
+                    +{finding.totalScore} pts
                   </span>
                 </div>
               </div>

@@ -1,4 +1,4 @@
-import React from 'react'
+﻿import React from 'react'
 import {
   Info,
   CheckCircle2,
@@ -12,7 +12,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
     if (!val) {
       return {
         bg: 'bg-slate-100',
-        text: 'text-[#667085]',
+        text: 'text-[#202938]',
         border: 'border-[#E4E7EC]',
         label: 'None',
         icon: HelpCircle
@@ -48,7 +48,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
     }
     return {
       bg: 'bg-slate-100',
-      text: 'text-[#667085]',
+      text: 'text-[#202938]',
       border: 'border-[#E4E7EC]',
       label: val,
       icon: Info
@@ -63,7 +63,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           <h2 className="text-sm font-bold text-[#202938]">
             Reported email authentication
           </h2>
-          <p className="text-xs text-[#667085] mt-0.5">
+          <p className="text-xs text-[#202938] mt-0.5">
             Results reported by the receiving mail server in the Authentication-Results header.
           </p>
         </div>
@@ -87,7 +87,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
                 className={`p-4 rounded-xl border ${badge.border} ${badge.bg} space-y-1.5`}
               >
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-[#667085] font-semibold">{mechanism}</span>
+                  <span className="text-xs text-[#202938] font-semibold">{mechanism}</span>
                   <IconComp className={`h-4 w-4 ${badge.text}`} />
                 </div>
                 <span className={`text-base font-bold block ${badge.text}`}>
@@ -107,7 +107,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
             <h2 className="text-sm font-bold text-[#202938]">
               DNS sender verification
             </h2>
-            <p className="text-xs text-[#667085] mt-0.5">
+            <p className="text-xs text-[#202938] mt-0.5">
               Live checks performed against the sender domain's DNS records.
             </p>
           </div>
@@ -125,16 +125,16 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
             return (
               <div className={`p-4 rounded-xl border ${spfBadge.border} ${spfBadge.bg} space-y-2`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#667085]">SPF record check</span>
+                  <span className="text-xs font-semibold text-[#202938]">SPF record check</span>
                   <SpfIcon className={`h-4 w-4 ${spfBadge.text}`} />
                 </div>
                 <span className={`text-base font-bold block ${spfBadge.text}`}>
                   {spfBadge.label}
                 </span>
-                <div className="pt-2 text-xs text-[#667085] space-y-1 border-t border-slate-200/60">
+                <div className="pt-2 text-xs text-[#202938] space-y-1 border-t border-slate-200/60">
                   <div>Relay IP: <span className="font-mono text-[#202938]">{headerAnalysis?.activeSpfRelayIp || '(Not found)'}</span></div>
                   {headerAnalysis?.activeSpfRecord && (
-                    <div className="truncate text-[11px] font-mono text-[#667085]" title={headerAnalysis.activeSpfRecord}>
+                    <div className="truncate text-[11px] font-mono text-[#202938]" title={headerAnalysis.activeSpfRecord}>
                       Record: {headerAnalysis.activeSpfRecord}
                     </div>
                   )}
@@ -150,16 +150,16 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
             return (
               <div className={`p-4 rounded-xl border ${dkimBadge.border} ${dkimBadge.bg} space-y-2`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#667085]">DKIM public key</span>
+                  <span className="text-xs font-semibold text-[#202938]">DKIM public key</span>
                   <DkimIcon className={`h-4 w-4 ${dkimBadge.text}`} />
                 </div>
                 <span className={`text-base font-bold block ${dkimBadge.text}`}>
                   {dkimBadge.label}
                 </span>
-                <div className="pt-2 text-xs text-[#667085] space-y-1 border-t border-slate-200/60">
+                <div className="pt-2 text-xs text-[#202938] space-y-1 border-t border-slate-200/60">
                   <div>Selector: <span className="font-mono text-[#202938]">{headerAnalysis?.activeDkimSelector || 'N/A'}</span></div>
                   {headerAnalysis?.activeDkimRecord && (
-                    <div className="truncate text-[11px] font-mono text-[#667085]" title={headerAnalysis.activeDkimRecord}>
+                    <div className="truncate text-[11px] font-mono text-[#202938]" title={headerAnalysis.activeDkimRecord}>
                       Key: {headerAnalysis.activeDkimRecord}
                     </div>
                   )}
@@ -175,16 +175,16 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
             return (
               <div className={`p-4 rounded-xl border ${dmarcBadge.border} ${dmarcBadge.bg} space-y-2`}>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#667085]">DMARC policy</span>
+                  <span className="text-xs font-semibold text-[#202938]">DMARC policy</span>
                   <DmarcIcon className={`h-4 w-4 ${dmarcBadge.text}`} />
                 </div>
                 <span className={`text-base font-bold block ${dmarcBadge.text}`}>
                   {dmarcBadge.label}
                 </span>
-                <div className="pt-2 text-xs text-[#667085] space-y-1 border-t border-slate-200/60">
+                <div className="pt-2 text-xs text-[#202938] space-y-1 border-t border-slate-200/60">
                   <div>Host: <span className="font-mono text-[#202938]">{headerAnalysis?.fromDomain ? `_dmarc.${headerAnalysis.fromDomain}` : 'N/A'}</span></div>
                   {headerAnalysis?.activeDmarcPolicy && (
-                    <div className="truncate text-[11px] font-mono text-[#667085]" title={headerAnalysis.activeDmarcPolicy}>
+                    <div className="truncate text-[11px] font-mono text-[#202938]" title={headerAnalysis.activeDmarcPolicy}>
                       Policy: {headerAnalysis.activeDmarcPolicy}
                     </div>
                   )}
@@ -210,21 +210,21 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
 
         <div className="divide-y divide-[#E4E7EC] text-xs">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">From address</span>
+            <span className="text-[#202938] font-medium">From address</span>
             <span className="md:col-span-2 font-mono text-[#202938] font-semibold break-all">
               {headerAnalysis?.fromAddress || parsed?.from || '(None)'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">From domain</span>
+            <span className="text-[#202938] font-medium">From domain</span>
             <span className="md:col-span-2 font-mono text-[#2563EB] break-all">
               {headerAnalysis?.fromDomain ? `@${headerAnalysis.fromDomain}` : '(None)'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">To</span>
+            <span className="text-[#202938] font-medium">To</span>
             <span className="md:col-span-2 font-mono text-[#202938] break-all">
               {parsed?.to && parsed.to.length > 0 ? parsed.to.join(', ') : '(None)'}
             </span>
@@ -232,7 +232,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
 
           {parsed?.cc && parsed.cc.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-              <span className="text-[#667085] font-medium">CC</span>
+              <span className="text-[#202938] font-medium">CC</span>
               <span className="md:col-span-2 font-mono text-[#202938] break-all">
                 {parsed.cc.join(', ')}
               </span>
@@ -240,7 +240,7 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           )}
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">Reply-To</span>
+            <span className="text-[#202938] font-medium">Reply-To</span>
             <span className="md:col-span-2 font-mono text-[#202938] break-all">
               {headerAnalysis?.replyTo ||
                 (parsed?.replyTo && parsed.replyTo.length > 0
@@ -250,28 +250,28 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">Return-Path</span>
+            <span className="text-[#202938] font-medium">Return-Path</span>
             <span className="md:col-span-2 font-mono text-[#202938] break-all">
               {headerAnalysis?.returnPath || parsed?.returnPath || '(None)'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">DKIM signing domain</span>
+            <span className="text-[#202938] font-medium">DKIM signing domain</span>
             <span className="md:col-span-2 font-mono text-[#2563EB] break-all">
               {headerAnalysis?.dkimDomain ? `@${headerAnalysis.dkimDomain}` : '(No DKIM signature)'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">Message-ID</span>
+            <span className="text-[#202938] font-medium">Message-ID</span>
             <span className="md:col-span-2 font-mono text-[#202938] break-all">
               {parsed?.messageId || '(None)'}
             </span>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 py-2.5">
-            <span className="text-[#667085] font-medium">Sent date</span>
+            <span className="text-[#202938] font-medium">Sent date</span>
             <span className="md:col-span-2 text-[#202938]">
               {(() => {
                 const dVal = parsed?.sentDate || parsed?.messageDate || parsed?.rawDate

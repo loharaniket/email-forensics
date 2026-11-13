@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+﻿import React, { useState, useMemo } from 'react'
 import {
   Search,
   Copy,
@@ -45,7 +45,7 @@ export default function LinksAndIps({
         {/* URL search bar */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
           <div className="relative flex-1 max-w-md">
-            <Search className="h-4 w-4 text-[#98A2B3] absolute left-3 top-2.5" />
+            <Search className="h-4 w-4 text-[#202938] absolute left-3 top-2.5" />
             <input
               id="url-search-input"
               type="text"
@@ -56,7 +56,7 @@ export default function LinksAndIps({
             />
           </div>
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className="text-[#667085]">
+            <span className="text-[#202938]">
               Total links: <strong className="text-[#202938]">{urls.length}</strong>
             </span>
             {urls.filter((u) => u.anchorMismatch).length > 0 && (
@@ -73,7 +73,7 @@ export default function LinksAndIps({
         </div>
 
         {filteredUrls.length === 0 ? (
-          <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#667085]">
+          <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#202938]">
             {urls.length === 0
               ? 'No links were found in this email.'
               : 'No links match your search.'}
@@ -104,11 +104,11 @@ export default function LinksAndIps({
                         <span className="text-sm font-bold font-mono text-[#202938]">
                           {u.domain || 'Unknown domain'}
                         </span>
-                        <span className="px-2 py-0.5 rounded text-[11px] bg-[#F5F6F8] text-[#667085] border border-[#E4E7EC]">
+                        <span className="px-2 py-0.5 rounded text-[11px] bg-[#F5F6F8] text-[#202938] border border-[#E4E7EC]">
                           {u.sourceType || 'Body link'}
                         </span>
                         {u.dnsStatus && (
-                          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-[#667085] border border-[#E4E7EC]">
+                          <span className="px-2 py-0.5 rounded text-[11px] font-mono bg-slate-100 text-[#202938] border border-[#E4E7EC]">
                             DNS: {u.dnsStatus}
                           </span>
                         )}
@@ -172,7 +172,7 @@ export default function LinksAndIps({
                   <div className="mt-3 space-y-2 text-xs">
                     <div className="bg-[#F5F6F8] p-3 rounded-lg border border-[#E4E7EC] flex items-start justify-between gap-3">
                       <div className="break-all flex-1 font-mono text-[11px]">
-                        <span className="text-[#667085] block text-[10px] uppercase font-sans font-medium mb-0.5">
+                        <span className="text-[#202938] block text-[10px] uppercase font-sans font-medium mb-0.5">
                           Safe link address (inert text):
                         </span>
                         <span className="text-[#202938] select-all font-semibold">
@@ -181,7 +181,7 @@ export default function LinksAndIps({
                       </div>
                       <button
                         onClick={() => copyValue(`norm-${idx}`, u.normalizedUrl)}
-                        className="p-1 rounded hover:bg-white text-[#667085] hover:text-[#202938] shrink-0 cursor-pointer"
+                        className="p-1 rounded hover:bg-white text-[#202938] shrink-0 cursor-pointer"
                         title="Copy normalized URL"
                       >
                         {copiedKey === `norm-${idx}` ? (
@@ -195,14 +195,14 @@ export default function LinksAndIps({
                     {u.rawUrl && u.rawUrl !== u.normalizedUrl && (
                       <div className="bg-[#F5F6F8] p-2.5 rounded-lg border border-[#E4E7EC] flex items-start justify-between gap-3 text-[11px]">
                         <div className="break-all flex-1 font-mono">
-                          <span className="text-[#667085] block text-[10px] uppercase font-sans font-medium mb-0.5">
+                          <span className="text-[#202938] block text-[10px] uppercase font-sans font-medium mb-0.5">
                             Original link address:
                           </span>
-                          <span className="text-[#667085] select-all">{u.rawUrl}</span>
+                          <span className="text-[#202938] select-all">{u.rawUrl}</span>
                         </div>
                         <button
                           onClick={() => copyValue(`raw-${idx}`, u.rawUrl)}
-                          className="p-1 rounded hover:bg-white text-[#667085] hover:text-[#202938] shrink-0 cursor-pointer"
+                          className="p-1 rounded hover:bg-white text-[#202938] shrink-0 cursor-pointer"
                           title="Copy raw URL"
                         >
                           {copiedKey === `raw-${idx}` ? (
@@ -215,7 +215,7 @@ export default function LinksAndIps({
                     )}
 
                     {u.anchorText && (
-                      <div className="text-xs text-[#667085]">
+                      <div className="text-xs text-[#202938]">
                         <span className="font-medium text-[#202938]">Visible text: </span>
                         <span>"{u.anchorText}"</span>
                       </div>
@@ -236,7 +236,7 @@ export default function LinksAndIps({
       {/* IP search bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white p-4 rounded-xl border border-[#E4E7EC]">
         <div className="relative flex-1 max-w-md">
-          <Search className="h-4 w-4 text-[#98A2B3] absolute left-3 top-2.5" />
+          <Search className="h-4 w-4 text-[#202938] absolute left-3 top-2.5" />
           <input
             id="infra-search-input"
             type="text"
@@ -247,20 +247,20 @@ export default function LinksAndIps({
           />
         </div>
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <span className="text-[#667085]">
+          <span className="text-[#202938]">
             Total IPs: <strong className="text-[#202938]">{infrastructure.length}</strong>
           </span>
           <span className="text-[#2563EB] bg-[#EFF6FF] px-2 py-0.5 rounded border border-blue-100 font-medium">
             {infrastructure.filter((i) => !i.isPrivate).length} Public
           </span>
-          <span className="text-[#667085] bg-[#F5F6F8] px-2 py-0.5 rounded border border-[#E4E7EC] font-medium">
+          <span className="text-[#202938] bg-[#F5F6F8] px-2 py-0.5 rounded border border-[#E4E7EC] font-medium">
             {infrastructure.filter((i) => i.isPrivate).length} Private / Internal
           </span>
         </div>
       </div>
 
       {filteredInfra.length === 0 ? (
-        <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#667085]">
+        <div className="p-8 rounded-xl bg-white border border-[#E4E7EC] text-center text-xs text-[#202938]">
           {infrastructure.length === 0
             ? 'No IP addresses found in this email.'
             : 'No IP addresses match your search.'}
@@ -280,7 +280,7 @@ export default function LinksAndIps({
                     </span>
                     <button
                       onClick={() => copyValue(`ip-${idx}`, item.ipAddress)}
-                      className="p-1 rounded hover:bg-[#F5F6F8] text-[#667085] hover:text-[#202938] shrink-0 cursor-pointer"
+                      className="p-1 rounded hover:bg-[#F5F6F8] text-[#202938] shrink-0 cursor-pointer"
                       title="Copy IP Address"
                     >
                       {copiedKey === `ip-${idx}` ? (
@@ -299,7 +299,7 @@ export default function LinksAndIps({
                   <span
                     className={`px-2 py-0.5 rounded text-[11px] font-medium border ${
                       item.isPrivate
-                        ? 'bg-slate-100 text-[#667085] border-[#E4E7EC]'
+                        ? 'bg-slate-100 text-[#202938] border-[#E4E7EC]'
                         : 'bg-[#EFF6FF] text-[#2563EB] border-blue-100'
                     }`}
                   >
@@ -308,7 +308,7 @@ export default function LinksAndIps({
                 </div>
               </div>
 
-              <div className="text-xs text-[#667085] space-y-1">
+              <div className="text-xs text-[#202938] space-y-1">
                 <div>Source: <span className="font-medium text-[#202938]">{item.sourceContext || 'Email Header'}</span></div>
                 {item.reverseDns && (
                   <div>Reverse DNS: <span className="font-mono text-[#202938]">{item.reverseDns}</span></div>
