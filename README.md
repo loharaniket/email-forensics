@@ -15,6 +15,22 @@ The repository consists of three main parts:
 
 ---
 
+## Screenshots & Dashboard Views
+
+### 1. Split Workspace Dashboard
+Upload RFC 5322 `.eml` evidence files and view recent cases with 1-click verification:
+![Dashboard View](frontend/public/screenshots/dashboard.png)
+
+### 2. Forensic Investigation Studio (Summary View)
+Full technical overview with classification, deterministic risk score, automated assessment, and category-deduplicated findings:
+![Investigation Summary](frontend/public/screenshots/investigation-summary.png)
+
+### 3. Risk Score & Heuristic Detection Analysis
+In-depth risk score breakdown, category contributions, and itemized threat indicators:
+![Risk Score Analysis](frontend/public/screenshots/risk-analysis.png)
+
+---
+
 ## What the Analysis Checks
 
 When an `.eml` email is uploaded or analyzed from Gmail, the system checks:
