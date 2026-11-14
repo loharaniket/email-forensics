@@ -112,7 +112,6 @@ class EmailHeaderServiceTest {
         mockHttpResponse = Mockito.mock(HttpResponse.class);
         service = new EmailHeaderService(
                 mockHttpClient,
-                "powerline-test-key",
                 "https://powerline.ai/api/tools/headers",
                 "testmail-test-key",
                 "https://api.testmail.app/api/tools/headers",
@@ -148,14 +147,12 @@ class EmailHeaderServiceTest {
         assertEquals("mail.example.com", hops.get(0).getFromHost());
         assertEquals(4L, hops.get(1).getDelaySeconds());
 
-        // Verify only 1 HTTP request was made to Powerline
         verify(mockHttpClient, times(1)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
     @Test
     @SuppressWarnings("unchecked")
     void shouldNotTreatAuthenticationFailAsApiFailure() throws Exception {
-        // An email failing SPF/DKIM/DMARC is a valid security result, NOT an API outage
         String failAuthJson = """
                 {
                   "authentication": {
@@ -182,7 +179,6 @@ class EmailHeaderServiceTest {
         assertEquals("fail", result.getDkimResult());
         assertEquals("fail", result.getDmarcResult());
 
-        // Crucial: Fallback must NOT trigger on authentication check failure
         verify(mockHttpClient, times(1)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
@@ -211,7 +207,6 @@ class EmailHeaderServiceTest {
         assertEquals("pass", result.getDkimResult());
         assertEquals("pass", result.getDmarcResult());
 
-        // Verify both providers were called sequentially
         verify(mockHttpClient, times(2)).send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class));
     }
 
@@ -248,7 +243,6 @@ class EmailHeaderServiceTest {
         when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
                 .thenThrow(new HttpTimeoutException("Connection timed out"));
 
-        // Service tries Powerline, gets timeout, tries Testmail, gets timeout
         HeaderAuthResult result = service.analyzeHeader(sampleRawHeaders);
 
         assertNotNull(result);
@@ -261,9 +255,8 @@ class EmailHeaderServiceTest {
     void shouldHandleMissingTestmailApiKeyGracefully() {
         EmailHeaderService unconfiguredService = new EmailHeaderService(
                 mockHttpClient,
-                null,
                 "https://powerline.ai/api/tools/headers",
-                "", // Missing Testmail key
+                "",
                 "https://api.testmail.app/api/tools/headers",
                 10
         );
@@ -276,7 +269,6 @@ class EmailHeaderServiceTest {
 
     @Test
     void shouldMarkMissingAuthChecksAsUnsupported() throws Exception {
-        // Response with only SPF, without DKIM, DMARC, or ARC
         String partialJson = """
                 {
                   "authentication": {
@@ -329,5 +321,48 @@ class EmailHeaderServiceTest {
         assertEquals("none", entity.getReportedArc());
         assertEquals("{\"status\":\"ok\"}", entity.getAuthApiResponseJson());
         assertEquals("Validated via Powerline.ai.", entity.getIndependentVerification());
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void shouldParseLivePowerlineResponseFormat() throws Exception {
+        String livePowerlineJson = """
+                {
+                  "senderIp": "198.51.100.1",
+                  "verdicts": {
+                    "spf": { "result": "pass" },
+                    "dkim": [ { "result": "pass" } ],
+                    "dmarc": { "result": "pass" }
+                  },
+                  "hops": [
+                    {
+                      "from": "mail.example.com",
+                      "by": "mx.example.com",
+                      "ip": "198.51.100.1",
+                      "delay": 1000
+                    }
+                  ]
+                }
+                """;
+
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn(livePowerlineJson);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockHttpResponse);
+
+        HeaderAuthResult result = service.callPowerlineApi(sampleRawHeaders);
+
+        assertNotNull(result);
+        assertEquals("Powerline.ai", result.getProviderName());
+        assertEquals("SUCCESS", result.getStatus());
+        assertEquals("pass", result.getSpfResult());
+        assertEquals("pass", result.getDkimResult());
+        assertEquals("pass", result.getDmarcResult());
+        assertEquals("198.51.100.1", result.getSpfRelayIp());
+
+        List<ReceivedHopDto> hops = result.getHops();
+        assertEquals(1, hops.size());
+        assertEquals("mail.example.com", hops.get(0).getFromHost());
+        assertEquals(1L, hops.get(0).getDelaySeconds());
     }
 }

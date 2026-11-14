@@ -16,24 +16,14 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpTimeoutException;
 import java.nio.charset.StandardCharsets;
 import java.time.Duration;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-/**
- * Beginner-friendly service to perform email header authentication analysis
- * using external APIs with automatic fallback:
- * 1. Powerline.ai Header API (Primary)
- * 2. Testmail.app Tools API (Fallback)
- */
 @Service
 public class EmailHeaderService {
 
     private static final Logger log = LoggerFactory.getLogger(EmailHeaderService.class);
-
-    @Value("${emailforensics.auth.powerline.api-key:${POWERLINE_API_KEY:}}")
-    private String powerlineApiKey;
 
     @Value("${emailforensics.auth.powerline.url:${POWERLINE_API_URL:https://powerline.ai/api/tools/headers}}")
     private String powerlineUrl;
@@ -57,39 +47,27 @@ public class EmailHeaderService {
                 .build();
     }
 
-    // Constructor for testing with mock client & custom keys
     public EmailHeaderService(HttpClient httpClient,
-                              String powerlineApiKey,
                               String powerlineUrl,
                               String testmailApiKey,
                               String testmailUrl,
                               int timeoutSeconds) {
         this.objectMapper = new ObjectMapper();
         this.httpClient = httpClient;
-        this.powerlineApiKey = powerlineApiKey;
         this.powerlineUrl = powerlineUrl != null ? powerlineUrl : "https://powerline.ai/api/tools/headers";
         this.testmailApiKey = testmailApiKey;
         this.testmailUrl = testmailUrl != null ? testmailUrl : "https://api.testmail.app/api/tools/headers";
         this.timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 15;
     }
 
-    /**
-     * Analyzes raw email headers using external APIs with automatic fallback.
-     * Tries Powerline.ai first. If Powerline.ai has a service failure, falls back to Testmail.app.
-     *
-     * @param rawHeaders The raw email headers text
-     * @return Normalized analysis result
-     */
     public HeaderAuthResult analyzeHeader(String rawHeaders) {
         if (rawHeaders == null || rawHeaders.trim().isEmpty()) {
             return HeaderAuthResult.serviceFailure("INPUT_VALIDATION", "No email headers provided for analysis.");
         }
 
-        // 1. Try Powerline.ai Header API (Primary)
-        log.info("Sending email headers to primary provider: Powerline.ai");
+        log.info("Sending email headers to primary provider: Powerline.ai ({})", powerlineUrl);
         HeaderAuthResult powerlineResult = callPowerlineApi(rawHeaders);
 
-        // If Powerline gave a valid response (even if SPF/DKIM/DMARC failed authentication), return it!
         if (powerlineResult != null && !powerlineResult.isServiceFailure()) {
             log.info("Powerline.ai header analysis succeeded with status: {}", powerlineResult.getStatus());
             return powerlineResult;
@@ -98,7 +76,6 @@ public class EmailHeaderService {
         String powerlineError = powerlineResult != null ? powerlineResult.getErrorMessage() : "Unknown failure";
         log.warn("Powerline.ai unavailable ({}). Falling back to Testmail.app...", powerlineError);
 
-        // 2. Try Testmail.app Tools API (Fallback)
         log.info("Sending email headers to fallback provider: Testmail.app");
         HeaderAuthResult testmailResult = callTestmailApi(rawHeaders);
 
@@ -110,29 +87,22 @@ public class EmailHeaderService {
         String testmailError = testmailResult != null ? testmailResult.getErrorMessage() : "Unknown failure";
         log.warn("Testmail.app also unavailable ({}). All header authentication providers failed.", testmailError);
 
-        // 3. Both failed: return clear, friendly error
         return HeaderAuthResult.allUnavailable(
                 "Email header authentication is temporarily unavailable. "
                         + "Powerline.ai: " + powerlineError + "; Testmail.app: " + testmailError
         );
     }
 
-    /**
-     * Calls Powerline.ai Header API (https://powerline.ai/api/tools/headers).
-     */
     public HeaderAuthResult callPowerlineApi(String rawHeaders) {
         try {
-            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+            HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(powerlineUrl))
                     .timeout(Duration.ofSeconds(timeoutSeconds))
                     .header("Content-Type", "text/plain")
-                    .POST(HttpRequest.BodyPublishers.ofString(rawHeaders, StandardCharsets.UTF_8));
+                    .POST(HttpRequest.BodyPublishers.ofString(rawHeaders, StandardCharsets.UTF_8))
+                    .build();
 
-            if (powerlineApiKey != null && !powerlineApiKey.trim().isEmpty()) {
-                reqBuilder.header("Authorization", "Bearer " + powerlineApiKey.trim());
-            }
-
-            HttpResponse<String> response = httpClient.send(reqBuilder.build(), HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
             int statusCode = response.statusCode();
             String responseBody = response.body();
 
@@ -149,9 +119,6 @@ public class EmailHeaderService {
         }
     }
 
-    /**
-     * Calls Testmail.app Tools API (https://api.testmail.app/api/tools/headers).
-     */
     public HeaderAuthResult callTestmailApi(String rawHeaders) {
         if (testmailApiKey == null || testmailApiKey.trim().isEmpty()) {
             return HeaderAuthResult.serviceFailure("Testmail.app", "Testmail.app API key is not configured.");
@@ -183,9 +150,6 @@ public class EmailHeaderService {
         }
     }
 
-    /**
-     * Saves the external API analysis result into the AnalysisResult database entity.
-     */
     public void saveResult(AnalysisResult entity, HeaderAuthResult authResult) {
         if (entity == null || authResult == null) {
             return;
@@ -207,31 +171,32 @@ public class EmailHeaderService {
         }
     }
 
-    /**
-     * Parses the JSON response returned by either Powerline.ai or Testmail.app.
-     */
     private HeaderAuthResult parseApiResponse(String providerName, String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
-            JsonNode authNode = root.has("authentication") ? root.path("authentication") : root;
+            JsonNode authNode = root.has("authentication") ? root.path("authentication")
+                    : (root.has("verdicts") ? root.path("verdicts") : root);
 
             HeaderAuthResult result = HeaderAuthResult.success(providerName);
             result.setRawResponseJson(json);
 
-            // 1. SPF
             JsonNode spfNode = authNode.path("spf");
             if (!spfNode.isMissingNode() && !spfNode.isNull()) {
                 String spfStatus = spfNode.hasNonNull("result") ? spfNode.path("result").asText()
                         : (spfNode.hasNonNull("status") ? spfNode.path("status").asText() : spfNode.asText("none"));
                 result.setSpfResult(normalizeVerdict(spfStatus));
                 result.setSpfRecord(spfNode.path("record").asText(null));
-                result.setSpfRelayIp(spfNode.hasNonNull("ip") ? spfNode.path("ip").asText() : spfNode.path("relay_ip").asText(null));
+                String ip = spfNode.hasNonNull("ip") ? spfNode.path("ip").asText()
+                        : (spfNode.hasNonNull("relay_ip") ? spfNode.path("relay_ip").asText() : root.path("senderIp").asText(null));
+                result.setSpfRelayIp(ip);
             } else {
                 result.setSpfResult("unsupported");
             }
 
-            // 2. DKIM
             JsonNode dkimNode = authNode.path("dkim");
+            if (dkimNode.isArray() && dkimNode.size() > 0) {
+                dkimNode = dkimNode.get(0);
+            }
             if (!dkimNode.isMissingNode() && !dkimNode.isNull()) {
                 String dkimStatus = dkimNode.hasNonNull("result") ? dkimNode.path("result").asText()
                         : (dkimNode.hasNonNull("status") ? dkimNode.path("status").asText() : dkimNode.asText("none"));
@@ -243,7 +208,6 @@ public class EmailHeaderService {
                 result.setDkimResult("unsupported");
             }
 
-            // 3. DMARC
             JsonNode dmarcNode = authNode.path("dmarc");
             if (!dmarcNode.isMissingNode() && !dmarcNode.isNull()) {
                 String dmarcStatus = dmarcNode.hasNonNull("result") ? dmarcNode.path("result").asText()
@@ -254,17 +218,16 @@ public class EmailHeaderService {
                 result.setDmarcResult("unsupported");
             }
 
-            // 4. ARC
             JsonNode arcNode = authNode.path("arc");
             if (!arcNode.isMissingNode() && !arcNode.isNull()) {
                 String arcStatus = arcNode.hasNonNull("result") ? arcNode.path("result").asText()
                         : (arcNode.hasNonNull("status") ? arcNode.path("status").asText() : arcNode.asText("none"));
                 result.setArcResult(normalizeVerdict(arcStatus));
             } else {
-                result.setArcResult("unsupported");
+                String arcFromAuth = findMethodInAuthList(root.path("auth"), "arc");
+                result.setArcResult(arcFromAuth != null ? normalizeVerdict(arcFromAuth) : "unsupported");
             }
 
-            // 5. Routing Hops
             JsonNode hopsArray = root.has("hops") ? root.path("hops")
                     : (root.has("delivery_path") ? root.path("delivery_path") : null);
 
@@ -272,13 +235,22 @@ public class EmailHeaderService {
             if (hopsArray != null && hopsArray.isArray()) {
                 for (int i = 0; i < hopsArray.size(); i++) {
                     JsonNode h = hopsArray.get(i);
-                    int order = h.hasNonNull("order") ? h.path("order").asInt(i + 1)
-                            : (h.hasNonNull("hop") ? h.path("hop").asInt(i + 1) : i + 1);
+                    if (h.path("synthetic").asBoolean(false)) {
+                        continue;
+                    }
+                    int order = h.hasNonNull("order") ? h.path("order").asInt(hops.size() + 1)
+                            : (h.hasNonNull("hop") ? h.path("hop").asInt(hops.size() + 1) : hops.size() + 1);
                     String from = h.path("from").asText(null);
                     String by = h.path("by").asText(null);
                     String proto = h.hasNonNull("protocol") ? h.path("protocol").asText() : h.path("with").asText(null);
                     String ip = h.path("ip").asText(null);
-                    Long delay = h.hasNonNull("delay") ? h.path("delay").asLong() : (h.hasNonNull("delay_seconds") ? h.path("delay_seconds").asLong() : null);
+                    Long delay = null;
+                    if (h.hasNonNull("delay")) {
+                        long rawDelay = h.path("delay").asLong();
+                        delay = (rawDelay >= 1000) ? rawDelay / 1000 : rawDelay;
+                    } else if (h.hasNonNull("delay_seconds")) {
+                        delay = h.path("delay_seconds").asLong();
+                    }
                     String rawLine = h.path("raw").asText("Received: from " + from + " by " + by);
 
                     hops.add(new ReceivedHopDto(null, order, from, by, proto, ip, null, delay, rawLine, null));
@@ -300,6 +272,22 @@ public class EmailHeaderService {
             log.error("Failed to parse JSON response from {}: {}", providerName, e.getMessage());
             return HeaderAuthResult.serviceFailure(providerName, "Invalid response JSON: " + e.getMessage());
         }
+    }
+
+    private String findMethodInAuthList(JsonNode authNode, String method) {
+        if (authNode != null && authNode.isArray()) {
+            for (JsonNode item : authNode) {
+                JsonNode results = item.path("results");
+                if (results.isArray()) {
+                    for (JsonNode r : results) {
+                        if (method.equalsIgnoreCase(r.path("method").asText())) {
+                            return r.path("result").asText();
+                        }
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private String normalizeVerdict(String raw) {

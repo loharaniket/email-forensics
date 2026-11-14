@@ -42,10 +42,6 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-/**
- * Service that extracts RFC 5322 header metadata and delegates email authentication
- * validation (SPF, DKIM, DMARC, ARC, and Hops) to external APIs via EmailHeaderService.
- */
 @Service
 public class HeaderAnalysisService {
 
@@ -98,7 +94,6 @@ public class HeaderAnalysisService {
             AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                     .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
 
-            // Load raw email bytes from storage
             byte[] emlBytes;
             try (InputStream in = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
                 emlBytes = in.readAllBytes();
@@ -106,10 +101,8 @@ public class HeaderAnalysisService {
                 throw new IllegalStateException("Failed to load email resource for header analysis: " + emailId, e);
             }
 
-            // Extract basic headers and mismatch signals
             RawHeaderData rawData = extractRawHeaderData(emlBytes);
 
-            // Call external API for email authentication (Powerline.ai primary, Testmail.app fallback)
             HeaderAuthResult authResult;
             if (emailHeaderService != null) {
                 authResult = emailHeaderService.analyzeHeader(rawData.rawHeadersText);
@@ -117,7 +110,6 @@ public class HeaderAnalysisService {
                 authResult = HeaderAuthResult.allUnavailable("EmailHeaderService is not configured.");
             }
 
-            // Save result into AnalysisResult entity
             AnalysisResult existingEntity = analysisResultRepository.findByAnalysisRunId(run.getId()).orElse(null);
             AnalysisResult entity = existingEntity != null ? existingEntity : new AnalysisResult(run);
             if (entity.getHeaderResultId() == null) {
@@ -136,7 +128,6 @@ public class HeaderAnalysisService {
             entity.setIdentityMismatchFlags(formatFlagsJson(rawData.mismatchFlags));
             entity.setRawHeadersJson(formatRawHeadersJson(rawData.rawHeaders));
 
-            // Save external API results (provider name, status, verdicts, raw response)
             if (emailHeaderService != null) {
                 emailHeaderService.saveResult(entity, authResult);
             } else {
@@ -151,7 +142,6 @@ public class HeaderAnalysisService {
 
             entity = analysisResultRepository.saveAndFlush(entity);
 
-            // Handle Received Hops
             List<ReceivedHopDto> hopDtos = new ArrayList<>();
             List<ReceivedHop> existingHops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
 
@@ -204,7 +194,6 @@ public class HeaderAnalysisService {
                 }
             }
 
-            // Construct and return HeaderAnalysisDto
             String verificationNote = "Authentication results validated via " + authResult.getProviderName() + ".";
             HeaderAnalysisDto dto = new HeaderAnalysisDto(
                     run.getId(),
@@ -525,7 +514,6 @@ public class HeaderAnalysisService {
                 }
             }
 
-            // Identify identity mismatch signals
             if (data.replyToAddress != null && data.fromDomain != null) {
                 String replyToDomain = extractDomain(data.replyToAddress);
                 if (replyToDomain != null && !replyToDomain.equalsIgnoreCase(data.fromDomain)) {

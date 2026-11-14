@@ -6,10 +6,6 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Simple data holder for email authentication results from external APIs.
- * Stores normalized verdicts (SPF, DKIM, DMARC, ARC), routing hops, and API status.
- */
 public class HeaderAuthResult {
 
     private String providerName = "UNAVAILABLE";
@@ -81,8 +77,6 @@ public class HeaderAuthResult {
         result.evaluatedAt = Instant.now();
         return result;
     }
-
-    // Getters and Setters
 
     public String getProviderName() {
         return providerName;
