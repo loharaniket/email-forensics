@@ -201,7 +201,7 @@ To test the platform with your own emails, you need to download an `.eml` file f
 
 ## Testing with Sample Emails
 
-The repository includes 8 sample `.eml` files in `test-fixtures/eml/` that cover real-world threats and edge cases. You can upload any of these via the web dashboard:
+The repository includes 9 sample `.eml` files in `test-fixtures/eml/` that cover real-world threats, individual attack vectors, and an all-in-one comprehensive threat test:
 
 | File Name | Primary Scenario Tested | Expected Result |
 |---|---|---|
@@ -213,6 +213,7 @@ The repository includes 8 sample `.eml` files in `test-fixtures/eml/` that cover
 | `06-received-chain.eml` | Multi-hop email that passed through 4 different mail servers. | Parses all 4 transit hops, extracts server IPs, and calculates transit delay. |
 | `07-inline-qr-code.eml` | Quishing attack hiding a phishing link inside an embedded image. | Detects the QR code, extracts the image, and decodes the embedded URL. |
 | `08-prompt-injection.eml` | Adversarial text instructions designed to trick LLMs into ignoring security rules. | Flags prompt injection markers in the content signals view. |
+| `09-comprehensive-all-attacks.eml` | **All-in-one comprehensive attack sample:** Combines SPF/DKIM/DMARC failures, display name spoofing, Reply-To mismatch, multi-hop relay delay (>1 hr), deceptive anchor mismatch, raw IP URL, non-standard port 8443, shortened link, typosquatting domain, excessive subdomains, quishing QR code, executable PE attachment, adversarial prompt injection, and social engineering urgency/payment cues. | **Critical Risk (100/100)** — Evaluates all 6 forensic channels and triggers all 7 risk categories simultaneously. |
 
 ---
 
