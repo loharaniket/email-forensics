@@ -6,7 +6,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.io.IOException;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
@@ -18,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -82,24 +80,34 @@ class EmailHeaderServiceTest {
 
     private final String testmailSuccessJson = """
             {
-              "authentication": {
-                "spf": {
-                  "status": "pass",
+              "authentication": [
+                {
+                  "method": "spf",
+                  "result": "pass",
                   "record": "v=spf1 mx ~all",
-                  "relay_ip": "198.51.100.22"
+                  "relay_ip": "198.51.100.22",
+                  "provenance": "received_header",
+                  "alignment": true
                 },
-                "dkim": {
-                  "status": "pass",
+                {
+                  "method": "dkim",
+                  "result": "pass",
                   "domain": "example.com",
-                  "selector": "default"
+                  "selector": "default",
+                  "record": "v=DKIM1..."
                 },
-                "dmarc": {
-                  "status": "pass",
+                {
+                  "method": "dmarc",
+                  "result": "pass",
                   "policy": "quarantine"
                 },
-                "arc": {
-                  "status": "none"
+                {
+                  "method": "arc",
+                  "result": "none"
                 }
+              ],
+              "meta": {
+                "complete": true
               },
               "hops": []
             }
@@ -289,6 +297,54 @@ class EmailHeaderServiceTest {
         assertEquals("unsupported", result.getDkimResult());
         assertEquals("unsupported", result.getDmarcResult());
         assertEquals("unsupported", result.getArcResult());
+    }
+
+    @Test
+    void shouldParseTestmailArrayFormat() throws Exception {
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn(testmailSuccessJson);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockHttpResponse);
+
+        HeaderAuthResult result = service.callTestmailApi(sampleRawHeaders);
+
+        assertNotNull(result);
+        assertEquals("Testmail.app", result.getProviderName());
+        assertEquals("SUCCESS", result.getStatus());
+        assertFalse(result.isServiceFailure());
+        assertEquals("pass", result.getSpfResult());
+        assertEquals("pass", result.getDkimResult());
+        assertEquals("pass", result.getDmarcResult());
+        assertEquals("none", result.getArcResult());
+        assertEquals("198.51.100.22", result.getSpfRelayIp());
+        assertEquals("example.com", result.getDkimDomain());
+        assertEquals("default", result.getDkimSelector());
+        assertEquals("quarantine", result.getDmarcPolicy());
+    }
+
+    @Test
+    void shouldRejectIncompleteTestmailReport() throws Exception {
+        String incompleteJson = """
+                {
+                  "meta": {
+                    "complete": false
+                  },
+                  "authentication": [
+                    { "method": "spf", "result": "pass" }
+                  ]
+                }
+                """;
+
+        when(mockHttpResponse.statusCode()).thenReturn(200);
+        when(mockHttpResponse.body()).thenReturn(incompleteJson);
+        when(mockHttpClient.send(any(HttpRequest.class), any(HttpResponse.BodyHandler.class)))
+                .thenReturn(mockHttpResponse);
+
+        HeaderAuthResult result = service.callTestmailApi(sampleRawHeaders);
+
+        assertNotNull(result);
+        assertTrue(result.isServiceFailure());
+        assertTrue(result.getErrorMessage().contains("incomplete"));
     }
 
     @Test

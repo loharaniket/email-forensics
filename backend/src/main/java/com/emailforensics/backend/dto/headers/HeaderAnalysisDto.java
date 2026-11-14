@@ -253,21 +253,7 @@ public class HeaderAnalysisDto {
         if (spfResult != null && !spfResult.isBlank()) {
             return spfResult;
         }
-        if (activeSpfResult != null && activeSpfResult.equalsIgnoreCase("PASS")) {
-            return "PASS";
-        }
-        if (reportedSpf != null && reportedSpf.equalsIgnoreCase("pass")) {
-            return "PASS";
-        }
-        if (activeSpfResult != null && !activeSpfResult.equalsIgnoreCase("UNAVAILABLE")
-                && !activeSpfResult.equalsIgnoreCase("SKIPPED_NO_RELAY_IP")
-                && !activeSpfResult.equalsIgnoreCase("NONE")) {
-            return activeSpfResult;
-        }
-        if (reportedSpf != null && !reportedSpf.isBlank()) {
-            return reportedSpf.toUpperCase(java.util.Locale.ROOT);
-        }
-        return activeSpfResult != null ? activeSpfResult : "NONE";
+        return reportedSpf != null ? reportedSpf : "NONE";
     }
 
     public void setSpfResult(String spfResult) {
@@ -278,21 +264,7 @@ public class HeaderAnalysisDto {
         if (dkimResult != null && !dkimResult.isBlank()) {
             return dkimResult;
         }
-        if (activeDkimStatus != null && (activeDkimStatus.equalsIgnoreCase("PASS") || activeDkimStatus.equalsIgnoreCase("SELECTOR_FOUND"))) {
-            return activeDkimStatus;
-        }
-        if (reportedDkim != null && reportedDkim.equalsIgnoreCase("pass")) {
-            return "PASS";
-        }
-        if (activeDkimStatus != null && !activeDkimStatus.equalsIgnoreCase("UNAVAILABLE")
-                && !activeDkimStatus.equalsIgnoreCase("SIGNATURE_ABSENT")
-                && !activeDkimStatus.equalsIgnoreCase("NONE")) {
-            return activeDkimStatus;
-        }
-        if (reportedDkim != null && !reportedDkim.isBlank()) {
-            return reportedDkim.toUpperCase(java.util.Locale.ROOT);
-        }
-        return activeDkimStatus != null ? activeDkimStatus : "NONE";
+        return reportedDkim != null ? reportedDkim : "NONE";
     }
 
     public void setDkimResult(String dkimResult) {
@@ -303,25 +275,19 @@ public class HeaderAnalysisDto {
         if (dmarcResult != null && !dmarcResult.isBlank()) {
             return dmarcResult;
         }
-        if (activeDmarcStatus != null && activeDmarcStatus.equalsIgnoreCase("PASS")) {
-            return "PASS";
-        }
-        if (reportedDmarc != null && reportedDmarc.equalsIgnoreCase("pass")) {
-            return "PASS";
-        }
-        if (activeDmarcStatus != null && !activeDmarcStatus.equalsIgnoreCase("UNAVAILABLE")
-                && !activeDmarcStatus.equalsIgnoreCase("RECORD_ABSENT")
-                && !activeDmarcStatus.equalsIgnoreCase("NONE")) {
-            return activeDmarcStatus;
-        }
-        if (reportedDmarc != null && !reportedDmarc.isBlank()) {
-            return reportedDmarc.toUpperCase(java.util.Locale.ROOT);
-        }
-        return activeDmarcStatus != null ? activeDmarcStatus : "NONE";
+        return reportedDmarc != null ? reportedDmarc : "NONE";
     }
 
     public void setDmarcResult(String dmarcResult) {
         this.dmarcResult = dmarcResult;
+    }
+
+    public String getArcResult() {
+        return reportedArc != null ? reportedArc : "NONE";
+    }
+
+    public void setArcResult(String arcResult) {
+        this.reportedArc = arcResult;
     }
 
     public String getDataMode() {

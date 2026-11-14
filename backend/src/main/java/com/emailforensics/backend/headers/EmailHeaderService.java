@@ -174,89 +174,29 @@ public class EmailHeaderService {
     private HeaderAuthResult parseApiResponse(String providerName, String json) {
         try {
             JsonNode root = objectMapper.readTree(json);
-            JsonNode authNode = root.has("authentication") ? root.path("authentication")
-                    : (root.has("verdicts") ? root.path("verdicts") : root);
+
+            if (root.path("meta").hasNonNull("complete") && !root.path("meta").path("complete").asBoolean(true)) {
+                return HeaderAuthResult.serviceFailure(providerName, "Report is marked as incomplete by provider.");
+            }
+            if (root.hasNonNull("complete") && !root.path("complete").asBoolean(true)) {
+                return HeaderAuthResult.serviceFailure(providerName, "Report is marked as incomplete by provider.");
+            }
+            if (root.hasNonNull("status") && "incomplete".equalsIgnoreCase(root.path("status").asText())) {
+                return HeaderAuthResult.serviceFailure(providerName, "Report status is incomplete.");
+            }
 
             HeaderAuthResult result = HeaderAuthResult.success(providerName);
             result.setRawResponseJson(json);
 
-            JsonNode spfNode = authNode.path("spf");
-            if (!spfNode.isMissingNode() && !spfNode.isNull()) {
-                String spfStatus = spfNode.hasNonNull("result") ? spfNode.path("result").asText()
-                        : (spfNode.hasNonNull("status") ? spfNode.path("status").asText() : spfNode.asText("none"));
-                result.setSpfResult(normalizeVerdict(spfStatus));
-                result.setSpfRecord(spfNode.path("record").asText(null));
-                String ip = spfNode.hasNonNull("ip") ? spfNode.path("ip").asText()
-                        : (spfNode.hasNonNull("relay_ip") ? spfNode.path("relay_ip").asText() : root.path("senderIp").asText(null));
-                result.setSpfRelayIp(ip);
+            if (root.has("authentication") && root.path("authentication").isArray()) {
+                parseAuthenticationArray(root.path("authentication"), result, root);
             } else {
-                result.setSpfResult("unsupported");
+                JsonNode authNode = root.has("authentication") ? root.path("authentication")
+                        : (root.has("verdicts") ? root.path("verdicts") : root);
+                parseAuthenticationObject(authNode, result, root);
             }
 
-            JsonNode dkimNode = authNode.path("dkim");
-            if (dkimNode.isArray() && dkimNode.size() > 0) {
-                dkimNode = dkimNode.get(0);
-            }
-            if (!dkimNode.isMissingNode() && !dkimNode.isNull()) {
-                String dkimStatus = dkimNode.hasNonNull("result") ? dkimNode.path("result").asText()
-                        : (dkimNode.hasNonNull("status") ? dkimNode.path("status").asText() : dkimNode.asText("none"));
-                result.setDkimResult(normalizeVerdict(dkimStatus));
-                result.setDkimDomain(dkimNode.path("domain").asText(null));
-                result.setDkimSelector(dkimNode.path("selector").asText(null));
-                result.setDkimRecord(dkimNode.path("record").asText(null));
-            } else {
-                result.setDkimResult("unsupported");
-            }
-
-            JsonNode dmarcNode = authNode.path("dmarc");
-            if (!dmarcNode.isMissingNode() && !dmarcNode.isNull()) {
-                String dmarcStatus = dmarcNode.hasNonNull("result") ? dmarcNode.path("result").asText()
-                        : (dmarcNode.hasNonNull("status") ? dmarcNode.path("status").asText() : dmarcNode.asText("none"));
-                result.setDmarcResult(normalizeVerdict(dmarcStatus));
-                result.setDmarcPolicy(dmarcNode.path("policy").asText(null));
-            } else {
-                result.setDmarcResult("unsupported");
-            }
-
-            JsonNode arcNode = authNode.path("arc");
-            if (!arcNode.isMissingNode() && !arcNode.isNull()) {
-                String arcStatus = arcNode.hasNonNull("result") ? arcNode.path("result").asText()
-                        : (arcNode.hasNonNull("status") ? arcNode.path("status").asText() : arcNode.asText("none"));
-                result.setArcResult(normalizeVerdict(arcStatus));
-            } else {
-                String arcFromAuth = findMethodInAuthList(root.path("auth"), "arc");
-                result.setArcResult(arcFromAuth != null ? normalizeVerdict(arcFromAuth) : "unsupported");
-            }
-
-            JsonNode hopsArray = root.has("hops") ? root.path("hops")
-                    : (root.has("delivery_path") ? root.path("delivery_path") : null);
-
-            List<ReceivedHopDto> hops = new ArrayList<>();
-            if (hopsArray != null && hopsArray.isArray()) {
-                for (int i = 0; i < hopsArray.size(); i++) {
-                    JsonNode h = hopsArray.get(i);
-                    if (h.path("synthetic").asBoolean(false)) {
-                        continue;
-                    }
-                    int order = h.hasNonNull("order") ? h.path("order").asInt(hops.size() + 1)
-                            : (h.hasNonNull("hop") ? h.path("hop").asInt(hops.size() + 1) : hops.size() + 1);
-                    String from = h.path("from").asText(null);
-                    String by = h.path("by").asText(null);
-                    String proto = h.hasNonNull("protocol") ? h.path("protocol").asText() : h.path("with").asText(null);
-                    String ip = h.path("ip").asText(null);
-                    Long delay = null;
-                    if (h.hasNonNull("delay")) {
-                        long rawDelay = h.path("delay").asLong();
-                        delay = (rawDelay >= 1000) ? rawDelay / 1000 : rawDelay;
-                    } else if (h.hasNonNull("delay_seconds")) {
-                        delay = h.path("delay_seconds").asLong();
-                    }
-                    String rawLine = h.path("raw").asText("Received: from " + from + " by " + by);
-
-                    hops.add(new ReceivedHopDto(null, order, from, by, proto, ip, null, delay, rawLine, null));
-                }
-            }
-            result.setHops(hops);
+            parseRoutingHops(root, result);
 
             result.setSummary(String.format(Locale.ROOT,
                     "Validated via %s. SPF: %s, DKIM: %s, DMARC: %s, ARC: %s",
@@ -272,6 +212,132 @@ public class EmailHeaderService {
             log.error("Failed to parse JSON response from {}: {}", providerName, e.getMessage());
             return HeaderAuthResult.serviceFailure(providerName, "Invalid response JSON: " + e.getMessage());
         }
+    }
+
+    private void parseAuthenticationArray(JsonNode authArray, HeaderAuthResult result, JsonNode root) {
+        String spf = null, spfRecord = null, spfIp = null;
+        String dkim = null, dkimDomain = null, dkimSelector = null, dkimRecord = null;
+        String dmarc = null, dmarcPolicy = null;
+        String arc = null;
+
+        for (JsonNode item : authArray) {
+            String method = item.path("method").asText("").toLowerCase(Locale.ROOT);
+            String itemResult = item.hasNonNull("result") ? item.path("result").asText()
+                    : (item.hasNonNull("status") ? item.path("status").asText() : null);
+
+            if ("spf".equals(method)) {
+                spf = itemResult;
+                spfRecord = item.path("record").asText(null);
+                spfIp = item.hasNonNull("relay_ip") ? item.path("relay_ip").asText()
+                        : (item.hasNonNull("ip") ? item.path("ip").asText() : null);
+            } else if ("dkim".equals(method)) {
+                dkim = itemResult;
+                dkimDomain = item.path("domain").asText(null);
+                dkimSelector = item.path("selector").asText(null);
+                dkimRecord = item.path("record").asText(null);
+            } else if ("dmarc".equals(method)) {
+                dmarc = itemResult;
+                dmarcPolicy = item.path("policy").asText(null);
+            } else if ("arc".equals(method)) {
+                arc = itemResult;
+            }
+        }
+
+        result.setSpfResult(spf != null ? normalizeVerdict(spf) : "unsupported");
+        result.setSpfRecord(spfRecord);
+        result.setSpfRelayIp(spfIp != null ? spfIp : root.path("senderIp").asText(null));
+
+        result.setDkimResult(dkim != null ? normalizeVerdict(dkim) : "unsupported");
+        result.setDkimDomain(dkimDomain);
+        result.setDkimSelector(dkimSelector);
+        result.setDkimRecord(dkimRecord);
+
+        result.setDmarcResult(dmarc != null ? normalizeVerdict(dmarc) : "unsupported");
+        result.setDmarcPolicy(dmarcPolicy);
+
+        result.setArcResult(arc != null ? normalizeVerdict(arc) : "unsupported");
+    }
+
+    private void parseAuthenticationObject(JsonNode authNode, HeaderAuthResult result, JsonNode root) {
+        JsonNode spfNode = authNode.path("spf");
+        if (!spfNode.isMissingNode() && !spfNode.isNull()) {
+            String spfStatus = spfNode.hasNonNull("result") ? spfNode.path("result").asText()
+                    : (spfNode.hasNonNull("status") ? spfNode.path("status").asText() : spfNode.asText("none"));
+            result.setSpfResult(normalizeVerdict(spfStatus));
+            result.setSpfRecord(spfNode.path("record").asText(null));
+            String ip = spfNode.hasNonNull("ip") ? spfNode.path("ip").asText()
+                    : (spfNode.hasNonNull("relay_ip") ? spfNode.path("relay_ip").asText() : root.path("senderIp").asText(null));
+            result.setSpfRelayIp(ip);
+        } else {
+            result.setSpfResult("unsupported");
+        }
+
+        JsonNode dkimNode = authNode.path("dkim");
+        if (dkimNode.isArray() && dkimNode.size() > 0) {
+            dkimNode = dkimNode.get(0);
+        }
+        if (!dkimNode.isMissingNode() && !dkimNode.isNull()) {
+            String dkimStatus = dkimNode.hasNonNull("result") ? dkimNode.path("result").asText()
+                    : (dkimNode.hasNonNull("status") ? dkimNode.path("status").asText() : dkimNode.asText("none"));
+            result.setDkimResult(normalizeVerdict(dkimStatus));
+            result.setDkimDomain(dkimNode.path("domain").asText(null));
+            result.setDkimSelector(dkimNode.path("selector").asText(null));
+            result.setDkimRecord(dkimNode.path("record").asText(null));
+        } else {
+            result.setDkimResult("unsupported");
+        }
+
+        JsonNode dmarcNode = authNode.path("dmarc");
+        if (!dmarcNode.isMissingNode() && !dmarcNode.isNull()) {
+            String dmarcStatus = dmarcNode.hasNonNull("result") ? dmarcNode.path("result").asText()
+                    : (dmarcNode.hasNonNull("status") ? dmarcNode.path("status").asText() : dmarcNode.asText("none"));
+            result.setDmarcResult(normalizeVerdict(dmarcStatus));
+            result.setDmarcPolicy(dmarcNode.path("policy").asText(null));
+        } else {
+            result.setDmarcResult("unsupported");
+        }
+
+        JsonNode arcNode = authNode.path("arc");
+        if (!arcNode.isMissingNode() && !arcNode.isNull()) {
+            String arcStatus = arcNode.hasNonNull("result") ? arcNode.path("result").asText()
+                    : (arcNode.hasNonNull("status") ? arcNode.path("status").asText() : arcNode.asText("none"));
+            result.setArcResult(normalizeVerdict(arcStatus));
+        } else {
+            String arcFromAuth = findMethodInAuthList(root.path("auth"), "arc");
+            result.setArcResult(arcFromAuth != null ? normalizeVerdict(arcFromAuth) : "unsupported");
+        }
+    }
+
+    private void parseRoutingHops(JsonNode root, HeaderAuthResult result) {
+        JsonNode hopsArray = root.has("hops") ? root.path("hops")
+                : (root.has("delivery_path") ? root.path("delivery_path") : null);
+
+        List<ReceivedHopDto> hops = new ArrayList<>();
+        if (hopsArray != null && hopsArray.isArray()) {
+            for (int i = 0; i < hopsArray.size(); i++) {
+                JsonNode h = hopsArray.get(i);
+                if (h.path("synthetic").asBoolean(false)) {
+                    continue;
+                }
+                int order = h.hasNonNull("order") ? h.path("order").asInt(hops.size() + 1)
+                        : (h.hasNonNull("hop") ? h.path("hop").asInt(hops.size() + 1) : hops.size() + 1);
+                String from = h.path("from").asText(null);
+                String by = h.path("by").asText(null);
+                String proto = h.hasNonNull("protocol") ? h.path("protocol").asText() : h.path("with").asText(null);
+                String ip = h.path("ip").asText(null);
+                Long delay = null;
+                if (h.hasNonNull("delay")) {
+                    long rawDelay = h.path("delay").asLong();
+                    delay = (rawDelay >= 1000) ? rawDelay / 1000 : rawDelay;
+                } else if (h.hasNonNull("delay_seconds")) {
+                    delay = h.path("delay_seconds").asLong();
+                }
+                String rawLine = h.path("raw").asText("Received: from " + from + " by " + by);
+
+                hops.add(new ReceivedHopDto(null, order, from, by, proto, ip, null, delay, rawLine, null));
+            }
+        }
+        result.setHops(hops);
     }
 
     private String findMethodInAuthList(JsonNode authNode, String method) {

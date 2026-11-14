@@ -215,15 +215,11 @@ public class HeaderAnalysisService {
             dto.setSpfResult(authResult.getSpfResult());
             dto.setDkimResult(authResult.getDkimResult());
             dto.setDmarcResult(authResult.getDmarcResult());
-            dto.setActiveSpfResult(authResult.getSpfResult());
-            dto.setActiveSpfRecord(authResult.getSpfRecord());
-            dto.setActiveSpfRelayIp(authResult.getSpfRelayIp());
-            dto.setActiveDkimStatus(authResult.getDkimResult());
-            dto.setActiveDkimRecord(authResult.getDkimRecord());
-            dto.setActiveDkimSelector(authResult.getDkimSelector());
-            dto.setActiveDmarcStatus(authResult.getDmarcResult());
-            dto.setActiveDmarcPolicy(authResult.getDmarcPolicy());
-            dto.setActiveVerificationSummary(authResult.getSummary());
+            dto.setArcResult(authResult.getArcResult());
+            dto.setReportedSpf(authResult.getSpfResult());
+            dto.setReportedDkim(authResult.getDkimResult());
+            dto.setReportedDmarc(authResult.getDmarcResult());
+            dto.setReportedArc(authResult.getArcResult());
             dto.setDataMode("EXTERNAL_API");
             dto.setAuthApiProvider(authResult.getProviderName());
             dto.setAuthApiStatus(authResult.getStatus());
@@ -272,17 +268,14 @@ public class HeaderAnalysisService {
         dto.setSpfResult(entity.getReportedSpf());
         dto.setDkimResult(entity.getReportedDkim());
         dto.setDmarcResult(entity.getReportedDmarc());
+        dto.setArcResult(entity.getReportedArc());
+        dto.setReportedSpf(entity.getReportedSpf());
+        dto.setReportedDkim(entity.getReportedDkim());
+        dto.setReportedDmarc(entity.getReportedDmarc());
+        dto.setReportedArc(entity.getReportedArc());
         dto.setDataMode("EXTERNAL_API");
         dto.setAuthApiProvider(entity.getAuthApiProvider());
         dto.setAuthApiStatus(entity.getAuthApiStatus());
-        dto.setActiveSpfResult(entity.getReportedSpf());
-        dto.setActiveDkimStatus(entity.getReportedDkim());
-        dto.setActiveDmarcStatus(entity.getReportedDmarc());
-        dto.setActiveVerificationSummary(entity.getIndependentVerification());
-
-        if (entity.getCurrentDnsObservation() != null && !entity.getCurrentDnsObservation().isBlank()) {
-            populateActiveAuthFromObservation(dto, entity.getCurrentDnsObservation(), entity.getIndependentVerification());
-        }
 
         return dto;
     }
@@ -354,10 +347,11 @@ public class HeaderAnalysisService {
             dto.setSpfResult(authResult.getSpfResult());
             dto.setDkimResult(authResult.getDkimResult());
             dto.setDmarcResult(authResult.getDmarcResult());
-            dto.setActiveSpfResult(authResult.getSpfResult());
-            dto.setActiveDkimStatus(authResult.getDkimResult());
-            dto.setActiveDmarcStatus(authResult.getDmarcResult());
-            dto.setActiveVerificationSummary(authResult.getSummary());
+            dto.setArcResult(authResult.getArcResult());
+            dto.setReportedSpf(authResult.getSpfResult());
+            dto.setReportedDkim(authResult.getDkimResult());
+            dto.setReportedDmarc(authResult.getDmarcResult());
+            dto.setReportedArc(authResult.getArcResult());
             dto.setDataMode("EXTERNAL_API");
             dto.setAuthApiProvider(authResult.getProviderName());
             dto.setAuthApiStatus(authResult.getStatus());
@@ -635,36 +629,5 @@ public class HeaderAnalysisService {
         } catch (Exception e) {
             return new LinkedHashMap<>();
         }
-    }
-
-    private void populateActiveAuthFromObservation(HeaderAnalysisDto dto, String obsJson, String summary) {
-        if (obsJson != null && !obsJson.isBlank()) {
-            try {
-                JsonNode root = objectMapper.readTree(obsJson);
-                dto.setActiveSpfResult(getNestedJsonText(root, "activeSpf", "status"));
-                dto.setActiveSpfRecord(getNestedJsonText(root, "activeSpf", "record"));
-                dto.setActiveSpfRelayIp(getNestedJsonText(root, "activeSpf", "evaluatedIp"));
-                dto.setActiveDkimStatus(getNestedJsonText(root, "activeDkim", "status"));
-                dto.setActiveDkimRecord(getNestedJsonText(root, "activeDkim", "record"));
-                dto.setActiveDkimSelector(getNestedJsonText(root, "activeDkim", "selector"));
-                dto.setActiveDmarcStatus(getNestedJsonText(root, "activeDmarc", "status"));
-                dto.setActiveDmarcPolicy(getNestedJsonText(root, "activeDmarc", "record"));
-                JsonNode topMode = root.get("dataMode");
-                if (topMode != null && !topMode.isNull() && !topMode.asText().isBlank()) {
-                    dto.setDataMode(topMode.asText());
-                }
-            } catch (Exception ignored) {
-            }
-        }
-        dto.setActiveVerificationSummary(summary != null ? summary : "Active DNS authentication observations persistent.");
-    }
-
-    private String getNestedJsonText(JsonNode root, String parentKey, String childKey) {
-        if (root == null) return null;
-        JsonNode parent = root.get(parentKey);
-        if (parent == null || parent.isNull()) return null;
-        JsonNode child = parent.get(childKey);
-        if (child == null || child.isNull()) return null;
-        return child.asText();
     }
 }

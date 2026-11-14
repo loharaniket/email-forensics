@@ -212,11 +212,6 @@ public class ReportService {
             headers.setDmarcResult(h.getReportedDmarc());
             headers.setArcResult(h.getReportedArc());
             headers.setIdentityMismatchFlags(parseStringList(h.getIdentityMismatchFlags()));
-            if (h.getCurrentDnsObservation() != null && !h.getCurrentDnsObservation().isBlank()) {
-                headers.setActiveSpfResult(extractSimpleJson(h.getCurrentDnsObservation(), "activeSpf", "status"));
-                headers.setActiveDkimResult(extractSimpleJson(h.getCurrentDnsObservation(), "activeDkim", "status"));
-                headers.setActiveDmarcResult(extractSimpleJson(h.getCurrentDnsObservation(), "activeDmarc", "status"));
-            }
             headers.setActiveVerificationSummary(h.getIndependentVerification());
         }
 
