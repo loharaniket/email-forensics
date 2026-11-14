@@ -72,19 +72,16 @@ export default function InvestigationSummary({
   }
 
   const spfStatus =
-    headerAnalysis?.spfResult ||
     headerAnalysis?.reportedSpf ||
-    headerAnalysis?.activeSpfResult ||
+    headerAnalysis?.spfResult ||
     'NONE'
   const dkimStatus =
-    headerAnalysis?.dkimResult ||
     headerAnalysis?.reportedDkim ||
-    headerAnalysis?.activeDkimStatus ||
+    headerAnalysis?.dkimResult ||
     'NONE'
   const dmarcStatus =
-    headerAnalysis?.dmarcResult ||
     headerAnalysis?.reportedDmarc ||
-    headerAnalysis?.activeDmarcStatus ||
+    headerAnalysis?.dmarcResult ||
     'NONE'
 
   const getStatusPill = (status) => {

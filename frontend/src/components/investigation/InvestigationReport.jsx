@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 
 export default function InvestigationReport({
   detail = {},
@@ -454,8 +454,7 @@ export default function InvestigationReport({
                 <thead className="bg-[#F8FAFC] border-b border-[#E4E7EC] text-[11px] text-[#202938] uppercase">
                   <tr>
                     <th className="p-2 font-semibold">Protocol</th>
-                    <th className="p-2 font-semibold">Reported Result</th>
-                    <th className="p-2 font-semibold">Active Verification</th>
+                    <th className="p-2 font-semibold">Authentication Result</th>
                     <th className="p-2 font-semibold">Technical Detail</th>
                   </tr>
                 </thead>
@@ -465,12 +464,8 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono font-semibold">
                       {headerAnalysis?.reportedSpf || headerAnalysis?.spfResult || 'NONE'}
                     </td>
-                    <td className="p-2 font-mono">
-                      {headerAnalysis?.activeSpfResult || 'Not performed'}
-                    </td>
                     <td className="p-2 text-[#202938] text-[11px]">
-                      Relay: {headerAnalysis?.activeSpfRelayIp || 'N/A'}
-                      {headerAnalysis?.activeSpfRecord ? ` | Record: ${headerAnalysis.activeSpfRecord}` : ''}
+                      {headerAnalysis?.activeSpfRelayIp ? `Relay: ${headerAnalysis.activeSpfRelayIp}` : (headerAnalysis?.reportedSpf ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A')}
                     </td>
                   </tr>
                   <tr>
@@ -478,11 +473,8 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono font-semibold">
                       {headerAnalysis?.reportedDkim || headerAnalysis?.dkimResult || 'NONE'}
                     </td>
-                    <td className="p-2 font-mono">
-                      {headerAnalysis?.activeDkimStatus || 'Not performed'}
-                    </td>
                     <td className="p-2 text-[#202938] text-[11px]">
-                      Selector: {headerAnalysis?.activeDkimSelector || 'N/A'} | Domain: {headerAnalysis?.dkimDomain || 'N/A'}
+                      {headerAnalysis?.dkimDomain ? `Domain: ${headerAnalysis.dkimDomain}` : (headerAnalysis?.reportedDkim ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A')}
                     </td>
                   </tr>
                   <tr>
@@ -490,11 +482,8 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono font-semibold">
                       {headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult || 'NONE'}
                     </td>
-                    <td className="p-2 font-mono">
-                      {headerAnalysis?.activeDmarcStatus || 'Not performed'}
-                    </td>
                     <td className="p-2 text-[#202938] text-[11px]">
-                      Policy: {headerAnalysis?.activeDmarcPolicy || 'N/A'}
+                      {headerAnalysis?.fromDomain ? `Host: _dmarc.${headerAnalysis.fromDomain}` : (headerAnalysis?.reportedDmarc ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A')}
                     </td>
                   </tr>
                   <tr>
@@ -502,9 +491,8 @@ export default function InvestigationReport({
                     <td className="p-2 font-mono font-semibold">
                       {headerAnalysis?.reportedArc || 'NONE'}
                     </td>
-                    <td className="p-2 font-mono">N/A</td>
                     <td className="p-2 text-[#202938] text-[11px]">
-                      {headerAnalysis?.reportedArc ? 'ARC validation sealed' : 'No ARC headers present'}
+                      {headerAnalysis?.reportedArc && headerAnalysis.reportedArc !== 'unsupported' ? 'ARC validation sealed' : 'No ARC headers present'}
                     </td>
                   </tr>
                 </tbody>

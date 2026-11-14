@@ -1,4 +1,4 @@
-﻿import React from 'react'
+import React from 'react'
 import {
   Info,
   CheckCircle2,
@@ -59,25 +59,32 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
     <div className="space-y-6">
       {/* Sender authentication overview */}
       <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
-        <div>
-          <h2 className="text-sm font-bold text-[#202938]">
-            Reported email authentication
-          </h2>
-          <p className="text-xs text-[#202938] mt-0.5">
-            Results reported by the receiving mail server in the Authentication-Results header.
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <h2 className="text-sm font-bold text-[#202938]">
+              Email authentication analysis
+            </h2>
+            <p className="text-xs text-[#202938] mt-0.5">
+              Verified via {headerAnalysis?.authApiProvider || 'external API'} with automatic fallback.
+            </p>
+          </div>
+          {headerAnalysis?.authApiProvider && (
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F0FDF4] text-[#15803D] border border-green-200 w-fit">
+              {headerAnalysis.authApiProvider}
+            </span>
+          )}
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {['SPF', 'DKIM', 'DMARC', 'ARC'].map((mechanism) => {
             const val =
               mechanism === 'SPF'
-                ? headerAnalysis?.reportedSpf
+                ? headerAnalysis?.reportedSpf || headerAnalysis?.spfResult
                 : mechanism === 'DKIM'
-                ? headerAnalysis?.reportedDkim
+                ? headerAnalysis?.reportedDkim || headerAnalysis?.dkimResult
                 : mechanism === 'DMARC'
-                ? headerAnalysis?.reportedDmarc
-                : headerAnalysis?.reportedArc
+                ? headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult
+                : headerAnalysis?.reportedArc || headerAnalysis?.arcResult
             const badge = getAuthBadge(val)
             const IconComp = badge.icon
 
@@ -97,109 +104,6 @@ export default function SenderChecks({ headerAnalysis, parsed }) {
             )
           })}
         </div>
-
-      </div>
-
-      {/* Active DNS verification */}
-      <div className="bg-white border border-[#E4E7EC] rounded-xl p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div>
-            <h2 className="text-sm font-bold text-[#202938]">
-              DNS sender verification
-            </h2>
-            <p className="text-xs text-[#202938] mt-0.5">
-              Live checks performed against the sender domain's DNS records.
-            </p>
-          </div>
-          <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-medium bg-[#F0FDF4] text-[#15803D] border border-green-200 w-fit">
-            <span className="h-1.5 w-1.5 rounded-full bg-[#15803D]"></span>
-            Live verified
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {(() => {
-            const spfVal = headerAnalysis?.activeSpfResult || headerAnalysis?.spfResult || headerAnalysis?.reportedSpf
-            const spfBadge = getAuthBadge(spfVal)
-            const SpfIcon = spfBadge.icon
-            return (
-              <div className={`p-4 rounded-xl border ${spfBadge.border} ${spfBadge.bg} space-y-2`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#202938]">SPF record check</span>
-                  <SpfIcon className={`h-4 w-4 ${spfBadge.text}`} />
-                </div>
-                <span className={`text-base font-bold block ${spfBadge.text}`}>
-                  {spfBadge.label}
-                </span>
-                <div className="pt-2 text-xs text-[#202938] space-y-1 border-t border-slate-200/60">
-                  <div>Relay IP: <span className="font-mono text-[#202938]">{headerAnalysis?.activeSpfRelayIp || '(Not found)'}</span></div>
-                  {headerAnalysis?.activeSpfRecord && (
-                    <div className="truncate text-[11px] font-mono text-[#202938]" title={headerAnalysis.activeSpfRecord}>
-                      Record: {headerAnalysis.activeSpfRecord}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })()}
-
-          {(() => {
-            const dkimVal = headerAnalysis?.activeDkimStatus || headerAnalysis?.dkimResult || headerAnalysis?.reportedDkim
-            const dkimBadge = getAuthBadge(dkimVal)
-            const DkimIcon = dkimBadge.icon
-            return (
-              <div className={`p-4 rounded-xl border ${dkimBadge.border} ${dkimBadge.bg} space-y-2`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#202938]">DKIM public key</span>
-                  <DkimIcon className={`h-4 w-4 ${dkimBadge.text}`} />
-                </div>
-                <span className={`text-base font-bold block ${dkimBadge.text}`}>
-                  {dkimBadge.label}
-                </span>
-                <div className="pt-2 text-xs text-[#202938] space-y-1 border-t border-slate-200/60">
-                  <div>Selector: <span className="font-mono text-[#202938]">{headerAnalysis?.activeDkimSelector || 'N/A'}</span></div>
-                  {headerAnalysis?.activeDkimRecord && (
-                    <div className="truncate text-[11px] font-mono text-[#202938]" title={headerAnalysis.activeDkimRecord}>
-                      Key: {headerAnalysis.activeDkimRecord}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })()}
-
-          {(() => {
-            const dmarcVal = headerAnalysis?.activeDmarcStatus || headerAnalysis?.dmarcResult || headerAnalysis?.reportedDmarc
-            const dmarcBadge = getAuthBadge(dmarcVal)
-            const DmarcIcon = dmarcBadge.icon
-            return (
-              <div className={`p-4 rounded-xl border ${dmarcBadge.border} ${dmarcBadge.bg} space-y-2`}>
-                <div className="flex items-center justify-between">
-                  <span className="text-xs font-semibold text-[#202938]">DMARC policy</span>
-                  <DmarcIcon className={`h-4 w-4 ${dmarcBadge.text}`} />
-                </div>
-                <span className={`text-base font-bold block ${dmarcBadge.text}`}>
-                  {dmarcBadge.label}
-                </span>
-                <div className="pt-2 text-xs text-[#202938] space-y-1 border-t border-slate-200/60">
-                  <div>Host: <span className="font-mono text-[#202938]">{headerAnalysis?.fromDomain ? `_dmarc.${headerAnalysis.fromDomain}` : 'N/A'}</span></div>
-                  {headerAnalysis?.activeDmarcPolicy && (
-                    <div className="truncate text-[11px] font-mono text-[#202938]" title={headerAnalysis.activeDmarcPolicy}>
-                      Policy: {headerAnalysis.activeDmarcPolicy}
-                    </div>
-                  )}
-                </div>
-              </div>
-            )
-          })()}
-        </div>
-
-        {headerAnalysis?.activeVerificationSummary && (
-          <div className="p-3.5 rounded-lg bg-[#EFF6FF] border border-blue-100 text-xs text-[#2563EB] flex items-start gap-2">
-            <Info className="h-4 w-4 shrink-0 mt-0.5" />
-            <span>{headerAnalysis.activeVerificationSummary}</span>
-          </div>
-        )}
       </div>
 
       {/* Sender and recipient headers */}
