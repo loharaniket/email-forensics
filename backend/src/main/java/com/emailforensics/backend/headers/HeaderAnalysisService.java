@@ -10,7 +10,6 @@ import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.mail.Header;
 import jakarta.mail.Session;
@@ -25,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -59,7 +57,6 @@ public class HeaderAnalysisService {
     private static final Pattern FROM_HOST_PATTERN = Pattern.compile("(?i)\\bfrom\\s+([^\\s;]+)");
     private static final Pattern BY_HOST_PATTERN = Pattern.compile("(?i)\\bby\\s+([^\\s;]+)");
     private static final Pattern PROTOCOL_PATTERN = Pattern.compile("(?i)\\bwith\\s+([^\\s;]+)");
-    private static final Pattern DKIM_DOMAIN_PATTERN = Pattern.compile("(?i)\\bd=([a-zA-Z0-9.-]+)");
     private static final Pattern EMAIL_IN_TEXT_PATTERN = Pattern.compile("([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})");
 
     @Autowired
@@ -75,14 +72,6 @@ public class HeaderAnalysisService {
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
         this.emailHeaderService = emailHeaderService;
-    }
-
-    public HeaderAnalysisService(AnalysisResultRepository analysisResultRepository,
-                                 ReceivedHopRepository receivedHopRepository,
-                                 EmailEvidenceRepository evidenceRepository,
-                                 AnalysisRunRepository analysisRunRepository,
-                                 EvidenceStorageService storageService) {
-        this(analysisResultRepository, receivedHopRepository, evidenceRepository, analysisRunRepository, storageService, null);
     }
 
     @Transactional
@@ -124,7 +113,7 @@ public class HeaderAnalysisService {
             entity.setFromDomain(rawData.fromDomain);
             entity.setReplyTo(rawData.replyToAddress);
             entity.setReturnPath(rawData.returnPathAddress);
-            entity.setDkimDomain(rawData.dkimDomain != null ? rawData.dkimDomain : authResult.getDkimDomain());
+            entity.setDkimDomain(authResult.getDkimDomain());
             entity.setIdentityMismatchFlags(formatFlagsJson(rawData.mismatchFlags));
             entity.setRawHeadersJson(formatRawHeadersJson(rawData.rawHeaders));
 
@@ -201,7 +190,7 @@ public class HeaderAnalysisService {
                     rawData.fromDomain,
                     rawData.replyToAddress,
                     rawData.returnPathAddress,
-                    rawData.dkimDomain,
+                    authResult.getDkimDomain(),
                     authResult.getSpfResult(),
                     authResult.getDkimResult(),
                     authResult.getDmarcResult(),
@@ -307,14 +296,6 @@ public class HeaderAnalysisService {
         return dtos;
     }
 
-    public HeaderAnalysisDto analyzeStream(String storageKey) {
-        try (InputStream in = storageService.loadAsResource(storageKey).getInputStream()) {
-            return analyzeStream(in);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to parse email headers", e);
-        }
-    }
-
     public HeaderAnalysisDto analyzeStream(InputStream in) {
         try {
             byte[] emlBytes = in.readAllBytes();
@@ -333,7 +314,7 @@ public class HeaderAnalysisService {
                     rawData.fromDomain,
                     rawData.replyToAddress,
                     rawData.returnPathAddress,
-                    rawData.dkimDomain,
+                    authResult.getDkimDomain(),
                     authResult.getSpfResult(),
                     authResult.getDkimResult(),
                     authResult.getDmarcResult(),
@@ -360,14 +341,6 @@ public class HeaderAnalysisService {
 
         } catch (Exception e) {
             throw new IllegalStateException("Failed to parse email headers", e);
-        }
-    }
-
-    public List<ReceivedHopDto> extractHopsFromStream(String storageKey) {
-        try (InputStream in = storageService.loadAsResource(storageKey).getInputStream()) {
-            return extractHopsFromStream(in);
-        } catch (Exception e) {
-            throw new IllegalStateException("Failed to extract received hops", e);
         }
     }
 
@@ -469,7 +442,6 @@ public class HeaderAnalysisService {
         String fromDomain;
         String replyToAddress;
         String returnPathAddress;
-        String dkimDomain;
         String rawHeadersText;
         Map<String, List<String>> rawHeaders = new LinkedHashMap<>();
         List<String> mismatchFlags = new ArrayList<>();
@@ -494,19 +466,11 @@ public class HeaderAnalysisService {
             String fromRaw = getFirstHeader(message, "From");
             String replyToRaw = getFirstHeader(message, "Reply-To");
             String returnPathRaw = getFirstHeader(message, "Return-Path");
-            String dkimSigRaw = getFirstHeader(message, "DKIM-Signature");
 
             data.fromAddress = extractEmailAddress(fromRaw);
             data.fromDomain = extractDomain(data.fromAddress);
             data.replyToAddress = extractEmailAddress(replyToRaw);
             data.returnPathAddress = extractEmailAddress(returnPathRaw);
-
-            if (dkimSigRaw != null) {
-                Matcher dkimMatcher = DKIM_DOMAIN_PATTERN.matcher(dkimSigRaw);
-                if (dkimMatcher.find()) {
-                    data.dkimDomain = dkimMatcher.group(1).toLowerCase(Locale.ROOT);
-                }
-            }
 
             if (data.replyToAddress != null && data.fromDomain != null) {
                 String replyToDomain = extractDomain(data.replyToAddress);
@@ -519,12 +483,6 @@ public class HeaderAnalysisService {
                 String returnPathDomain = extractDomain(data.returnPathAddress);
                 if (returnPathDomain != null && !returnPathDomain.equalsIgnoreCase(data.fromDomain)) {
                     data.mismatchFlags.add("RETURN_PATH_MISMATCH: Return-Path envelope (@" + returnPathDomain + ") differs from From domain (@" + data.fromDomain + ")");
-                }
-            }
-
-            if (data.dkimDomain != null && data.fromDomain != null) {
-                if (!data.fromDomain.equalsIgnoreCase(data.dkimDomain) && !data.fromDomain.endsWith("." + data.dkimDomain)) {
-                    data.mismatchFlags.add("DKIM_DOMAIN_MISMATCH: DKIM signing domain (" + data.dkimDomain + ") does not match From domain (" + data.fromDomain + ")");
                 }
             }
 

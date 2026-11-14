@@ -21,7 +21,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +54,7 @@ class HeaderAnalysisServiceTest {
         mockAuth.setDkimResult("pass");
         mockAuth.setDmarcResult("fail");
         mockAuth.setArcResult("none");
+        mockAuth.setDkimDomain("phish-sender.test");
         mockAuth.setSummary("Validated via Powerline.ai.");
 
         when(mockEmailHeaderService.analyzeHeader(any())).thenReturn(mockAuth);
@@ -141,21 +141,23 @@ class HeaderAnalysisServiceTest {
     }
 
     @Test
-    void shouldFlagDkimDomainMismatchWhenPresent() {
+    void shouldUseApiDkimDomainAndNotGenerateLocalMismatchFlag() {
+        HeaderAuthResult mockAuth = HeaderAuthResult.success("Powerline.ai");
+        mockAuth.setDkimDomain("unrelated-signer.com");
         when(mockEmailHeaderService.analyzeHeader(any()))
-                .thenReturn(HeaderAuthResult.allUnavailable("Service down"));
+                .thenReturn(mockAuth);
 
-        String dkimMismatchEmail = "From: CEO <ceo@company.com>\r\n" +
+        String email = "From: CEO <ceo@company.com>\r\n" +
                 "DKIM-Signature: v=1; a=rsa-sha256; d=unrelated-signer.com;\r\n" +
                 "Subject: Test\r\n\r\nHello";
-        InputStream in = new ByteArrayInputStream(dkimMismatchEmail.getBytes(StandardCharsets.UTF_8));
+        InputStream in = new ByteArrayInputStream(email.getBytes(StandardCharsets.UTF_8));
         HeaderAnalysisDto dto = service.analyzeStream(in);
 
         assertEquals("company.com", dto.getFromDomain());
         assertEquals("unrelated-signer.com", dto.getDkimDomain());
         boolean hasDkimMismatch = dto.getIdentityMismatchFlags().stream()
-                .anyMatch(f -> f.startsWith("DKIM_DOMAIN_MISMATCH"));
-        assertTrue(hasDkimMismatch);
+                .anyMatch(f -> f.contains("DKIM_DOMAIN_MISMATCH"));
+        assertFalse(hasDkimMismatch);
     }
 
     @Test

@@ -324,12 +324,6 @@ public class RiskScoringService {
                             "From display name contains an embedded email address or deceptive brand mismatch.",
                             "From: " + h.getFromAddress()
                     ), "DISPLAY_NAME");
-                } else if (normalized.startsWith("DKIM_DOMAIN_MISMATCH") || normalized.contains("DKIM_DOMAIN")) {
-                    addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                            UUID.randomUUID(), run, CAT_IDENTITY, "IDENTITY_DKIM_DOMAIN_MISMATCH", "LOW", 10,
-                            "DKIM signature domain does not match From header domain.",
-                            "From: " + h.getFromAddress() + " vs DKIM: " + h.getDkimDomain()
-                    ), "DKIM_MISMATCH");
                 }
             }
         }
@@ -670,13 +664,13 @@ public class RiskScoringService {
         boolean authExecuted = headerAnalysis != null;
         int authCount = 0;
         if (headerAnalysis != null) {
-            if (headerAnalysis.getReportedSpf() != null || headerAnalysis.getActiveSpfResult() != null || headerAnalysis.getSpfResult() != null) {
+            if (headerAnalysis.getReportedSpf() != null || headerAnalysis.getSpfResult() != null) {
                 authCount++;
             }
-            if (headerAnalysis.getReportedDkim() != null || headerAnalysis.getActiveDkimStatus() != null || headerAnalysis.getDkimResult() != null) {
+            if (headerAnalysis.getReportedDkim() != null || headerAnalysis.getDkimResult() != null) {
                 authCount++;
             }
-            if (headerAnalysis.getReportedDmarc() != null || headerAnalysis.getActiveDmarcStatus() != null || headerAnalysis.getDmarcResult() != null) {
+            if (headerAnalysis.getReportedDmarc() != null || headerAnalysis.getDmarcResult() != null) {
                 authCount++;
             }
         }

@@ -465,7 +465,7 @@ export default function InvestigationReport({
                       {headerAnalysis?.reportedSpf || headerAnalysis?.spfResult || 'NONE'}
                     </td>
                     <td className="p-2 text-[#202938] text-[11px]">
-                      {headerAnalysis?.activeSpfRelayIp ? `Relay: ${headerAnalysis.activeSpfRelayIp}` : (headerAnalysis?.reportedSpf ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A')}
+                      {headerAnalysis?.reportedSpf ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A'}
                     </td>
                   </tr>
                   <tr>
@@ -483,7 +483,7 @@ export default function InvestigationReport({
                       {headerAnalysis?.reportedDmarc || headerAnalysis?.dmarcResult || 'NONE'}
                     </td>
                     <td className="p-2 text-[#202938] text-[11px]">
-                      {headerAnalysis?.fromDomain ? `Host: _dmarc.${headerAnalysis.fromDomain}` : (headerAnalysis?.reportedDmarc ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A')}
+                      {headerAnalysis?.reportedDmarc ? `Validated via ${headerAnalysis?.authApiProvider || 'API'}` : 'N/A'}
                     </td>
                   </tr>
                   <tr>
