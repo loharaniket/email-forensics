@@ -6,8 +6,14 @@ import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
+import com.emailforensics.backend.evidence.EmailEvidence;
+import com.emailforensics.backend.evidence.EmailEvidenceRepository;
+import com.emailforensics.backend.evidence.EvidenceStorageService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
+import org.mockito.Mockito;
+import org.springframework.core.io.ByteArrayResource;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -15,7 +21,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.time.Instant;
+import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -23,19 +32,33 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 class HeaderAnalysisServiceTest {
 
     private HeaderAnalysisService service;
+    private EmailHeaderService mockEmailHeaderService;
     private final Path fixturesDir = Paths.get("..", "test-fixtures", "eml");
 
     @BeforeEach
     void setUp() {
-        service = new HeaderAnalysisService(null, null, null, null, null);
+        mockEmailHeaderService = Mockito.mock(EmailHeaderService.class);
+        service = new HeaderAnalysisService(null, null, null, null, null, mockEmailHeaderService);
     }
 
     @Test
     void shouldExtractHeadersAndDetectMismatches() throws Exception {
+        HeaderAuthResult mockAuth = HeaderAuthResult.success("Powerline.ai");
+        mockAuth.setSpfResult("pass");
+        mockAuth.setDkimResult("pass");
+        mockAuth.setDmarcResult("fail");
+        mockAuth.setArcResult("none");
+        mockAuth.setSummary("Validated via Powerline.ai.");
+
+        when(mockEmailHeaderService.analyzeHeader(any())).thenReturn(mockAuth);
+
         Path emlPath = fixturesDir.resolve("06-received-chain.eml");
         try (InputStream in = Files.newInputStream(emlPath)) {
             HeaderAnalysisDto dto = service.analyzeStream(in);
@@ -50,9 +73,11 @@ class HeaderAnalysisServiceTest {
             assertEquals("pass", dto.getReportedDkim());
             assertEquals("fail", dto.getReportedDmarc());
             assertEquals("none", dto.getReportedArc());
+            assertEquals("Powerline.ai", dto.getAuthApiProvider());
+            assertEquals("SUCCESS", dto.getAuthApiStatus());
 
             assertNotNull(dto.getVerificationNote());
-            assertTrue(dto.getVerificationNote().contains("Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported"));
+            assertTrue(dto.getVerificationNote().contains("Powerline.ai"));
 
             List<String> flags = dto.getIdentityMismatchFlags();
             assertNotNull(flags);
@@ -117,6 +142,9 @@ class HeaderAnalysisServiceTest {
 
     @Test
     void shouldFlagDkimDomainMismatchWhenPresent() {
+        when(mockEmailHeaderService.analyzeHeader(any()))
+                .thenReturn(HeaderAuthResult.allUnavailable("Service down"));
+
         String dkimMismatchEmail = "From: CEO <ceo@company.com>\r\n" +
                 "DKIM-Signature: v=1; a=rsa-sha256; d=unrelated-signer.com;\r\n" +
                 "Subject: Test\r\n\r\nHello";
@@ -132,17 +160,17 @@ class HeaderAnalysisServiceTest {
 
     @Test
     void shouldHandleLargeHeaderJsonWithoutStackOverflow() {
-        AnalysisRunRepository mockRunRepo = org.mockito.Mockito.mock(AnalysisRunRepository.class);
-        AnalysisResultRepository mockResultRepo = org.mockito.Mockito.mock(AnalysisResultRepository.class);
-        ReceivedHopRepository mockHopRepo = org.mockito.Mockito.mock(ReceivedHopRepository.class);
+        AnalysisRunRepository mockRunRepo = Mockito.mock(AnalysisRunRepository.class);
+        AnalysisResultRepository mockResultRepo = Mockito.mock(AnalysisResultRepository.class);
+        ReceivedHopRepository mockHopRepo = Mockito.mock(ReceivedHopRepository.class);
 
         HeaderAnalysisService headerService = new HeaderAnalysisService(
-                mockResultRepo, mockHopRepo, null, mockRunRepo, null
+                mockResultRepo, mockHopRepo, null, mockRunRepo, null, null
         );
 
-        java.util.UUID emailId = java.util.UUID.randomUUID();
-        java.util.UUID runId = java.util.UUID.randomUUID();
-        com.emailforensics.backend.evidence.AnalysisRun run = new com.emailforensics.backend.evidence.AnalysisRun();
+        UUID emailId = UUID.randomUUID();
+        UUID runId = UUID.randomUUID();
+        AnalysisRun run = new AnalysisRun();
         run.setId(runId);
 
         StringBuilder sb = new StringBuilder("{");
@@ -152,21 +180,85 @@ class HeaderAnalysisServiceTest {
         }
         sb.append("}");
 
-        com.emailforensics.backend.analysis.AnalysisResult result = new com.emailforensics.backend.analysis.AnalysisResult();
+        AnalysisResult result = new AnalysisResult();
         result.setHeaderResultId(UUID.randomUUID());
         result.setAnalysisRun(run);
         result.setRawHeadersJson(sb.toString());
         result.setFromAddress("sender@example.com");
 
-        org.mockito.Mockito.when(mockRunRepo.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId))
-                .thenReturn(java.util.Optional.of(run));
-        org.mockito.Mockito.when(mockResultRepo.findByAnalysisRunId(runId))
-                .thenReturn(java.util.Optional.of(result));
-        org.mockito.Mockito.when(mockHopRepo.findByAnalysisRunIdOrderByHopOrderAsc(runId))
-                .thenReturn(java.util.Collections.emptyList());
+        when(mockRunRepo.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId))
+                .thenReturn(Optional.of(run));
+        when(mockResultRepo.findByAnalysisRunId(runId))
+                .thenReturn(Optional.of(result));
+        when(mockHopRepo.findByAnalysisRunIdOrderByHopOrderAsc(runId))
+                .thenReturn(Collections.emptyList());
 
         HeaderAnalysisDto dto = headerService.getHeaderAnalysis(emailId);
         assertNotNull(dto);
         assertEquals(200, dto.getRawHeaders().size());
+    }
+
+    @Test
+    void shouldAnalyzeAndSaveHeadersWithExternalApiData() {
+        AnalysisResultRepository mockResultRepo = Mockito.mock(AnalysisResultRepository.class);
+        ReceivedHopRepository mockHopRepo = Mockito.mock(ReceivedHopRepository.class);
+        EmailEvidenceRepository mockEvidenceRepo = Mockito.mock(EmailEvidenceRepository.class);
+        AnalysisRunRepository mockRunRepo = Mockito.mock(AnalysisRunRepository.class);
+        EvidenceStorageService mockStorage = Mockito.mock(EvidenceStorageService.class);
+
+        HeaderAnalysisService headerService = new HeaderAnalysisService(
+                mockResultRepo, mockHopRepo, mockEvidenceRepo, mockRunRepo, mockStorage, mockEmailHeaderService
+        );
+
+        UUID emailId = UUID.randomUUID();
+        UUID runId = UUID.randomUUID();
+
+        EmailEvidence evidence = new EmailEvidence();
+        evidence.setId(emailId);
+        evidence.setStorageKey("vault/test.eml");
+
+        AnalysisRun run = new AnalysisRun();
+        run.setId(runId);
+        run.setEmailEvidence(evidence);
+
+        String rawEml = "From: Alice <alice@example.com>\r\n" +
+                "To: Bob <bob@company.com>\r\n" +
+                "Subject: Test email\r\n" +
+                "Received: from mail.example.com ([198.51.100.1]) by mx.company.com; Mon, 14 Nov 2026 10:00:00 +0000\r\n\r\n" +
+                "Hello Bob";
+
+        when(mockEvidenceRepo.findById(emailId)).thenReturn(Optional.of(evidence));
+        when(mockRunRepo.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)).thenReturn(Optional.of(run));
+        when(mockStorage.loadAsResource("vault/test.eml"))
+                .thenReturn(new ByteArrayResource(rawEml.getBytes(StandardCharsets.UTF_8)));
+
+        HeaderAuthResult mockAuthResult = HeaderAuthResult.success("Powerline.ai");
+        mockAuthResult.setSpfResult("pass");
+        mockAuthResult.setDkimResult("pass");
+        mockAuthResult.setDmarcResult("pass");
+        mockAuthResult.setArcResult("none");
+        mockAuthResult.setRawResponseJson("{\"status\":\"success\"}");
+        mockAuthResult.setSummary("SPF: pass, DKIM: pass, DMARC: pass");
+
+        when(mockEmailHeaderService.analyzeHeader(any())).thenReturn(mockAuthResult);
+        when(mockResultRepo.findByAnalysisRunId(runId)).thenReturn(Optional.empty());
+        when(mockResultRepo.saveAndFlush(any())).thenAnswer(invocation -> invocation.getArgument(0));
+        when(mockHopRepo.findByAnalysisRunIdOrderByHopOrderAsc(runId)).thenReturn(Collections.emptyList());
+
+        HeaderAnalysisDto resultDto = headerService.analyzeAndSaveHeaders(emailId);
+
+        assertNotNull(resultDto);
+        assertEquals("alice@example.com", resultDto.getFromAddress());
+        assertEquals("example.com", resultDto.getFromDomain());
+        assertEquals("pass", resultDto.getReportedSpf());
+        assertEquals("pass", resultDto.getReportedDkim());
+        assertEquals("pass", resultDto.getReportedDmarc());
+        assertEquals("Powerline.ai", resultDto.getAuthApiProvider());
+        assertEquals("SUCCESS", resultDto.getAuthApiStatus());
+
+        ArgumentCaptor<AnalysisResult> resultCaptor = ArgumentCaptor.forClass(AnalysisResult.class);
+        verify(mockResultRepo).saveAndFlush(resultCaptor.capture());
+        AnalysisResult saved = resultCaptor.getValue();
+        assertEquals("alice@example.com", saved.getFromAddress());
     }
 }

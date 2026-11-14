@@ -6,7 +6,6 @@ import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
 import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
-import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
@@ -20,10 +19,13 @@ import jakarta.mail.internet.MailDateFormat;
 import jakarta.mail.internet.MimeMessage;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.io.ByteArrayInputStream;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -40,6 +42,10 @@ import java.util.UUID;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+/**
+ * Service that extracts RFC 5322 header metadata and delegates email authentication
+ * validation (SPF, DKIM, DMARC, ARC, and Hops) to external APIs via EmailHeaderService.
+ */
 @Service
 public class HeaderAnalysisService {
 
@@ -50,7 +56,7 @@ public class HeaderAnalysisService {
     private final EmailEvidenceRepository evidenceRepository;
     private final AnalysisRunRepository analysisRunRepository;
     private final EvidenceStorageService storageService;
-    private final EmailAuthService emailAuthService;
+    private final EmailHeaderService emailHeaderService;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     private static final Pattern IP_PATTERN = Pattern.compile("(?:\\[|\\()([0-9]{1,3}(?:\\.[0-9]{1,3}){3}|[a-fA-F0-9:]+)(?:\\]|\\))");
@@ -58,25 +64,21 @@ public class HeaderAnalysisService {
     private static final Pattern BY_HOST_PATTERN = Pattern.compile("(?i)\\bby\\s+([^\\s;]+)");
     private static final Pattern PROTOCOL_PATTERN = Pattern.compile("(?i)\\bwith\\s+([^\\s;]+)");
     private static final Pattern DKIM_DOMAIN_PATTERN = Pattern.compile("(?i)\\bd=([a-zA-Z0-9.-]+)");
-    private static final Pattern AUTH_SPF_PATTERN = Pattern.compile("(?i)\\bspf=([a-zA-Z]+)");
-    private static final Pattern AUTH_DKIM_PATTERN = Pattern.compile("(?i)\\bdkim=([a-zA-Z]+)");
-    private static final Pattern AUTH_DMARC_PATTERN = Pattern.compile("(?i)\\bdmarc=([a-zA-Z]+)");
-    private static final Pattern AUTH_ARC_PATTERN = Pattern.compile("(?i)\\barc=([a-zA-Z]+)");
     private static final Pattern EMAIL_IN_TEXT_PATTERN = Pattern.compile("([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})");
 
-    @org.springframework.beans.factory.annotation.Autowired
+    @Autowired
     public HeaderAnalysisService(AnalysisResultRepository analysisResultRepository,
                                  ReceivedHopRepository receivedHopRepository,
                                  EmailEvidenceRepository evidenceRepository,
                                  AnalysisRunRepository analysisRunRepository,
                                  EvidenceStorageService storageService,
-                                 EmailAuthService emailAuthService) {
+                                 EmailHeaderService emailHeaderService) {
         this.analysisResultRepository = analysisResultRepository;
         this.receivedHopRepository = receivedHopRepository;
         this.evidenceRepository = evidenceRepository;
         this.analysisRunRepository = analysisRunRepository;
         this.storageService = storageService;
-        this.emailAuthService = emailAuthService;
+        this.emailHeaderService = emailHeaderService;
     }
 
     public HeaderAnalysisService(AnalysisResultRepository analysisResultRepository,
@@ -96,10 +98,27 @@ public class HeaderAnalysisService {
             AnalysisRun run = analysisRunRepository.findTopByEmailEvidenceIdOrderByCreatedAtDesc(emailId)
                     .orElseThrow(() -> new IllegalArgumentException("Analysis run not found for evidence: " + emailId));
 
-            AnalysisResult existingEntity = analysisResultRepository.findByAnalysisRunId(run.getId()).orElse(null);
-            HeaderAnalysisDto dto = analyzeStream(evidence.getStorageKey());
-            dto.setAnalysisRunId(run.getId());
+            // Load raw email bytes from storage
+            byte[] emlBytes;
+            try (InputStream in = storageService.loadAsResource(evidence.getStorageKey()).getInputStream()) {
+                emlBytes = in.readAllBytes();
+            } catch (Exception e) {
+                throw new IllegalStateException("Failed to load email resource for header analysis: " + emailId, e);
+            }
 
+            // Extract basic headers and mismatch signals
+            RawHeaderData rawData = extractRawHeaderData(emlBytes);
+
+            // Call external API for email authentication (Powerline.ai primary, Testmail.app fallback)
+            HeaderAuthResult authResult;
+            if (emailHeaderService != null) {
+                authResult = emailHeaderService.analyzeHeader(rawData.rawHeadersText);
+            } else {
+                authResult = HeaderAuthResult.allUnavailable("EmailHeaderService is not configured.");
+            }
+
+            // Save result into AnalysisResult entity
+            AnalysisResult existingEntity = analysisResultRepository.findByAnalysisRunId(run.getId()).orElse(null);
             AnalysisResult entity = existingEntity != null ? existingEntity : new AnalysisResult(run);
             if (entity.getHeaderResultId() == null) {
                 entity.setHeaderResultId(UUID.randomUUID());
@@ -107,100 +126,120 @@ public class HeaderAnalysisService {
             if (entity.getHeaderCreatedAt() == null) {
                 entity.setHeaderCreatedAt(Instant.now());
             }
+
             entity.setAnalysisRun(run);
-            entity.setFromAddress(dto.getFromAddress());
-            entity.setFromDomain(dto.getFromDomain());
-            entity.setReplyTo(dto.getReplyTo());
-            entity.setReturnPath(dto.getReturnPath());
-            entity.setDkimDomain(dto.getDkimDomain());
-            entity.setReportedSpf(dto.getReportedSpf());
-            entity.setReportedDkim(dto.getReportedDkim());
-            entity.setReportedDmarc(dto.getReportedDmarc());
-            entity.setReportedArc(dto.getReportedArc());
-            entity.setIdentityMismatchFlags(formatFlagsJson(dto.getIdentityMismatchFlags()));
-            entity.setRawHeadersJson(formatRawHeadersJson(dto.getRawHeaders()));
+            entity.setFromAddress(rawData.fromAddress);
+            entity.setFromDomain(rawData.fromDomain);
+            entity.setReplyTo(rawData.replyToAddress);
+            entity.setReturnPath(rawData.returnPathAddress);
+            entity.setDkimDomain(rawData.dkimDomain != null ? rawData.dkimDomain : authResult.getDkimDomain());
+            entity.setIdentityMismatchFlags(formatFlagsJson(rawData.mismatchFlags));
+            entity.setRawHeadersJson(formatRawHeadersJson(rawData.rawHeaders));
+
+            // Save external API results (provider name, status, verdicts, raw response)
+            if (emailHeaderService != null) {
+                emailHeaderService.saveResult(entity, authResult);
+            } else {
+                entity.setAuthApiProvider(authResult.getProviderName());
+                entity.setAuthApiStatus(authResult.getStatus());
+                entity.setReportedSpf(authResult.getSpfResult());
+                entity.setReportedDkim(authResult.getDkimResult());
+                entity.setReportedDmarc(authResult.getDmarcResult());
+                entity.setReportedArc(authResult.getArcResult());
+                entity.setIndependentVerification(authResult.getSummary());
+            }
+
             entity = analysisResultRepository.saveAndFlush(entity);
 
+            // Handle Received Hops
             List<ReceivedHopDto> hopDtos = new ArrayList<>();
             List<ReceivedHop> existingHops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
-        if (existingHops.isEmpty()) {
-            List<ReceivedHopDto> hops = extractHopsFromStream(evidence.getStorageKey());
-            for (ReceivedHopDto hopDto : hops) {
-                ReceivedHop hopEntity = new ReceivedHop(
-                        UUID.randomUUID(),
-                        run,
-                        hopDto.getHopOrder(),
-                        hopDto.getFromHost(),
-                        hopDto.getByHost(),
-                        hopDto.getProtocol(),
-                        hopDto.getHopIp(),
-                        hopDto.getHopTimestamp(),
-                        hopDto.getDelaySeconds(),
-                        hopDto.getRawHopLine(),
-                        hopDto.getParsingWarning()
-                );
+
+            if (existingHops.isEmpty()) {
+                List<ReceivedHopDto> hopsToSave;
+                if (authResult.getHops() != null && !authResult.getHops().isEmpty()) {
+                    hopsToSave = authResult.getHops();
+                } else {
+                    hopsToSave = extractHopsFromStream(new ByteArrayInputStream(emlBytes));
+                }
+
+                for (ReceivedHopDto hopDto : hopsToSave) {
+                    ReceivedHop hopEntity = new ReceivedHop(
+                            UUID.randomUUID(),
+                            run,
+                            hopDto.getHopOrder(),
+                            hopDto.getFromHost(),
+                            hopDto.getByHost(),
+                            hopDto.getProtocol(),
+                            hopDto.getHopIp(),
+                            hopDto.getHopTimestamp(),
+                            hopDto.getDelaySeconds(),
+                            hopDto.getRawHopLine(),
+                            hopDto.getParsingWarning()
+                    );
+                    try {
+                        receivedHopRepository.save(hopEntity);
+                    } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
+                    }
+                }
                 try {
-                    receivedHopRepository.save(hopEntity);
+                    receivedHopRepository.flush();
                 } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
                 }
-            }
-            try {
-                receivedHopRepository.flush();
-            } catch (org.springframework.dao.DataIntegrityViolationException ignored) {
-            }
-            dto.setTotalHopsCount(hops.size());
-            hopDtos = hops;
-        } else {
-            dto.setTotalHopsCount(existingHops.size());
-            for (ReceivedHop h : existingHops) {
-                hopDtos.add(new ReceivedHopDto(
-                        h.getId(),
-                        h.getHopOrder(),
-                        h.getFromHost(),
-                        h.getByHost(),
-                        h.getProtocol(),
-                        h.getHopIp(),
-                        h.getHopTimestamp(),
-                        h.getDelaySeconds(),
-                        h.getRawHopLine(),
-                        h.getParsingWarning()
-                ));
-            }
-        }
-
-        if (emailAuthService != null) {
-            String dkimHeader = null;
-            if (dto.getRawHeaders() != null && dto.getRawHeaders().containsKey("DKIM-Signature")) {
-                List<String> dkimVals = dto.getRawHeaders().get("DKIM-Signature");
-                if (dkimVals != null && !dkimVals.isEmpty()) {
-                    dkimHeader = dkimVals.get(0);
+                hopDtos = hopsToSave;
+            } else {
+                for (ReceivedHop h : existingHops) {
+                    hopDtos.add(new ReceivedHopDto(
+                            h.getId(),
+                            h.getHopOrder(),
+                            h.getFromHost(),
+                            h.getByHost(),
+                            h.getProtocol(),
+                            h.getHopIp(),
+                            h.getHopTimestamp(),
+                            h.getDelaySeconds(),
+                            h.getRawHopLine(),
+                            h.getParsingWarning()
+                    ));
                 }
             }
-            try {
-                String returnPathDomain = extractDomain(dto.getReturnPath());
-                EmailAuthService.ActiveAuthResult activeResult = emailAuthService.performActiveAuthentication(
-                        dto.getFromDomain(), returnPathDomain, dkimHeader, hopDtos
-                );
-                dto.setActiveSpfResult(activeResult.getActiveSpfResult());
-                dto.setActiveSpfRecord(activeResult.getActiveSpfRecord());
-                dto.setActiveSpfRelayIp(activeResult.getActiveSpfRelayIp());
-                dto.setActiveDkimStatus(activeResult.getActiveDkimStatus());
-                dto.setActiveDkimRecord(activeResult.getActiveDkimRecord());
-                dto.setActiveDkimSelector(activeResult.getActiveDkimSelector());
-                dto.setActiveDmarcStatus(activeResult.getActiveDmarcStatus());
-                dto.setActiveDmarcPolicy(activeResult.getActiveDmarcPolicy());
-                dto.setActiveVerificationSummary(activeResult.getSummary());
 
-                entity.setIndependentVerification(activeResult.getSummary());
-                entity.setCurrentDnsObservation(activeResult.getDnsObservationJson());
-                analysisResultRepository.save(entity);
-                analysisResultRepository.flush();
-            } catch (Exception e) {
-                log.warn("Active email authentication failed for evidence ID: {}", emailId, e);
-            }
-        }
+            // Construct and return HeaderAnalysisDto
+            String verificationNote = "Authentication results validated via " + authResult.getProviderName() + ".";
+            HeaderAnalysisDto dto = new HeaderAnalysisDto(
+                    run.getId(),
+                    rawData.fromAddress,
+                    rawData.fromDomain,
+                    rawData.replyToAddress,
+                    rawData.returnPathAddress,
+                    rawData.dkimDomain,
+                    authResult.getSpfResult(),
+                    authResult.getDkimResult(),
+                    authResult.getDmarcResult(),
+                    authResult.getArcResult(),
+                    rawData.mismatchFlags,
+                    verificationNote,
+                    rawData.rawHeaders,
+                    hopDtos.size()
+            );
 
-        return dto;
+            dto.setSpfResult(authResult.getSpfResult());
+            dto.setDkimResult(authResult.getDkimResult());
+            dto.setDmarcResult(authResult.getDmarcResult());
+            dto.setActiveSpfResult(authResult.getSpfResult());
+            dto.setActiveSpfRecord(authResult.getSpfRecord());
+            dto.setActiveSpfRelayIp(authResult.getSpfRelayIp());
+            dto.setActiveDkimStatus(authResult.getDkimResult());
+            dto.setActiveDkimRecord(authResult.getDkimRecord());
+            dto.setActiveDkimSelector(authResult.getDkimSelector());
+            dto.setActiveDmarcStatus(authResult.getDmarcResult());
+            dto.setActiveDmarcPolicy(authResult.getDmarcPolicy());
+            dto.setActiveVerificationSummary(authResult.getSummary());
+            dto.setDataMode("EXTERNAL_API");
+            dto.setAuthApiProvider(authResult.getProviderName());
+            dto.setAuthApiStatus(authResult.getStatus());
+
+            return dto;
         }
     }
 
@@ -221,7 +260,8 @@ public class HeaderAnalysisService {
         List<String> flags = parseFlagsJson(entity.getIdentityMismatchFlags());
         Map<String, List<String>> rawMap = parseRawHeadersJson(entity.getRawHeadersJson());
 
-        String verificationNote = "Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported by receiving server headers in the original message. They are not independently verified in offline state.";
+        String providerLabel = entity.getAuthApiProvider() != null ? entity.getAuthApiProvider() : "External API";
+        String verificationNote = "Authentication results validated via " + providerLabel + ".";
 
         HeaderAnalysisDto dto = new HeaderAnalysisDto(
                 run.getId(),
@@ -240,10 +280,19 @@ public class HeaderAnalysisService {
                 hops.size()
         );
 
+        dto.setSpfResult(entity.getReportedSpf());
+        dto.setDkimResult(entity.getReportedDkim());
+        dto.setDmarcResult(entity.getReportedDmarc());
+        dto.setDataMode("EXTERNAL_API");
+        dto.setAuthApiProvider(entity.getAuthApiProvider());
+        dto.setAuthApiStatus(entity.getAuthApiStatus());
+        dto.setActiveSpfResult(entity.getReportedSpf());
+        dto.setActiveDkimStatus(entity.getReportedDkim());
+        dto.setActiveDmarcStatus(entity.getReportedDmarc());
+        dto.setActiveVerificationSummary(entity.getIndependentVerification());
+
         if (entity.getCurrentDnsObservation() != null && !entity.getCurrentDnsObservation().isBlank()) {
             populateActiveAuthFromObservation(dto, entity.getCurrentDnsObservation(), entity.getIndependentVerification());
-        } else if (entity.getIndependentVerification() != null) {
-            dto.setActiveVerificationSummary(entity.getIndependentVerification());
         }
 
         return dto;
@@ -286,123 +335,43 @@ public class HeaderAnalysisService {
 
     public HeaderAnalysisDto analyzeStream(InputStream in) {
         try {
-            Properties props = new Properties();
-            Session session = Session.getDefaultInstance(props, null);
-            MimeMessage message = new MimeMessage(session, in);
+            byte[] emlBytes = in.readAllBytes();
+            RawHeaderData rawData = extractRawHeaderData(emlBytes);
 
-            Map<String, List<String>> rawHeaders = new LinkedHashMap<>();
-            Enumeration<Header> allHeaders = message.getAllHeaders();
-            while (allHeaders.hasMoreElements()) {
-                Header h = allHeaders.nextElement();
-                rawHeaders.computeIfAbsent(h.getName(), k -> new ArrayList<>()).add(h.getValue());
+            HeaderAuthResult authResult;
+            if (emailHeaderService != null) {
+                authResult = emailHeaderService.analyzeHeader(rawData.rawHeadersText);
+            } else {
+                authResult = HeaderAuthResult.allUnavailable("EmailHeaderService is not configured.");
             }
-
-            String fromRaw = getFirstHeader(message, "From");
-            String replyToRaw = getFirstHeader(message, "Reply-To");
-            String returnPathRaw = getFirstHeader(message, "Return-Path");
-            String dkimSigRaw = getFirstHeader(message, "DKIM-Signature");
-            String authResultsRaw = getFirstHeader(message, "Authentication-Results");
-
-            String fromAddress = extractEmailAddress(fromRaw);
-            String fromDomain = extractDomain(fromAddress);
-            String replyToAddress = extractEmailAddress(replyToRaw);
-            String returnPathAddress = extractEmailAddress(returnPathRaw);
-
-            String dkimDomain = null;
-            if (dkimSigRaw != null) {
-                Matcher dkimMatcher = DKIM_DOMAIN_PATTERN.matcher(dkimSigRaw);
-                if (dkimMatcher.find()) {
-                    dkimDomain = dkimMatcher.group(1).toLowerCase(Locale.ROOT);
-                }
-            }
-
-            String reportedSpf = extractAuthResult(authResultsRaw, AUTH_SPF_PATTERN);
-            String reportedDkim = extractAuthResult(authResultsRaw, AUTH_DKIM_PATTERN);
-            String reportedDmarc = extractAuthResult(authResultsRaw, AUTH_DMARC_PATTERN);
-            String reportedArc = extractAuthResult(authResultsRaw, AUTH_ARC_PATTERN);
-
-            List<String> mismatchFlags = new ArrayList<>();
-
-            if (replyToAddress != null && fromDomain != null) {
-                String replyToDomain = extractDomain(replyToAddress);
-                if (replyToDomain != null && !replyToDomain.equalsIgnoreCase(fromDomain)) {
-                    mismatchFlags.add("REPLY_TO_DOMAIN_MISMATCH: Reply-To domain (@" + replyToDomain + ") differs from From domain (@" + fromDomain + ")");
-                }
-            }
-
-            if (returnPathAddress != null && fromDomain != null) {
-                String returnPathDomain = extractDomain(returnPathAddress);
-                if (returnPathDomain != null && !returnPathDomain.equalsIgnoreCase(fromDomain)) {
-                    mismatchFlags.add("RETURN_PATH_MISMATCH: Return-Path envelope (@" + returnPathDomain + ") differs from From domain (@" + fromDomain + ")");
-                }
-            }
-
-            if (dkimDomain != null && fromDomain != null) {
-                if (!fromDomain.equalsIgnoreCase(dkimDomain) && !fromDomain.endsWith("." + dkimDomain)) {
-                    mismatchFlags.add("DKIM_DOMAIN_MISMATCH: DKIM signing domain (" + dkimDomain + ") does not match From domain (" + fromDomain + ")");
-                }
-            }
-
-            if (fromRaw != null) {
-                String displayName = null;
-                try {
-                    InternetAddress[] fromAddresses = InternetAddress.parse(fromRaw);
-                    if (fromAddresses.length > 0 && fromAddresses[0].getPersonal() != null) {
-                        displayName = fromAddresses[0].getPersonal();
-                    }
-                } catch (Exception ignored) {
-                }
-                if (displayName == null) {
-                    int lastAngle = fromRaw.lastIndexOf('<');
-                    if (lastAngle > 0) {
-                        displayName = fromRaw.substring(0, lastAngle).trim();
-                    }
-                }
-                if (displayName != null && displayName.contains("@")) {
-                    Matcher nameMatcher = EMAIL_IN_TEXT_PATTERN.matcher(displayName);
-                    if (nameMatcher.find()) {
-                        String nameEmail = nameMatcher.group(1).toLowerCase(Locale.ROOT);
-                        if (fromAddress != null && !nameEmail.equalsIgnoreCase(fromAddress)) {
-                            mismatchFlags.add("SUSPICIOUS_DISPLAY_NAME: Display name mimics email address (" + nameEmail + ") while true sender is (" + fromAddress + ")");
-                        }
-                    }
-                }
-            }
-
-            String verificationNote = "Authentication results (SPF, DKIM, DMARC, ARC) are extracted as reported by receiving server headers in the original message. They are not independently verified in offline state.";
 
             HeaderAnalysisDto dto = new HeaderAnalysisDto(
                     null,
-                    fromAddress,
-                    fromDomain,
-                    replyToAddress,
-                    returnPathAddress,
-                    dkimDomain,
-                    reportedSpf,
-                    reportedDkim,
-                    reportedDmarc,
-                    reportedArc,
-                    mismatchFlags,
-                    verificationNote,
-                    rawHeaders,
+                    rawData.fromAddress,
+                    rawData.fromDomain,
+                    rawData.replyToAddress,
+                    rawData.returnPathAddress,
+                    rawData.dkimDomain,
+                    authResult.getSpfResult(),
+                    authResult.getDkimResult(),
+                    authResult.getDmarcResult(),
+                    authResult.getArcResult(),
+                    rawData.mismatchFlags,
+                    "Authentication results validated via " + authResult.getProviderName() + ".",
+                    rawData.rawHeaders,
                     0
             );
 
-            if (emailAuthService != null) {
-                String returnPathDomain = extractDomain(returnPathAddress);
-                EmailAuthService.ActiveAuthResult activeRes = emailAuthService.performActiveAuthentication(
-                        fromDomain, returnPathDomain, dkimSigRaw, Collections.emptyList()
-                );
-                dto.setActiveSpfResult(activeRes.getActiveSpfResult());
-                dto.setActiveSpfRecord(activeRes.getActiveSpfRecord());
-                dto.setActiveSpfRelayIp(activeRes.getActiveSpfRelayIp());
-                dto.setActiveDkimStatus(activeRes.getActiveDkimStatus());
-                dto.setActiveDkimRecord(activeRes.getActiveDkimRecord());
-                dto.setActiveDkimSelector(activeRes.getActiveDkimSelector());
-                dto.setActiveDmarcStatus(activeRes.getActiveDmarcStatus());
-                dto.setActiveDmarcPolicy(activeRes.getActiveDmarcPolicy());
-                dto.setActiveVerificationSummary(activeRes.getSummary());
-            }
+            dto.setSpfResult(authResult.getSpfResult());
+            dto.setDkimResult(authResult.getDkimResult());
+            dto.setDmarcResult(authResult.getDmarcResult());
+            dto.setActiveSpfResult(authResult.getSpfResult());
+            dto.setActiveDkimStatus(authResult.getDkimResult());
+            dto.setActiveDmarcStatus(authResult.getDmarcResult());
+            dto.setActiveVerificationSummary(authResult.getSummary());
+            dto.setDataMode("EXTERNAL_API");
+            dto.setAuthApiProvider(authResult.getProviderName());
+            dto.setAuthApiStatus(authResult.getStatus());
 
             return dto;
 
@@ -512,6 +481,103 @@ public class HeaderAnalysisService {
         return hops;
     }
 
+    private static class RawHeaderData {
+        String fromAddress;
+        String fromDomain;
+        String replyToAddress;
+        String returnPathAddress;
+        String dkimDomain;
+        String rawHeadersText;
+        Map<String, List<String>> rawHeaders = new LinkedHashMap<>();
+        List<String> mismatchFlags = new ArrayList<>();
+    }
+
+    private RawHeaderData extractRawHeaderData(byte[] emlBytes) {
+        RawHeaderData data = new RawHeaderData();
+        try {
+            Properties props = new Properties();
+            Session session = Session.getDefaultInstance(props, null);
+            MimeMessage message = new MimeMessage(session, new ByteArrayInputStream(emlBytes));
+
+            StringBuilder sb = new StringBuilder();
+            Enumeration<Header> allHeaders = message.getAllHeaders();
+            while (allHeaders.hasMoreElements()) {
+                Header h = allHeaders.nextElement();
+                data.rawHeaders.computeIfAbsent(h.getName(), k -> new ArrayList<>()).add(h.getValue());
+                sb.append(h.getName()).append(": ").append(h.getValue()).append("\r\n");
+            }
+            data.rawHeadersText = sb.toString();
+
+            String fromRaw = getFirstHeader(message, "From");
+            String replyToRaw = getFirstHeader(message, "Reply-To");
+            String returnPathRaw = getFirstHeader(message, "Return-Path");
+            String dkimSigRaw = getFirstHeader(message, "DKIM-Signature");
+
+            data.fromAddress = extractEmailAddress(fromRaw);
+            data.fromDomain = extractDomain(data.fromAddress);
+            data.replyToAddress = extractEmailAddress(replyToRaw);
+            data.returnPathAddress = extractEmailAddress(returnPathRaw);
+
+            if (dkimSigRaw != null) {
+                Matcher dkimMatcher = DKIM_DOMAIN_PATTERN.matcher(dkimSigRaw);
+                if (dkimMatcher.find()) {
+                    data.dkimDomain = dkimMatcher.group(1).toLowerCase(Locale.ROOT);
+                }
+            }
+
+            // Identify identity mismatch signals
+            if (data.replyToAddress != null && data.fromDomain != null) {
+                String replyToDomain = extractDomain(data.replyToAddress);
+                if (replyToDomain != null && !replyToDomain.equalsIgnoreCase(data.fromDomain)) {
+                    data.mismatchFlags.add("REPLY_TO_DOMAIN_MISMATCH: Reply-To domain (@" + replyToDomain + ") differs from From domain (@" + data.fromDomain + ")");
+                }
+            }
+
+            if (data.returnPathAddress != null && data.fromDomain != null) {
+                String returnPathDomain = extractDomain(data.returnPathAddress);
+                if (returnPathDomain != null && !returnPathDomain.equalsIgnoreCase(data.fromDomain)) {
+                    data.mismatchFlags.add("RETURN_PATH_MISMATCH: Return-Path envelope (@" + returnPathDomain + ") differs from From domain (@" + data.fromDomain + ")");
+                }
+            }
+
+            if (data.dkimDomain != null && data.fromDomain != null) {
+                if (!data.fromDomain.equalsIgnoreCase(data.dkimDomain) && !data.fromDomain.endsWith("." + data.dkimDomain)) {
+                    data.mismatchFlags.add("DKIM_DOMAIN_MISMATCH: DKIM signing domain (" + data.dkimDomain + ") does not match From domain (" + data.fromDomain + ")");
+                }
+            }
+
+            if (fromRaw != null) {
+                String displayName = null;
+                try {
+                    InternetAddress[] fromAddresses = InternetAddress.parse(fromRaw);
+                    if (fromAddresses.length > 0 && fromAddresses[0].getPersonal() != null) {
+                        displayName = fromAddresses[0].getPersonal();
+                    }
+                } catch (Exception ignored) {
+                }
+                if (displayName == null) {
+                    int lastAngle = fromRaw.lastIndexOf('<');
+                    if (lastAngle > 0) {
+                        displayName = fromRaw.substring(0, lastAngle).trim();
+                    }
+                }
+                if (displayName != null && displayName.contains("@")) {
+                    Matcher nameMatcher = EMAIL_IN_TEXT_PATTERN.matcher(displayName);
+                    if (nameMatcher.find()) {
+                        String nameEmail = nameMatcher.group(1).toLowerCase(Locale.ROOT);
+                        if (data.fromAddress != null && !nameEmail.equalsIgnoreCase(data.fromAddress)) {
+                            data.mismatchFlags.add("SUSPICIOUS_DISPLAY_NAME: Display name mimics email address (" + nameEmail + ") while true sender is (" + data.fromAddress + ")");
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception e) {
+            log.warn("Error extracting raw header data: {}", e.getMessage());
+        }
+        return data;
+    }
+
     private String getFirstHeader(MimeMessage message, String name) {
         try {
             String[] values = message.getHeader(name);
@@ -543,15 +609,6 @@ public class HeaderAnalysisService {
         int atIndex = emailAddress.lastIndexOf('@');
         if (atIndex >= 0 && atIndex < emailAddress.length() - 1) {
             return emailAddress.substring(atIndex + 1).trim().toLowerCase(Locale.ROOT);
-        }
-        return null;
-    }
-
-    private String extractAuthResult(String authResultsRaw, Pattern pattern) {
-        if (authResultsRaw == null) return null;
-        Matcher m = pattern.matcher(authResultsRaw);
-        if (m.find()) {
-            return m.group(1).toLowerCase(Locale.ROOT);
         }
         return null;
     }

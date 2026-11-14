@@ -80,6 +80,21 @@ public class AnalysisResult implements Persistable<UUID> {
     @Column(name = "raw_headers_json", columnDefinition = "TEXT")
     private String rawHeadersJson;
 
+    @Column(name = "auth_api_provider", length = 50)
+    private String authApiProvider;
+
+    @Column(name = "auth_api_status", length = 50)
+    private String authApiStatus;
+
+    @Column(name = "auth_api_response_json", columnDefinition = "TEXT")
+    private String authApiResponseJson;
+
+    @Column(name = "auth_api_error_details", columnDefinition = "TEXT")
+    private String authApiErrorDetails;
+
+    @Column(name = "auth_api_updated_at")
+    private Instant authApiUpdatedAt;
+
     @Column(name = "header_created_at")
     private Instant headerCreatedAt;
 
@@ -346,6 +361,46 @@ public class AnalysisResult implements Persistable<UUID> {
 
     public void setRawHeadersJson(String rawHeadersJson) {
         this.rawHeadersJson = rawHeadersJson;
+    }
+
+    public String getAuthApiProvider() {
+        return authApiProvider;
+    }
+
+    public void setAuthApiProvider(String authApiProvider) {
+        this.authApiProvider = authApiProvider;
+    }
+
+    public String getAuthApiStatus() {
+        return authApiStatus;
+    }
+
+    public void setAuthApiStatus(String authApiStatus) {
+        this.authApiStatus = authApiStatus;
+    }
+
+    public String getAuthApiResponseJson() {
+        return authApiResponseJson;
+    }
+
+    public void setAuthApiResponseJson(String authApiResponseJson) {
+        this.authApiResponseJson = authApiResponseJson;
+    }
+
+    public String getAuthApiErrorDetails() {
+        return authApiErrorDetails;
+    }
+
+    public void setAuthApiErrorDetails(String authApiErrorDetails) {
+        this.authApiErrorDetails = authApiErrorDetails;
+    }
+
+    public Instant getAuthApiUpdatedAt() {
+        return authApiUpdatedAt;
+    }
+
+    public void setAuthApiUpdatedAt(Instant authApiUpdatedAt) {
+        this.authApiUpdatedAt = authApiUpdatedAt;
     }
 
     public Instant getHeaderCreatedAt() {

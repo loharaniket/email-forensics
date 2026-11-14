@@ -37,6 +37,8 @@ public class HeaderAnalysisDto {
     private String dkimResult;
     private String dmarcResult;
     private String dataMode;
+    private String authApiProvider;
+    private String authApiStatus;
 
     public HeaderAnalysisDto() {
     }
@@ -328,5 +330,21 @@ public class HeaderAnalysisDto {
 
     public void setDataMode(String dataMode) {
         this.dataMode = dataMode;
+    }
+
+    public String getAuthApiProvider() {
+        return authApiProvider;
+    }
+
+    public void setAuthApiProvider(String authApiProvider) {
+        this.authApiProvider = authApiProvider;
+    }
+
+    public String getAuthApiStatus() {
+        return authApiStatus;
+    }
+
+    public void setAuthApiStatus(String authApiStatus) {
+        this.authApiStatus = authApiStatus;
     }
 }
