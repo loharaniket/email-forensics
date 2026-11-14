@@ -248,7 +248,6 @@ export default function EvidenceUploadSection() {
 
   return (
     <div className="h-full flex flex-col lg:flex-row gap-4 min-h-0 overflow-hidden">
-      {/* Left Column: Simple & Beginner-Friendly Upload Card */}
       <section className="w-full lg:w-[380px] bg-white border border-[#E4E7EC] rounded-xl p-4 sm:p-5 flex flex-col justify-between shrink-0 overflow-y-auto">
         <div className="space-y-4">
           <div className="pb-3 border-b border-[#E4E7EC]">
@@ -472,9 +471,8 @@ export default function EvidenceUploadSection() {
                             id={`verify-btn-${item.id}`}
                             onClick={() => handleVerifyIntegrity(item.id)}
                             disabled={verifying}
-                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border border-[#E4E7EC] bg-white hover:bg-slate-50 text-[#202938] transition-colors cursor-pointer ${
-                              integrity?.intact ? 'border-green-300 text-[#15803D]' : ''
-                            }`}
+                            className={`flex items-center gap-1 px-2 py-1 rounded-md text-xs font-medium border border-[#E4E7EC] bg-white hover:bg-slate-50 text-[#202938] transition-colors cursor-pointer ${integrity?.intact ? 'border-green-300 text-[#15803D]' : ''
+                              }`}
                             title="Verify SHA-256 evidence integrity"
                           >
                             <ShieldCheck className={`h-3 w-3 ${verifying ? 'animate-spin' : ''}`} />
