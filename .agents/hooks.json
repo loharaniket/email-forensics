@@ -7,7 +7,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "node .agents/scripts/block-git-commits.mjs",
+            "command": "node scripts/block-git-commits.mjs",
             "timeout": 10
           }
         ]
