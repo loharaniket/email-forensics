@@ -1,0 +1,172 @@
+# Antigravity AI Agent Instructions - Email Forensics Version 2
+
+Welcome to the Email Forensics project repository. This file defines the permanent rules, guidelines, and operating principles for all AI assistants working on this codebase.
+
+---
+
+## 1. Project Identity and Purpose
+
+- **Project Name:** Email Forensics
+- **Version:** Version 2 (MVP)
+- **Primary Goal:** Build an AI-assisted forensic web application that allows security analysts to upload `.eml` files, safely preserve original evidence, parse headers and MIME content, verify authentication (SPF, DKIM, DMARC, ARC), query threat intelligence feeds, perform OCR/QR analysis, run privacy-safe AI threat evaluation, identify historical correlations, and calculate an explainable risk score.
+- **Architecture Style:** Modular Monolith consisting of:
+  - Frontend: React + Vite
+  - Backend: Java 21 + Spring Boot 4.1.x
+  - Database: PostgreSQL (only two main tables: `emails` and `indicators`)
+  - Mail Authentication Helper: Node.js 22+ with `mailauth`
+  - Local Image Tools: Tesseract OCR (local text extraction) and ZXing (QR code decoding)
+  - AI Integration: Spring AI with Gemini (using strictly redacted text after explicit user approval)
+  - Reporting: Apache PDFBox for downloadable forensic summary reports
+
+---
+
+## 2. Git Branch Policy
+
+- **Main Branch (`main`):**
+  - Contains the stable, preserved Version 1 of Email Forensics.
+  - **NEVER** modify, commit to, rebase, or push to the `main` branch.
+- **Development Branch (`development`):**
+  - All Version 2 development must happen strictly on the `development` branch (or feature branches cut from `development`, such as `feature/email-forensics-v2`).
+  - Always verify that the active branch is `development` before writing code.
+- **Manual Git Policy:**
+  - Do NOT execute automated git commits or pushes unless the user explicitly requests it.
+  - The developer manually commits and pushes code.
+
+---
+
+## 3. Beginner-Friendly Coding Requirements
+
+The developer is learning Spring Boot while building this project. Every piece of code generated must be easy to read, understand, and maintain.
+
+1. **Simple Names:** Use clear, obvious class names (`EmailController`, `EmailService`, `EmailRepository`), method names (`uploadEmail()`, `checkEmail()`, `calculateRiskScore()`), and variable names (`emailText`, `emailFile`, `fileHash`).
+2. **Small Methods:** Keep methods short (under 25 lines where possible) with simple, single-purpose logic.
+3. **Single Responsibility:** Each class must do one main job.
+4. **No Unnecessary Abstractions:** Avoid abstract classes, unnecessary generic classes, complex design patterns, or extra interface layers unless strictly required.
+5. **Simple Flow:** Use basic loops and conditions. Avoid deeply nested `if`/`else` blocks and complicated Java stream pipelines when simple loops are clearer.
+6. **No Complicated Helper Classes:** Keep logic close to where it is used instead of creating dozens of abstract utility classes.
+
+---
+
+## 4. Strict No-Comments Rule in Source Code
+
+Do NOT put comments inside source code files. This is a strict project requirement.
+
+- No single-line comments (`//`).
+- No multi-line comments (`/* ... */`).
+- No JavaDoc comments (`/** ... */`).
+- No TODO comments.
+- No HTML comments (`<!-- ... -->`).
+- No CSS comments (`/* ... */`).
+- No explanatory comments inside methods.
+
+Write clean, self-explanatory code with clear names instead of adding comments. When explanations are helpful, provide them in chat responses or external Markdown files in `docs/`.
+
+---
+
+## 5. Spring Boot Development Guidelines
+
+- **Basic Annotations Only:** Use only necessary Spring Boot annotations:
+  - `@RestController`, `@RequestMapping`, `@GetMapping`, `@PostMapping`
+  - `@Service`, `@Repository`
+  - `@Entity`, `@Id`, `@GeneratedValue`, `@Column` (when required), `@Transactional` (when required)
+- **STRICTLY NO LOMBOK:**
+  - Do NOT use Lombok.
+  - Do NOT use `@Data`, `@Getter`, `@Setter`, `@Builder`, `@RequiredArgsConstructor`, or `@AllArgsConstructor`.
+  - Write standard Java constructors, getters, and setters manually.
+- **Constructor Injection:** Use constructor-based dependency injection with simple constructors. Do NOT use field injection (`@Autowired` on private fields).
+- **Simple Layering:** Keep code organized in basic packages: `controller`, `service`, `repository`, `entity`, `dto`, `provider`, `model`, `exception`, and `config`.
+- **No Complex Frameworks:** Use simple Spring Data JPA queries and Spring Framework `RestClient` for external HTTP requests.
+
+---
+
+## 6. MVP Development Rules
+
+This project is an MVP (Minimum Viable Product) for educational and practical email forensic investigation.
+
+- Do NOT introduce enterprise technologies unless explicitly requested:
+  - No microservices.
+  - No Kafka, RabbitMQ, or message brokers.
+  - No Redis or distributed caching.
+  - No Kubernetes or complex cloud infrastructure.
+  - No user management, login, registration, JWT, or Spring Security in Version 2.
+- **Minimal Required Validation:** Validate input existence, `.eml` extension, basic file size limit (10 MB), parseability, and required database fields. Do not build complex custom validation engines.
+
+---
+
+## 7. Frontend Reference Guidelines
+
+- The existing Version 1 frontend located in `frontend/` is the primary design reference.
+- **Preserve Visual Identity:** Keep the existing color scheme, dark theme, typography, padding, card styling, button appearances, and layout hierarchy.
+- **React + Vite:** Build frontend pages using React, Vite, and standard CSS.
+- **No Heavy Libraries:** Use the browser's native `fetch()` API instead of Axios. Use React component state and custom hooks (like `useEmailAnalysis`) instead of Redux.
+- Before making frontend changes, consult [docs/ai/frontend-reference-guide.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/docs/ai/frontend-reference-guide.md).
+
+---
+
+## 8. Security and Trust Boundaries
+
+1. **Untrusted Input:** Treat all uploaded emails, headers, body text, URLs, and attachments as untrusted.
+2. **Never Execute Attachments:** Never execute or run scripts from uploaded files. Process inline/attached images for OCR and QR decoding only.
+3. **Never Fetch URLs:** Never visit, open, or fetch URLs found in emails. Only query their reputation via external threat intelligence APIs.
+4. **Evidence Preservation:**
+   - Compute SHA-256 hash immediately upon receiving raw bytes.
+   - Save the original file to private storage outside the web root under a generated UUID path.
+   - Never overwrite or modify the original `.eml` file.
+5. **PII Redaction & Explicit Approval:**
+   - Redact personal information (names, emails, phones, tokens, credentials) before sending text to Gemini.
+   - Show the redacted preview to the user and pause for explicit approval (`WAITING_FOR_AI_APPROVAL`) before contacting the free AI service.
+6. **API Keys:** Store all threat provider keys and Gemini keys in environment variables. Never expose keys to the frontend or git.
+
+---
+
+## 9. Database Architecture
+
+- Database name: `email_forensics_db` (PostgreSQL)
+- **Only Two Main Tables:**
+  1. `emails`: Stores email metadata, file path, SHA-256 hash, status, risk score, verdict, and compact JSONB fields (`auth_data`, `ai_data`).
+  2. `indicators`: Stores extracted indicators (URL, DOMAIN, IP, QR_URL, OCR_TEXT) with foreign key `email_id` (`ON DELETE RESTRICT`) and compact provider results in JSONB `details`.
+- Do NOT create additional tables for users, campaigns, cases, or graph nodes.
+
+---
+
+## 10. Dependency and Architecture Change Rules
+
+- Do NOT add new dependencies without explaining:
+  1. The dependency name.
+  2. Why it is required.
+  3. What problem it solves.
+  4. Where it will be used.
+  5. Why existing built-in or standard libraries cannot do the job.
+- Prefer built-in Java and standard Spring Boot features over external libraries.
+
+---
+
+## 11. Explanation and Mentoring Rules
+
+The developer wants to learn while building. When completing a task:
+- Explain what was created or changed in simple English.
+- Explain the role of the controller, service, repository, and database.
+- Keep explanations clear and beginner-friendly without jargon.
+
+---
+
+## 12. Rule and Skill Discovery
+
+Before executing development work, Antigravity AI agents must consult the appropriate workspace rules and skills:
+
+- **Rules (`.agents/rules/`):**
+  - [development-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/development-rules.md) - Coding standards, naming, zero comments.
+  - [git-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/git-rules.md) - Branch protection, development branch only.
+  - [mvp-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/mvp-rules.md) - MVP scope constraints, avoiding bloat.
+  - [email-security-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/email-security-rules.md) - Evidence preservation, untrusted data handling.
+  - [spring-boot-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/spring-boot-rules.md) - Backend rules, no Lombok, basic annotations.
+  - [frontend-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/frontend-rules.md) - Frontend design reference, component reuse.
+
+- **Skills (`.agents/skills/`):**
+  - `project-understanding`: Step-by-step procedure to inspect project state before coding.
+  - `spring-boot-beginner`: Practical guide to writing beginner-friendly Spring Boot code.
+  - `frontend-reference`: Practical guide to replicating the v1 design system in React.
+  - `email-forensics`: Technical reference for email parsing, auth checks, threat intel, and risk scoring.
+  - `database-development`: Practical instructions for PostgreSQL entities, schema, and correlation queries.
+  - `testing-and-debugging`: Procedures for running unit, integration, fixture, and mock tests.
+  - `code-review`: Final pre-completion verification checklist.

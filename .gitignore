@@ -40,5 +40,4 @@ logs/
 *.log
 scratch/
 
-# Documentation
-docs/
+
