@@ -79,14 +79,14 @@ email-forensics/
 
 ## 4. Specialized Agents and Supported Tool Configurations
 
-All custom agent files use supported Antigravity tool names, explicit permissions, and `inheritCustomizations: true`:
+All custom agent files use supported Antigravity tool names, explicit permissions, `inheritCustomizations: true`, and `inheritMcp: false`:
 
-| Agent | Model | Tools | Read/Write Role |
-| :--- | :--- | :--- | :--- |
-| **`project-planner`** | `flash` | `[view_file, grep_search, find_by_name, list_dir, search_web, send_message]` | **Read-Only:** Inspects architecture and prepares implementation plans. No file-editing tools. |
-| **`spring-boot-developer`** | `flash` | `[view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]` | **Read/Write:** Implements simple Java backend features, runs tests, explains data flow. |
-| **`frontend-developer`** | `flash` | `[view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]` | **Read/Write:** Builds brand-new React components using V1 visual design tokens. |
-| **`code-reviewer`** | `flash` | `[view_file, grep_search, find_by_name, list_dir, search_web, send_message]` | **Read-Only:** Audits code against beginner simplicity, zero code comments, no Lombok. Cannot claim tests passed without execution logs. |
+| Agent | Model | Command Execution Policy | Tools | Read/Write Role |
+| :--- | :--- | :--- | :--- | :--- |
+| **`project-planner`** | `flash` | `off` | `[view_file, grep_search, find_by_name, list_dir, search_web, send_message]` | **Read-Only:** Inspects architecture and prepares implementation plans. No file-editing or terminal tools. |
+| **`spring-boot-developer`** | `flash` | `sandboxed` | `[view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]` | **Read/Write:** Implements simple Java backend features, runs tests, explains data flow. |
+| **`frontend-developer`** | `flash` | `sandboxed` | `[view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]` | **Read/Write:** Builds brand-new React components using V1 visual design tokens. |
+| **`code-reviewer`** | `flash` | `off` | `[view_file, grep_search, find_by_name, list_dir, search_web, send_message]` | **Read-Only:** Audits code against beginner simplicity, zero code comments, no Lombok. Cannot claim tests or git status passed without supplied evidence. |
 
 ---
 
@@ -96,23 +96,27 @@ The repository owner manually reviews, stages, commits, and pushes all code.
 
 ### Technical Hook Enforcement
 Configured via `.agents/hooks.json` and executed via `.agents/scripts/block-git-commits.mjs`:
-- Intercepts `run_command` and `github_*` MCP tool calls before execution.
+- Intercepts `run_command` and namespaced GitHub MCP tool calls (`.*github.*`) before execution.
 - Automatically denies:
   - `git commit`
   - `git push` (including `--force`)
   - `git reset` (including `--hard`)
   - `git clean`
-  - `git checkout .` or `git restore .`
-  - `git switch` or `git checkout <branch>` (agents must never switch branches automatically)
-  - GitHub CLI write commands (`gh pr create`, `gh repo`, etc.)
-  - GitHub MCP write tools (`github_create_pull_request`, `github_create_commit`, etc.)
+  - `git checkout .`, `git checkout <branch>`, or `git restore .`
+  - `git switch` or branch modifications (`git branch <name>`, `git branch -D`, `git branch -m`)
+  - Shell wrappers (`powershell -Command "git ..."`, `cmd /c "git ..."`, `bash -c "git ..."`, `sh -c "git ..."`, encoded commands)
+  - GitHub CLI write commands (`gh pr create`, `gh pr edit`, `gh pr merge`, `gh api --method POST`, etc.) under a strict deny-by-default policy
+  - GitHub MCP write tools (`github_create_pull_request`, `github:create_issue`, `mcp__github__create_branch`, etc.)
 - Safely permits read-only inspection commands:
   - `git status`
   - `git diff`
   - `git log`
-  - `git branch --show-current`
+  - `git branch --show-current`, `git branch --list`, `git branch -a`
   - `git show`
-- Normal project commands (`npm test`, `mvn test`, `dir`, `node`) run without restriction.
+  - Safe read-only GitHub CLI queries (`gh pr view`, `gh repo view`, `gh api GET`)
+- Normal project build and test commands (`npm test`, `npm run build`, `mvn test`, `mvn clean test`, `node`) run without restriction.
+- **Fail-Closed Protection:** Any malformed JSON, empty payload, or unparseable command is immediately denied for safety.
+- **Coordinator & Branch Policy:** The coordinator verifies the active Git branch (`git branch --show-current`) and provides this verified state to read-only agents (`project-planner` and `code-reviewer`). Read-only agents do not run terminal commands. If evidence is missing, the reviewer reports `NOT VERIFIED`.
 
 ---
 
@@ -154,9 +158,9 @@ Build the application one phase at a time following the roadmap:
   > "Implement Phase 3: Email parsing with Angus Mail and Jsoup. Extract From, Reply-To, Subject, Date, Message-ID, Received headers, plain text, and HTML links. Test against plain text and HTML fixtures. Remember: zero code comments and no Lombok."
 
 ### Phase 4: Mail Authentication (SPF, DKIM, DMARC, ARC)
-- **Goal:** Integrate Node.js 22.19.0+ `mailauth` helper and execute via `ProcessBuilder`.
+- **Goal:** Integrate Node.js 22.19.0 or later `mailauth` helper and execute via `ProcessBuilder`.
 - **Example Prompt:**
-  > "Implement Phase 4: Node.js mailauth helper in tools/mailauth/verify.mjs using Node.js 22.19.0+. Call the helper from AuthenticationService in Java with a process timeout. Store normalized SPF, DKIM, DMARC, and ARC results in emails.auth_data. Never convert NOT_VERIFIABLE into PASS or FAIL."
+  > "Implement Phase 4: Node.js mailauth helper in tools/mailauth/verify.mjs using Node.js 22.19.0 or later. Call the helper from AuthenticationService in Java with a process timeout. Store normalized SPF, DKIM, DMARC, and ARC results in emails.auth_data. Never convert NOT_VERIFIABLE into PASS or FAIL."
 
 ### Phase 5: URL, Domain, and IP Extraction
 - **Goal:** Extract unique URLs, hostnames, and public IPs, storing them in the `indicators` table.

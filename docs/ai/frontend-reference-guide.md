@@ -60,12 +60,13 @@ Use these colors consistently across badges, score meters, and status indicators
 | **High Risk / Impersonation** | `#f97316` | Orange-500 | Serious anomalies, SPF/DMARC failure with mismatch. |
 | **Elevated / Suspicious** | `#f59e0b` | Amber-500 | Suspicious language, unverified sender, warning flags. |
 | **Guarded / Low Risk** | `#eab308` | Yellow-500 | Minor observations, low risk factors. |
-| **Benign / Safe / Pass** | `#10b981` | Emerald-500 | Check passed, SPF pass, DKIM pass, benign indicator. |
+| **Cryptographic Pass** | `#10b981` | Emerald-500 | Strict cryptographic verification passed (SPF pass, DKIM pass, DMARC pass). |
+| **No Known Threat / Neutral** | `#64748b` | Slate-500 | No provider matches found in feeds. Render in neutral grey; absence of a known threat is NOT proof of safety. |
 | **Info / Processing / Primary** | `#3b82f6` | Blue-500 | Active polling, primary buttons, informational links. |
 | **Unknown / Insufficient Data** | `#64748b` | Slate-500 | Unchecked, provider timeout, or missing SMTP context. |
 
 > [!IMPORTANT]
-> Never render `UNKNOWN` or `NOT_CHECKED` using green or benign styling. Unchecked items must always use neutral grey (`#64748b`).
+> Never render `NO_KNOWN_THREAT`, `UNKNOWN`, or `NOT_CHECKED` using green or benign/safe styling. Absence of a known threat in reputation feeds is never proof of safety (threat feeds only know about already-discovered attacks). These items must always use neutral grey (`#64748b`). Emerald green (`#10b981`) is reserved strictly for affirmative cryptographic verification passes (such as SPF/DKIM/DMARC PASS).
 
 ---
 

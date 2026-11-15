@@ -24,7 +24,7 @@ Do NOT introduce any of the following enterprise technologies or features under 
 - **No Container Orchestration:** No Kubernetes, Helm charts, or multi-container meshes during standard development.
 - **No Non-Image Attachment Scanning:** No malware execution, sandboxing, or Office/archive deep scanning. Non-image attachments are ignored in Version 2.
 - **No Attachment SHA-256 Scanning:** Attachment files are not separately hashed or submitted to virus scanners in Version 2.
-- **No Cloud Bloat:** Do not introduce cloud-managed services that prevent local execution. The entire project must run on a developer laptop with Java 21, Node.js 22+, and local PostgreSQL.
+- **No Cloud Bloat:** Do not introduce cloud-managed services that prevent local execution. The entire project must run on a developer laptop with Java 21, Node.js 22.19.0 or later, and local PostgreSQL.
 
 ---
 

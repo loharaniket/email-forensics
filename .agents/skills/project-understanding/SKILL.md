@@ -31,14 +31,13 @@ Review the relevant sections of [docs/architecture-v2.md](../../../docs/architec
 - External threat intelligence provider specifications.
 - Risk score weighting formula.
 
-### Step 3: Check the Active Git Branch
-Verify that the repository is on the correct branch before taking action:
-```bash
-git branch --show-current
-```
-- The active branch must be `development` (or a feature branch like `feature/email-forensics-v2`).
-- Never perform work on `main`.
-- **NO AUTOMATIC BRANCH SWITCHING:** Agents must **NEVER** run `git switch` or `git checkout` to change branches. If the active branch is wrong, stop immediately and ask the developer to switch manually.
+### Step 3: Verify the Active Git Branch
+The repository must be on `development` or an approved feature branch cut from `development` (such as `feature/email-forensics-v2`):
+- **Coordinator Responsibility:** The coordinator verifies the active branch using `git branch --show-current` before invoking subagents and provides the verified branch information to read-only agents.
+- **Read-Only Agents (Project Planner & Code Reviewer):** These agents do not possess terminal execution tools (`run_command`) and have `commandExecutionPolicy: off`. They must **NOT** attempt terminal commands. They rely on the coordinator's verified branch status.
+- **Developer Agents:** Developer agents may run read-only `git branch --show-current` if needed.
+- **Approved Branches:** Work is permitted strictly on `development` or an approved feature branch cut from `development`. Never perform work on `main`.
+- **NO AUTOMATIC BRANCH SWITCHING:** Agents must **NEVER** run `git switch` or `git checkout <branch>` to change branches. If the active branch is `main` or an unapproved branch, the agent must **STOP immediately** and ask the developer to switch branches manually.
 
 ### Step 4: Map the Modular Monolith Architecture
 Understand how the three core layers interact:

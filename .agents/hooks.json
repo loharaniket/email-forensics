@@ -3,11 +3,11 @@
     "enabled": true,
     "PreToolUse": [
       {
-        "matcher": "run_command|github_.*",
+        "matcher": "run_command|.*github.*",
         "hooks": [
           {
             "type": "command",
-            "command": "node scripts/block-git-commits.mjs",
+            "command": "node .agents/scripts/block-git-commits.mjs",
             "timeout": 10
           }
         ]

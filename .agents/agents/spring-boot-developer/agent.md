@@ -5,7 +5,8 @@ subagent: true
 mainAgent: false
 model: flash
 inheritCustomizations: true
-disableMcp: true
+inheritMcp: false
+commandExecutionPolicy: sandboxed
 tools: [view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]
 ---
 

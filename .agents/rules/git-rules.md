@@ -46,11 +46,12 @@ The repository owner manually manages every Git commit and push.
 
 ---
 
-## 4. Work Strictly on the Development Branch
+## 4. Work Strictly on the Development or Approved Feature Branches
 
-- All Version 2 development must occur on the `development` branch (or feature branches cut from it, such as `feature/email-forensics-v2`).
-- Before starting work on any task, run `git branch --show-current` or `git status` to confirm you are on `development`.
-- **NO AUTOMATIC BRANCH SWITCHING:** Agents must **NEVER** run `git switch` or `git checkout` to change branches automatically. If the active branch is `main` or anything other than `development`, the agent must **STOP immediately** and request the developer to switch branches manually.
+- All Version 2 development must occur on the `development` branch or an approved feature branch cut from `development` (such as `feature/email-forensics-v2`).
+- **Coordinator Responsibility:** The coordinator verifies the active branch using `git branch --show-current` and provides this verified branch status to read-only agents (`project-planner`, `code-reviewer`). Read-only agents do not possess terminal execution tools and must not attempt terminal commands.
+- **Developer Agents:** Developer agents may run read-only `git branch --show-current` or `git status` before starting work to confirm the branch.
+- **NO AUTOMATIC BRANCH SWITCHING:** Agents must **NEVER** run `git switch` or `git checkout <branch>` to change branches automatically. If the active branch is `main` or anything other than `development` (or an approved feature branch), the agent must **STOP immediately** and request the developer to switch branches manually.
 
 ---
 

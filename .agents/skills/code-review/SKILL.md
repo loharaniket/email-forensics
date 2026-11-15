@@ -16,7 +16,9 @@ Consult the authoritative specification in [docs/architecture-v2.md](../../../do
 The code reviewer is strictly **read-only**:
 - It inspects changed files and reports findings with exact file paths and line numbers.
 - It must **NEVER** edit, create, or delete source files directly.
-- **Test Verification Integrity:** Because the reviewer does not possess terminal tools, it cannot run tests. It must **NEVER** claim that tests passed without actual execution results or terminal logs provided by the developer or coordinator. If no test logs are provided, it must report that testing still needs to be performed.
+- **Evidence-Based Reporting:** The code reviewer possesses no terminal execution tools (`run_command`) and has `commandExecutionPolicy: off`. It cannot run terminal commands, execute tests, or run `git status`.
+- **Integrity Rule:** The reviewer must **NEVER** claim that Git status, working-tree cleanliness, or test execution has been verified unless actual command outputs or terminal execution logs are explicitly supplied by the coordinator or developer.
+- **Report NOT VERIFIED When Evidence Is Absent:** Whenever test execution logs or `git status` command outputs are unavailable, the reviewer must explicitly report **`NOT VERIFIED`** for those items.
 
 ---
 
@@ -87,12 +89,12 @@ Review all changed files against these 12 criteria:
 ### 11. Test Execution Verification
 - Have unit or integration tests been written for the new functionality?
 - Verify actual execution logs: did the tests actually run and pass?
-- If no test logs are provided, explicitly state: **"Tests not verified: developer/coordinator must run tests."**
+- **Evidence Requirement:** If no actual test execution output or logs are supplied by the developer or coordinator, the reviewer must report **`NOT VERIFIED`** ("Tests NOT VERIFIED: test execution logs were not provided"). Never assume or claim tests passed.
 
 ### 12. Git Safety and Branch Policy
 - Confirm that **NO** automated `git commit`, `git push`, or branch-switching commands were executed.
 - Confirm that `main` branch was not modified.
-- Verify that working tree files are clean and ready for the human developer to inspect and commit manually.
+- **Evidence Requirement:** The reviewer cannot run `git status` directly. Working-tree cleanliness and active branch state (`development` or approved feature branch) must be supplied as evidence by the coordinator. If this evidence is not supplied, report **`NOT VERIFIED`** ("Git status and working tree NOT VERIFIED: coordinator terminal output was not provided").
 
 ---
 

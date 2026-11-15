@@ -66,7 +66,7 @@ Email Forensics Version 2 is an AI-assisted forensic web application designed fo
 5. **MIME & Header Extraction:** Parse all RFC 5322 headers, MIME parts, plain text, and HTML bodies using Jakarta Mail (Eclipse Angus) and Jsoup.
 6. **Sender Identity Analysis:** Compare From, Reply-To, Return-Path, DKIM signing domain, and Received hops to detect spoofing or inconsistencies.
 7. **Delivery Path Reconstruction:** Trace Received headers chronologically from newest to oldest, identifying relay hops and untrusted boundaries.
-8. **Mail Authentication Verification:** Call Node.js 22.19.0+ `mailauth` helper to verify SPF, DKIM, DMARC, and ARC using original email bytes and DNS queries.
+8. **Mail Authentication Verification:** Call Node.js 22.19.0 or later `mailauth` helper to verify SPF, DKIM, DMARC, and ARC using original email bytes and DNS queries.
 9. **Indicator Extraction & Normalization:** Extract URLs, domains, and IP addresses; normalize for duplicate matching while preserving original raw values.
 10. **URL & Domain Reputation:** Check extracted URLs and domains against Google Safe Browsing, PhishTank, OpenPhish feed, URLhaus, and ThreatFox.
 11. **IP Intelligence:** Check public IPs against AbuseIPDB for abuse reputation, IPinfo Lite for country and ASN, and VirusTotal/GreyNoise context.

@@ -35,17 +35,17 @@ The single authoritative technical reference for Version 2 is [docs/architecture
 - **Main Branch (`main`):**
   - Contains the stable, preserved Version 1 of Email Forensics.
   - **NEVER** modify, commit to, rebase, or push to the `main` branch.
-- **Development Branch (`development`):**
-  - All Version 2 development must happen strictly on the `development` branch (or feature branches cut from `development`, such as `feature/email-forensics-v2`).
-  - Always verify that the active branch is `development` before writing code.
+- **Development & Approved Feature Branches:**
+  - All Version 2 development must happen strictly on the `development` branch or an approved feature branch cut from `development` (such as `feature/email-forensics-v2`).
+  - The coordinator must verify the active Git branch via `git branch --show-current` and provide that information to read-only agents (`project-planner` and `code-reviewer`). Read-only agents do not possess terminal execution tools and must not attempt terminal commands.
 - **No Automatic Branch Switching:**
   - AI agents must **NEVER** automatically switch branches (no `git switch` or `git checkout <branch>`).
-  - If the active branch is `main` or anything other than `development`, the agent must **STOP immediately** and ask the developer to switch branches manually.
+  - If the active branch is `main` or anything other than `development` (or an approved feature branch), the agent must **STOP immediately** and ask the developer to switch branches manually.
 - **Absolute Manual Commit & Push Prohibition:**
   - AI agents are **STRICTLY PROHIBITED** from executing `git commit`, `git push`, `git push --force`, `git reset`, `git clean`, `git checkout .`, `git restore .`, or any GitHub write commands under any circumstance, even if explicitly instructed in a prompt.
   - The repository owner manually reviews, stages, commits, and pushes all code.
   - This policy is enforced technically via `.agents/hooks.json` PreToolUse command filters and requires continuous human verification.
-  - Agents may only run read-only git operations (`git status`, `git diff`, `git log`, `git branch --show-current`, `git show`).
+  - Developer agents may only run read-only git operations (`git status`, `git diff`, `git log`, `git branch --show-current`, `git show`).
 
 ---
 

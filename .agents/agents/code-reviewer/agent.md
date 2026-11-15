@@ -5,7 +5,8 @@ subagent: true
 mainAgent: false
 model: flash
 inheritCustomizations: true
-disableMcp: true
+inheritMcp: false
+commandExecutionPolicy: off
 tools: [view_file, grep_search, find_by_name, list_dir, search_web, send_message]
 ---
 
