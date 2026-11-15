@@ -7,13 +7,7 @@ description: Use this skill when writing PostgreSQL queries, creating or modifyi
 
 This skill outlines the database schema, entity mapping, JSONB handling, and query design for the Email Forensics application.
 
-## When to Use This Skill
-
-Activate this skill when:
-- Creating or editing entity classes (`Email.java`, `Indicator.java`).
-- Writing Spring Data JPA repositories (`EmailRepository.java`, `IndicatorRepository.java`).
-- Writing or reviewing native SQL queries for historical correlation.
-- Designing or running database schema updates.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ---
 
@@ -64,7 +58,7 @@ The system uses exactly two tables in PostgreSQL (`email_forensics_db`):
 └─────────────────────────────────┘
 ```
 
-Do not add additional tables for cases, users, sessions, or threat provider dumps.
+Do not add additional tables for cases, campaigns, users, sessions, or threat provider dumps.
 
 ---
 

@@ -2,17 +2,29 @@
 
 This document records the visual identity, colors, typography, components, and page layouts of the Version 1 frontend. All Version 2 frontend development must follow this guide to preserve the application's clean, modern dark visual style.
 
+Consult the authoritative specification in [docs/architecture-v2.md](../architecture-v2.md).
+
 All explanations in this guide use simple English.
 
 ---
 
-## 1. Application Theme and Visual Identity
+## 1. Version 1 is a Visual Reference Only (Do Not Copy Code)
 
-The Email Forensics frontend uses a professional cyber-security dark theme.
-- **Style:** Clean, minimal, high-contrast dark dashboard.
-- **Tone:** Technical, trustworthy, easy to read.
-- **Primary Accent:** Vivid blue for primary actions, focus highlights, and active tabs.
-- **Surface Elevation:** Subtle shifts from deep background slate to lighter slate surfaces for cards, modals, and tables.
+The existing Version 1 frontend located in `frontend/` is a **VISUAL REFERENCE ONLY**.
+
+- **Take Design Inspiration From:**
+  - Overall visual theme and dark colour palette.
+  - Colour combinations and contrast levels.
+  - Typography and spacing scale.
+  - Card design, button design, and border radius.
+  - Navigation style and table appearance.
+  - Overall professional cybersecurity dashboard appearance.
+- **STRICT PROHIBITION ON COPYING V1 CODE:**
+  - Agents must **NOT** copy V1 frontend source code or reuse its components as they are.
+  - Agents must design **BRAND-NEW** Version 2 React components with clean, simple, understandable code.
+  - During future frontend development, agents may inspect V1 frontend files in read-only mode solely to understand visual styling and design decisions.
+  - Never copy old business logic, API integrations, state management, component implementations, or legacy features.
+  - Never add comments inside source code files.
 
 ---
 
@@ -74,202 +86,60 @@ Use these colors consistently across badges, score meters, and status indicators
 
 ---
 
-## 4. Reusable UI Components Catalog
+## 4. Reusable UI Components Catalog (Brand-New V2 Components)
 
-Version 2 organizes the frontend into clean, reusable components located in `frontend/src/components/`:
+Version 2 organizes the frontend into clean, brand-new components located in `frontend/src/components/`:
 
 ### 1. `FileUpload.jsx`
-- **Purpose:** Drag-and-drop file upload target.
-- **States:**
-  - Default: Dashed border (`#334155`), upload icon, file prompt text.
-  - Drag-over: Solid blue border (`#3b82f6`), slightly lighter background.
-  - File selected: Shows file name, human-readable size (e.g. `2.4 MB`), and remove button.
-- **Controls:** Only allows `.eml` files; displays an inline warning if a user selects an unsupported file format or file over 10 MB.
+- Drag-and-drop file upload target.
+- Accepts `.eml` only; displays file name and size.
+- Shows validation error for unsupported files or files > 10 MB.
 
 ### 2. `ProgressSteps.jsx`
-- **Purpose:** Visual progress tracker during email processing.
-- **Stages Displayed:**
-  1. Saving original evidence
-  2. Parsing MIME headers and content
-  3. Verifying mail authentication (SPF, DKIM, DMARC, ARC)
-  4. Querying threat intelligence providers
-  5. Generating AI threat evaluation
-  6. Finalising investigation report
-- **Visuals:** Step circles connected by lines; active step has an animated pulse effect; completed steps show a green checkmark.
+- Visual progress tracker during email processing.
+- Stages: Saving -> Parsing -> Authentication -> Threat Checks -> AI Analysis -> Finalising.
 
 ### 3. `EmailSummary.jsx`
-- **Purpose:** Top overview banner on the result page.
-- **Displays:**
-  - Message Subject (bold, primary text).
-  - From Address and Display Name.
-  - Reply-To Address (highlights mismatch if different from From).
-  - Date and Message-ID.
-  - SHA-256 Hash of original file (monospace with one-click copy button).
-  - Overall Investigation Verdict badge.
+- Displays subject, From, Reply-To, Date, Message-ID, SHA-256 hash (with copy button), and overall verdict badge.
 
 ### 4. `RiskScoreCard.jsx`
-- **Purpose:** Prominent visual summary of the calculated risk score.
-- **Displays:**
-  - Large numeric score (e.g. `75 / 100`).
-  - Circular or linear progress meter with color keyed to risk level:
-    - 0-19: Green (LOW)
-    - 20-39: Yellow (GUARDED)
-    - 40-59: Amber (ELEVATED)
-    - 60-79: Orange (HIGH)
-    - 80-100: Red (CRITICAL)
-  - Confidence Badge: `HIGH`, `MEDIUM`, or `LOW`.
+- Large numeric score (0-100), risk badge (LOW, GUARDED, ELEVATED, HIGH, CRITICAL), and confidence badge (HIGH, MEDIUM, LOW).
 
 ### 5. `AuthenticationResults.jsx`
-- **Purpose:** Detailed summary of email authentication protocols.
-- **Displays 4 Protocol Cards:**
-  - **SPF:** Status badge (`PASS`, `FAIL`, `NONE`, `TEMPERROR`, `PERMERROR`, `NOT_VERIFIABLE`), client IP, MAIL FROM domain.
-  - **DKIM:** Status badge, signing domain (`d=`), selector (`s=`).
-  - **DMARC:** Status badge, policy (`none`, `quarantine`, `reject`), alignment check.
-  - **ARC:** Status badge, chain validation result.
+- 4 cards for SPF, DKIM, DMARC, and ARC with status badges and policy details.
 
 ### 6. `ReceivedChain.jsx`
-- **Purpose:** Interactive timeline of mail hops.
-- **Displays:**
-  - Chronological list of hops (from originating client to destination server).
-  - Hop number, transmitting server, receiving server, timestamp, and delay between hops.
-  - Visual indicator highlighting hops that crossed untrusted boundaries.
+- Chronological timeline of mail hops from sender to receiver, highlighting untrusted hops.
 
 ### 7. `UrlFindings.jsx`
-- **Purpose:** Table of all URLs and domains extracted from the email body and HTML.
-- **Table Columns:**
-  - Original URL (truncated with hover tooltip, query parameters masked where sensitive).
-  - Origin (`BODY`, `HTML`).
-  - Threat Providers Checked (e.g. Safe Browsing, PhishTank, URLhaus).
-  - Individual Provider Verdicts (`MATCH`, `NO_MATCH`, `ERROR`).
-  - Consolidated Indicator Verdict badge (`MALICIOUS`, `SUSPICIOUS`, `NO_MATCH`, `UNKNOWN`).
+- Table of extracted URLs/domains with provider check statuses and verdicts.
 
 ### 8. `IpFindings.jsx`
-- **Purpose:** Table of public IP addresses found in mail hops or URLs.
-- **Table Columns:**
-  - IP Address (monospace).
-  - Origin (`MAIL_HOP`, `URL_DNS`).
-  - Geolocation & ASN (Country code, ISP/Organization from IPinfo Lite).
-  - Abuse Score (from AbuseIPDB, e.g. `82%`).
-  - Verdict badge.
+- Table of public IPs with origin, geolocation (IPinfo/MaxMind), abuse score (AbuseIPDB), and verdict.
 
 ### 9. `ImageFindings.jsx`
-- **Purpose:** Displays findings from inline images and image attachments.
-- **Displays:**
-  - Thumbnail preview of the image.
-  - OCR Extracted Text block (from Tesseract OCR).
-  - Decoded QR code URL (from ZXing) with reputation verdict badge.
+- Displays inline/attached image previews, local Tesseract OCR text, and decoded ZXing QR destination URLs.
 
 ### 10. `AiAssessment.jsx`
-- **Purpose:** Privacy-safe AI threat evaluation summary from Gemini.
-- **Displays:**
-  - Classification banner (`PHISHING`, `SUSPICIOUS`, `BENIGN`).
-  - Plain-English explanation paragraph explaining why the email is dangerous or safe.
-  - Detected Signal Badges: `URGENCY`, `PAYMENT_REQUEST`, `CREDENTIAL_HARVESTING`, `EXECUTIVE_IMPERSONATION`.
-  - Evidence Cross-References (tags linking to specific indicator IDs).
-  - Limitations and Actionable Recommendations list.
+- Displays Gemini's structured evaluation: classification, plain-English summary, detected signals, evidence tags, limitations, and recommendations.
 
 ### 11. `RiskFactors.jsx`
-- **Purpose:** Transparent breakdown of how the risk score was calculated.
-- **Displays:**
-  - Itemized table of scoring rules triggered.
-  - Factor description (e.g. "Verified Phishing URL match in PhishTank").
-  - Points added (e.g. `+40`).
-  - Capped total score calculation.
+- Itemized breakdown of scoring rules triggered, points added, and capped total score.
 
 ### 12. `RelatedEmails.jsx`
-- **Purpose:** Historical correlation table of other emails in the database sharing indicators.
-- **Displays:**
-  - Email ID, File Name, Sender, Subject, Date, Verdict.
-  - Matched Indicator (e.g. identical URL or same malicious IP).
-  - Relation Strength badge (`STRONG`, `MEDIUM`, `WEAK`).
+- Table of past investigations that share matching indicators (file name, sender, date, verdict, relation strength).
 
 ### 13. `RedactionPreview.jsx`
-- **Purpose:** Modal displayed when status is `WAITING_FOR_AI_APPROVAL`.
-- **Displays:**
-  - Warning banner stating that text will be sent to the free Gemini API.
-  - Read-only preview box showing the exact redacted text (with `[PERSON]`, `[EMAIL]`, `[PHONE]` tokens).
-  - Action buttons: "Approve & Send to AI" (Primary Blue) and "Decline AI Analysis" (Secondary/Cancel).
+- Modal displayed during `WAITING_FOR_AI_APPROVAL` showing the redacted text preview with Approve and Decline action buttons.
 
 ### 14. `ErrorNotice.jsx`
-- **Purpose:** Reusable alert banner for errors.
-- **Displays:**
-  - Red background (`#7f1d1d`), red border (`#ef4444`), alert icon, clear error message.
+- Reusable red alert banner for error display.
 
 ---
 
-## 5. Page Layouts and Flows
+## 5. Frontend API Client Pattern (`src/api/emailApi.js`)
 
-### Page 1: Upload Page (`UploadPage.jsx`)
-```
-┌──────────────────────────────────────────────────────────┐
-│                   EMAIL FORENSICS V2                     │
-│        Investigate Suspicious Emails Safely              │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│   ┌──────────────────────────────────────────────────┐   │
-│   │                                                  │   │
-│   │           [ Upload .eml File Zone ]              │   │
-│   │           Drag and drop or Browse                │   │
-│   │                                                  │   │
-│   └──────────────────────────────────────────────────┘   │
-│                                                          │
-│   [x] Allow External Threat Intelligence Lookups         │
-│   [x] Request AI Threat Evaluation (Redacted Preview)    │
-│                                                          │
-│                 [  ANALYSE EMAIL  ]                      │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
-```
-
-### Page 2: Analysis Page (`AnalysisPage.jsx`)
-```
-┌──────────────────────────────────────────────────────────┐
-│ Investigation #1042: invoice.eml                         │
-│ Status: PROCESSING                                       │
-├──────────────────────────────────────────────────────────┤
-│                                                          │
-│  (✓) Saving  ->  (✓) Parsing  ->  (*) Threat Checks  ->  ( ) AI  ->  ( ) Done
-│                                                          │
-│  Current Stage: Querying URLhaus and PhishTank...        │
-│  [ Polling backend every 2 seconds ]                     │
-│                                                          │
-└──────────────────────────────────────────────────────────┘
-```
-
-### Page 3: Result Page (`ResultPage.jsx`)
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│  [ EmailSummary Card: Sender, Subject, Date, SHA-256 Hash ]              │
-├─────────────────────────────────────┬────────────────────────────────────┤
-│  Risk Score: 75 / 100               │  AI Evaluation Summary:            │
-│  Level: HIGH  | Confidence: MEDIUM  │  "Message requests urgent wire...  │
-│  Verdict: SUSPICIOUS                │   Signals: Urgency, Payment"       │
-├─────────────────────────────────────┴────────────────────────────────────┤
-│  [ Tabs: Authentication | Indicators | Images/QR | Risk Factors | Related]│
-├──────────────────────────────────────────────────────────────────────────┤
-│  [ Active Tab Content ]                                                  │
-├──────────────────────────────────────────────────────────────────────────┤
-│  [ Download PDF Report Button ]                                          │
-└──────────────────────────────────────────────────────────────────────────┘
-```
-
-### Page 4: History Page (`HistoryPage.jsx`)
-```
-┌──────────────────────────────────────────────────────────────────────────┐
-│ Previous Investigations                                                  │
-├────────┬──────────────┬──────────────────┬───────────┬─────────┬─────────┤
-│ ID     │ File Name    │ Sender           │ Date      │ Score   │ Verdict │
-├────────┼──────────────┼──────────────────┼───────────┼─────────┼─────────┤
-│ 1042   │ invoice.eml  │ billing@test.com │ Nov 15    │ 75/100  │ SUSP... │
-│ 1041   │ verify.eml   │ security@acme.co │ Nov 14    │ 95/100  │ PHISH.. │
-└────────┴──────────────┴──────────────────┴───────────┴─────────┴─────────┘
-```
-
----
-
-## 6. Frontend API Client Pattern (`src/api/emailApi.js`)
-
-All API communication must be isolated in `src/api/emailApi.js`:
+All API communication must be isolated in `src/api/emailApi.js` using native `fetch()`:
 
 ```javascript
 const BASE_URL = '/api';

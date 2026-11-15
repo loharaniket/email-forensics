@@ -7,20 +7,11 @@ description: Use this skill when implementing, verifying, or debugging the core 
 
 This skill serves as the comprehensive technical guide for the 20-step forensic email analysis pipeline defined in Version 2.
 
-## When to Use This Skill
-
-Activate this skill when:
-- Implementing or modifying the `AnalysisOrchestrator` workflow.
-- Parsing MIME headers, Received chains, or bodies using Jakarta Mail and Jsoup.
-- Calling the Node.js `mailauth` helper for SPF, DKIM, DMARC, and ARC verification.
-- Integrating external threat intelligence client classes in `com.emailforensics.provider`.
-- Implementing OCR (Tesseract) or QR decoding (ZXing).
-- Redacting PII and integrating Gemini via Spring AI.
-- Calculating risk scores and determining investigation verdicts.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ---
 
-## The 20-Step Forensic Pipeline
+## 1. The 20-Step Forensic Pipeline
 
 The backend processes uploaded emails across 20 distinct stages:
 
@@ -48,10 +39,10 @@ The backend processes uploaded emails across 20 distinct stages:
 
 ---
 
-## 1. Evidence Preservation and Hashing
+## 2. Evidence Preservation and Hashing
 
 1. Receive the file stream as raw bytes.
-2. Calculate the SHA-256 hash using Java's built-in `MessageDigest`:
+2. Calculate the SHA-256 hash immediately using Java's built-in `MessageDigest`:
    ```java
    MessageDigest digest = MessageDigest.getInstance("SHA-256");
    byte[] hashBytes = digest.digest(rawBytes);
@@ -62,7 +53,7 @@ The backend processes uploaded emails across 20 distinct stages:
 
 ---
 
-## 2. Email Parsing (Jakarta Mail / Angus Mail)
+## 3. Email Parsing (Jakarta Mail / Angus Mail)
 
 Extract all relevant headers and body parts:
 - `From`: Parsed display name and address.
@@ -75,7 +66,7 @@ Extract all relevant headers and body parts:
 
 ---
 
-## 3. Email Authentication Verification (`mailauth` Helper)
+## 4. Email Authentication Verification (`mailauth` Helper)
 
 Run the Node.js helper `tools/mailauth/verify.mjs` via `ProcessBuilder`:
 - Check SPF, DKIM, DMARC, and ARC using the original email bytes.
@@ -90,27 +81,28 @@ Run the Node.js helper `tools/mailauth/verify.mjs` via `ProcessBuilder`:
 
 ---
 
-## 4. Threat Intelligence Provider Lookups
+## 5. Threat Intelligence Providers and Normalization
 
 Query threat providers based on indicator type:
 
-| Indicator Type | External Providers | Notes |
-| :--- | :--- | :--- |
-| **URLs** | Google Safe Browsing v5, PhishTank, OpenPhish feed, URLhaus, ThreatFox | De-duplicate URLs before querying. Never fetch URLs live. |
-| **Domains** | ThreatFox, VirusTotal (quota permitting) | Extract from From, Reply-To, and URL hostnames. |
-| **Public IPs** | AbuseIPDB, IPinfo Lite, GreyNoise Community | Skip private, loopback, and reserved IP ranges (RFC 1918). |
+| Indicator Type | Primary Providers | Fallbacks / Context | Key Constraints |
+| :--- | :--- | :--- | :--- |
+| **URLs** | Safe Browsing v5, PhishTank, OpenPhish feed, URLhaus, ThreatFox | VirusTotal (quota limited) | De-duplicate URLs before querying. Never fetch URLs live. |
+| **Domains** | ThreatFox, Safe Browsing, PhishTank | VirusTotal (quota limited) | Extract from From, Reply-To, and URL hostnames. |
+| **Public IPs** | AbuseIPDB (abuse reputation) | ThreatFox, VirusTotal, GreyNoise (scanning context) | Skip private/reserved IPs (RFC 1918). Geolocation is NOT reputation! |
+| **IP Geolocation** | IPinfo Lite (country/ASN) | MaxMind GeoLite2 (local fallback) | Provides network context only; never treat location as malicious verdict. |
+| **Image OCR** | Tesseract 5 (local, default) | OCR.space (cloud, requires user consent) | Free cloud OCR limited to 500 req/day. Local OCR runs on server. |
+| **AI Threat Eval** | Google Gemini via Spring AI | Ollama (local LLM fallback) | Requires PII redaction and explicit user approval before sending. |
 
-### Provider Response Normalization
-Normalize each response into the standard internal `ProviderObservation` model:
-- `provider`: Provider name string (e.g. `PHISHTANK`, `ABUSEIPDB`).
-- `status`: `MATCH`, `NO_MATCH`, `ERROR`, or `UNKNOWN`.
-- `verdict`: `PHISHING`, `MALWARE`, `ABUSE`, or `null`.
-- `checkedAt`: Timestamp of check.
-- `evidence`: Compact key-value details (never store raw HTML or huge payloads).
+### Normalized Result Statuses:
+- `MATCH`: Provider found a confirmed threat/abuse record.
+- `NO_MATCH`: Query succeeded, but provider had no record. **`NO_MATCH` does NOT prove the indicator is safe.**
+- `ERROR`: Request failed (timeout, network error, invalid key). Does not abort the pipeline.
+- `UNKNOWN`: Available evidence is insufficient to reach a verdict.
 
 ---
 
-## 5. OCR and QR Code Processing
+## 6. OCR and QR Code Processing
 
 1. Extract supported image MIME types (`image/jpeg`, `image/png`, `image/gif`, `image/webp`).
 2. Run local **Tesseract OCR** to extract visible text (store in temporary derived file, delete after analysis).
@@ -119,11 +111,11 @@ Normalize each response into the standard internal `ProviderObservation` model:
 
 ---
 
-## 6. PII Redaction and AI Assessment Contract
+## 7. PII Redaction and AI Assessment Contract
 
 1. Redact personal identifiers using pattern replacement:
    - Names -> `[PERSON]`
-   - Local-part of email -> `[EMAIL]` (keep domain)
+   - Local-part of email -> `[EMAIL]` (retain domain)
    - Phone numbers -> `[PHONE]`
    - Account numbers -> `[ACCOUNT]`
    - Card numbers -> `[CARD]`
@@ -146,21 +138,31 @@ Normalize each response into the standard internal `ProviderObservation` model:
 
 ---
 
-## 7. Risk Score Calculation and Risk Levels
+## 8. Risk Score Calculation and Risk Levels
 
 The risk score is calculated strictly by backend deterministic rules in `RiskScoreService`. The AI model does NOT determine the numeric score.
 
-### Scoring Factors (Cap at 100 points maximum):
-1. **Verified Phishing URL or Domain:** `+40 points` (counted once across all matching providers).
-2. **Confirmed Malware URL:** `+40 points` (if URL already scored as phishing, do not double-count).
-3. **Known Malicious IP:** `+15 points` (ThreatFox match or AbuseIPDB score > 80).
-4. **Strong Authentication Inconsistency:** `+15 points` (DMARC fail with sender mismatch, or DKIM fail with bad signature).
+### Provisional Scoring Factors (Capped at 100 points maximum):
+1. **Verified Phishing URL or Domain:** `+40 points` (PhishTank or Safe Browsing verified match).
+2. **Confirmed Malware-Distribution URL:** `+40 points` (URLhaus match; if already counted as phishing URL, do not double-count).
+3. **Known Malicious IP Evidence:** `+15 points` (ThreatFox match or AbuseIPDB score > 80).
+4. **Strong Email Authentication Inconsistency:** `+15 points` (DMARC fail with sender mismatch, or DKIM fail with bad signature).
 5. **Separate Malicious QR Destination:** `+10 points` (only if distinct from already scored URLs).
-6. **AI-Supported Social Engineering / Fraud:** `+5 points` (credential harvesting or urgent payment request).
-7. **Historical Repeat of Known Malicious Indicator:** `+10 points` (exact match on malicious URL/domain/IP in database).
+6. **AI-Supported Social Engineering / Fraud:** `+5 points` (credential harvesting, urgent payment, or executive impersonation).
+7. **Historical Repeat of Confirmed Malicious Indicator:** `+10 points` (exact match with an indicator marked MALICIOUS in a previous investigation).
 
-### Formula:
-$$\text{Final Risk Score} = \min(\text{Sum of Unique Active Factors}, 100)$$
+$$\text{Final Risk Score} = \min(\text{Raw Points}, 100)$$
+
+### Provisional Weights & Calibration Requirements:
+- All scoring weights are **provisional starting heuristics**.
+- They must be evaluated and tuned on a labelled dataset of legitimate and phishing emails using formal metrics:
+  - Precision
+  - Recall
+  - F1-Score
+  - False Positive Rate
+  - Confusion Matrix
+- Do not claim research-paper accuracy without local benchmark testing.
+- AI confidence labels (`HIGH`, `MEDIUM`, `LOW`) must not be presented as statistical probabilities.
 
 ### Risk Levels:
 - `0 - 19`: **LOW**

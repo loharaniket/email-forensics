@@ -7,9 +7,7 @@ description: Use this skill before starting any development or analysis task to 
 
 This skill guides the AI agent through a structured 10-step process to thoroughly understand the Email Forensics project before modifying or creating any code.
 
-## When to Use This Skill
-
-Activate this skill at the beginning of any new task, feature request, or investigation to establish correct project context, prevent unintended modifications, and ensure full alignment with architectural guidelines.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ---
 
@@ -17,15 +15,16 @@ Activate this skill at the beginning of any new task, feature request, or invest
 
 Follow these ten steps sequentially:
 
-### Step 1: Read the Project Master Instructions
-Always read `AGENTS.md` at the repository root. Ensure you are familiar with:
+### Step 1: Read Master Instructions
+Always read [AGENTS.md](AGENTS.md) at the repository root. Ensure you are familiar with:
 - The beginner-friendly coding style.
 - The strict no-code-comments rule.
 - The ban on Lombok and complex Spring annotations.
+- The absolute prohibition on `git commit` and `git push`.
 - The two-table database restriction (`emails` and `indicators`).
 
 ### Step 2: Read the Technical Architecture Reference
-Review the relevant sections of the Version 2 architecture specification:
+Review the relevant sections of [docs/architecture-v2.md](docs/architecture-v2.md):
 - Backend class and package hierarchy.
 - Frontend page and component organization.
 - External threat intelligence provider specifications.
@@ -41,7 +40,7 @@ git branch --show-current
 
 ### Step 4: Map the Modular Monolith Architecture
 Understand how the three core layers interact:
-- **Frontend (React + Vite):** Dispatches multipart uploads, polls status, renders findings, handles AI redaction approval.
+- **Frontend (React + Vite):** Dispatches multipart uploads, polls status, renders findings, handles AI redaction approval. Built from scratch with V1 as visual reference only.
 - **Backend (Spring Boot 4.1.x):** Coordinates asynchronous analysis via `ThreadPoolTaskExecutor`, calls local tools, talks to PostgreSQL.
 - **Mail Authentication Helper (Node.js 22+):** Executes SPF, DKIM, DMARC, ARC checks via a local process.
 
@@ -58,7 +57,7 @@ Ensure any data operations interact strictly with the two allowed tables:
 - `indicators`: Stores extracted URLs, domains, IPs, QR URLs, and OCR text with compact JSONB findings.
 
 ### Step 7: Confirm API Contracts and Data Shapes
-Review the API endpoint contracts in Section 11 of the technical documentation before adding or modifying REST controllers:
+Review the API endpoint contracts in Section 11 of [docs/architecture-v2.md](docs/architecture-v2.md) before adding or modifying REST controllers:
 - `POST /api/emails/analyze`: Accepts multipart file, returns 202 Accepted.
 - `GET /api/emails/{id}`: Returns status, summary, and authentication results.
 - `GET /api/emails/{id}/indicators`: Returns extracted indicators and provider verdicts.
@@ -70,10 +69,10 @@ Clarify the exact input, processing stages, and output:
 - What validation checks are required?
 - How should failures in external services be handled? (Always return `UNKNOWN` or `ERROR`, never false `SAFE`).
 
-### Step 9: Identify Existing Reusable Code
+### Step 9: Identify Existing Reusable Patterns
 Check for existing patterns before creating new ones:
-- Reuse existing DTOs, response models, or exception handlers.
-- In frontend, check existing UI components in `frontend/src/components/` and style variables in `frontend/src/styles/`.
+- Reuse existing DTOs, response models, or exception handlers in the backend.
+- In frontend, consult [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md) for design tokens. Remember: V1 is visual reference only; do not copy V1 code.
 
 ### Step 10: Identify Missing Requirements or Blockers
 If any requirement is ambiguous or missing:

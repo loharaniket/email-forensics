@@ -7,14 +7,7 @@ description: Use this skill when executing unit tests, integration tests, mock p
 
 This skill provides testing procedures, test fixture standards, mock provider configurations, and debugging workflows for the Email Forensics application.
 
-## When to Use This Skill
-
-Activate this skill when:
-- Writing or running JUnit 5 unit or integration tests for the backend.
-- Running frontend tests with Vitest and React Testing Library.
-- Creating test `.eml` fixtures.
-- Mocking external threat intelligence APIs to avoid wasting free quota.
-- Investigating compilation errors, failed tests, or runtime exceptions.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ---
 
@@ -23,6 +16,7 @@ Activate this skill when:
 1. **Never Claim Tests Passed Without Running Them:** Always execute tests via command line (`./mvnw test` or `npm test`) and inspect the output.
 2. **Never Use Real Malware or Live Malicious URLs in Test Fixtures:** Always use reserved domains (such as `example.test`, `test.invalid`) and RFC 5737 test IP addresses (`192.0.2.1`, `198.51.100.1`, `203.0.113.1`).
 3. **Never Burn API Quota in Automated Tests:** Always use WireMock or MockWebServer to simulate provider responses during automated testing. Run live provider calls only during deliberate manual smoke tests.
+4. **Never Execute Git Commit or Push:** Tests should be run to verify code, but agents must never commit or push test results or code changes.
 
 ---
 

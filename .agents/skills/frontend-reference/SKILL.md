@@ -5,85 +5,57 @@ description: Use this skill when building or styling React frontend pages, compo
 
 # Skill: Frontend Design Reference and UI Implementation
 
-This skill provides step-by-step guidance on how to replicate and maintain the visual identity, dark theme, and component structure of the Version 1 frontend in the Version 2 application.
+This skill provides step-by-step guidance on how to replicate and maintain the visual identity, dark theme, and design tokens of the Version 1 frontend while writing clean, brand-new Version 2 components.
 
-## When to Use This Skill
-
-Activate this skill whenever:
-- Creating or editing React components in `frontend/src/components/`.
-- Creating or updating pages in `frontend/src/pages/`.
-- Styling elements in `frontend/src/styles/`.
-- Connecting React pages to backend REST endpoints in `frontend/src/api/emailApi.js`.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md) and design tokens in [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md).
 
 ---
 
-## 1. How to Inspect and Apply the Reference Design
+## 1. Version 1 is a Visual Reference Only (Do Not Copy Code)
 
-Before creating or editing frontend code, review the [frontend-reference-guide.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/docs/ai/frontend-reference-guide.md).
-
-Always verify:
-1. **Color Palette:** Use established CSS custom properties or design constants:
-   - Primary Accent: `#3b82f6` (blue-500)
-   - Background Canvas: `#0f172a` (slate-900)
-   - Card/Surface Background: `#1e293b` (slate-800)
-   - Elevated Surface Background: `#334155` (slate-700)
-   - Border Color: `#334155` (slate-700) or `#475569` (slate-600)
-   - Text Primary: `#f8fafc` (slate-50)
-   - Text Muted/Secondary: `#94a3b8` (slate-400)
-   - Danger/Malicious: `#ef4444` (red-500)
-   - Warning/Suspicious: `#f59e0b` (amber-500)
-   - Success/Benign: `#10b981` (emerald-500)
-2. **Typography:** Standard system sans-serif font stack (`Inter`, system-ui, -apple-system, sans-serif).
-3. **Card Styling:** Rounded corners (`border-radius: 0.5rem` or `0.75rem`), subtle borders, dark background, padding of `1.25rem` to `1.5rem`.
-4. **Button Styling:**
-   - Primary: Blue background, white text, hover state with slight brightness increase, disabled state with reduced opacity and cursor not-allowed.
-   - Danger: Red background for declining or stopping actions.
-   - Secondary: Dark surface with border, light text.
+The existing Version 1 frontend located in `frontend/` is a **VISUAL REFERENCE ONLY**.
+- **Take Design Inspiration From:**
+  - Dark theme and Slate color palette.
+  - High-contrast typography and spacing hierarchy.
+  - Border radius, button styling, card styling, and table layouts.
+  - Cybersecurity dashboard look and feel.
+- **STRICT PROHIBITION ON COPYING V1 CODE:**
+  - Do **NOT** copy or paste V1 JSX, JavaScript, or CSS files.
+  - Do **NOT** reuse V1 components as they are.
+  - Build **BRAND-NEW** React components for Version 2 with simple, clean, beginner-friendly code.
+  - Never copy legacy V1 business logic, state management, or old API clients.
+  - Never write comments inside source code files.
 
 ---
 
-## 2. Page Hierarchy and Layout Standards
+## 2. Design Tokens and Colors
 
-The Version 2 frontend consists of four focused pages:
-
-### 1. UploadPage (`UploadPage.jsx`)
-- Header with project title and brief description.
-- Main upload card with drag-and-drop file zone.
-- File selection feedback displaying file name and human-readable size.
-- Consent checkboxes:
-  - `allowExternalLookups`: Checkbox for agreeing to send extracted indicators to external threat databases.
-  - `requestAi`: Checkbox for requesting AI analysis (explaining that a redacted preview will be presented for approval).
-- Large primary action button ("Analyse Email").
-
-### 2. AnalysisPage (`AnalysisPage.jsx`)
-- Active progress indicator tracking the 6 main pipeline stages:
-  1. Saving original evidence
-  2. Parsing MIME headers and content
-  3. Verifying mail authentication (SPF, DKIM, DMARC, ARC)
-  4. Performing external threat intelligence lookups
-  5. Generating AI threat evaluation (if approved)
-  6. Finalising investigation and score
-- Polling mechanism calling `GET /api/emails/{id}` every 2 seconds.
-- Modal or inline card displaying `RedactionPreview` when status reaches `WAITING_FOR_AI_APPROVAL`.
-
-### 3. ResultPage (`ResultPage.jsx`)
-- Header summary card: File name, SHA-256 hash, sender, subject, date.
-- Risk Score Card: Numeric score (0-100), risk badge (LOW, GUARDED, ELEVATED, HIGH, CRITICAL), and confidence label (LOW, MEDIUM, HIGH).
-- Tabbed or multi-section layout:
-  - **Authentication Tab:** SPF, DKIM, DMARC, ARC verdicts and Received hop chain.
-  - **Indicators Tab:** Table of extracted URLs, domains, and IPs with individual provider verdicts.
-  - **Image & QR Tab:** OCR extracted text and decoded QR destination URLs.
-  - **AI Assessment Tab:** Plain-English summary, classification, detected fraud signals, limitations, and recommendations.
-  - **Risk Factors Tab:** Itemized list of scoring factors and points added.
-  - **Related Emails Tab:** Table of historical emails sharing matched indicators.
-- Download PDF report button.
-
-### 4. HistoryPage (`HistoryPage.jsx`)
-- Paginated table showing previous investigations: Email ID, file name, sender, date, risk score, verdict, and link to view full results.
+Use these standard colors from [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md):
+- Primary Accent: `#3b82f6` (blue-500)
+- Background Canvas: `#0f172a` (slate-900)
+- Card/Surface Background: `#1e293b` (slate-800)
+- Elevated Surface: `#334155` (slate-700)
+- Border Color: `#334155` (slate-700) or `#475569` (slate-600)
+- Text Primary: `#f8fafc` (slate-50)
+- Text Muted/Secondary: `#94a3b8` (slate-400)
+- Danger/Malicious: `#ef4444` (red-500)
+- Warning/Suspicious: `#f59e0b` (amber-500)
+- Success/Benign: `#10b981` (emerald-500)
+- Unknown/Unchecked: `#64748b` (slate-500) – **Never display Unknown as green/benign.**
 
 ---
 
-## 3. API Communication Pattern
+## 3. Four Core Pages in Version 2
+
+Build fresh, dedicated components for the four primary pages:
+1. **UploadPage (`UploadPage.jsx`):** File upload card with `.eml` drag-and-drop, size display, external lookup consent checkbox, AI analysis consent checkbox, and an Analyse button.
+2. **AnalysisPage (`AnalysisPage.jsx`):** Step-by-step progress tracking (Saving, Parsing, Authentication, Threat Checks, AI Analysis, Finalising), polling `/api/emails/{id}` every 2 seconds, and displaying the Redaction Preview modal when approval is requested.
+3. **ResultPage (`ResultPage.jsx`):** Investigation dashboard displaying summary, authentication results, URL/domain findings, IP reputation, OCR/QR results, AI evaluation summary, breakdown of risk score factors, and historical related emails table.
+4. **HistoryPage (`HistoryPage.jsx`):** Paginated table of previously analyzed email records.
+
+---
+
+## 4. API Communication Pattern
 
 Centralize all API calls in `src/api/emailApi.js` using the browser's native `fetch()` API:
 
@@ -118,8 +90,10 @@ export async function getEmailStatus(emailId) {
 
 ---
 
-## 4. State Management and Custom Hook Pattern
+## 5. State Management
 
-Manage state cleanly using the `useEmailAnalysis` hook without adding external state libraries:
+Manage state cleanly using standard React hooks and a dedicated custom hook (`useEmailAnalysis`):
 - Manage `currentEmailId`, `status`, `stage`, `results`, `error`, and `loading`.
-- Include safe cleanup logic to cancel pending `setInterval` polling when navigating away or unmounting.
+- Include cleanup logic to cancel pending `setInterval` polling when navigating away or unmounting.
+- Do not install Redux, Zustand, or complex global stores.
+- Never execute `git commit` or `git push`.

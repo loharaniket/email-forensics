@@ -2,6 +2,8 @@
 
 Welcome to the Email Forensics project repository. This file defines the permanent rules, guidelines, and operating principles for all AI assistants working on this codebase.
 
+The single authoritative technical reference for Version 2 is [docs/architecture-v2.md](docs/architecture-v2.md). All agents must consult that document before designing or modifying code.
+
 ---
 
 ## 1. Project Identity and Purpose
@@ -10,17 +12,17 @@ Welcome to the Email Forensics project repository. This file defines the permane
 - **Version:** Version 2 (MVP)
 - **Primary Goal:** Build an AI-assisted forensic web application that allows security analysts to upload `.eml` files, safely preserve original evidence, parse headers and MIME content, verify authentication (SPF, DKIM, DMARC, ARC), query threat intelligence feeds, perform OCR/QR analysis, run privacy-safe AI threat evaluation, identify historical correlations, and calculate an explainable risk score.
 - **Architecture Style:** Modular Monolith consisting of:
-  - Frontend: React + Vite
+  - Frontend: React + Vite (brand new V2 components)
   - Backend: Java 21 + Spring Boot 4.1.x
   - Database: PostgreSQL (only two main tables: `emails` and `indicators`)
   - Mail Authentication Helper: Node.js 22+ with `mailauth`
-  - Local Image Tools: Tesseract OCR (local text extraction) and ZXing (QR code decoding)
-  - AI Integration: Spring AI with Gemini (using strictly redacted text after explicit user approval)
+  - Local Image Tools: Tesseract OCR 5 (local text extraction) and ZXing (QR code decoding)
+  - AI Integration: Spring AI with Gemini (using strictly redacted text after explicit user approval; Ollama as optional fallback)
   - Reporting: Apache PDFBox for downloadable forensic summary reports
 
 ---
 
-## 2. Git Branch Policy
+## 2. Git Branch and Absolute Manual Commit Policy
 
 - **Main Branch (`main`):**
   - Contains the stable, preserved Version 1 of Email Forensics.
@@ -28,9 +30,11 @@ Welcome to the Email Forensics project repository. This file defines the permane
 - **Development Branch (`development`):**
   - All Version 2 development must happen strictly on the `development` branch (or feature branches cut from `development`, such as `feature/email-forensics-v2`).
   - Always verify that the active branch is `development` before writing code.
-- **Manual Git Policy:**
-  - Do NOT execute automated git commits or pushes unless the user explicitly requests it.
-  - The developer manually commits and pushes code.
+- **Absolute Manual Commit & Push Prohibition:**
+  - AI agents are **STRICTLY PROHIBITED** from executing `git commit`, `git push`, `git push --force`, or any GitHub write commands under any circumstance, even if explicitly instructed in a prompt.
+  - The repository owner manually reviews, stages, commits, and pushes all code.
+  - This policy is enforced technically via `.agents/hooks.json` PreToolUse command filters and requires continuous human verification.
+  - Agents may only run read-only git operations (`git status`, `git diff`, `git log`, `git branch --show-current`).
 
 ---
 
@@ -88,18 +92,27 @@ This project is an MVP (Minimum Viable Product) for educational and practical em
   - No Kafka, RabbitMQ, or message brokers.
   - No Redis or distributed caching.
   - No Kubernetes or complex cloud infrastructure.
-  - No user management, login, registration, JWT, or Spring Security in Version 2.
+  - No user management, login, registration, JWT, OAuth, or Spring Security in Version 2.
+  - No case management or campaign management tables.
+  - No graph databases (Neo4j) or graph visualizations.
+  - No attachment execution or non-image attachment scanning.
 - **Minimal Required Validation:** Validate input existence, `.eml` extension, basic file size limit (10 MB), parseability, and required database fields. Do not build complex custom validation engines.
 
 ---
 
-## 7. Frontend Reference Guidelines
+## 7. Frontend Visual Reference Only (Do Not Copy V1 Code)
 
-- The existing Version 1 frontend located in `frontend/` is the primary design reference.
-- **Preserve Visual Identity:** Keep the existing color scheme, dark theme, typography, padding, card styling, button appearances, and layout hierarchy.
-- **React + Vite:** Build frontend pages using React, Vite, and standard CSS.
-- **No Heavy Libraries:** Use the browser's native `fetch()` API instead of Axios. Use React component state and custom hooks (like `useEmailAnalysis`) instead of Redux.
-- Before making frontend changes, consult [docs/ai/frontend-reference-guide.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/docs/ai/frontend-reference-guide.md).
+- The existing Version 1 frontend located in `frontend/` is a **VISUAL REFERENCE ONLY**.
+- Take design inspiration from V1 in:
+  - Overall visual theme and dark colour palette (`#0f172a`, `#1e293b`, `#334155`).
+  - Typography, spacing, borders, card styles, and button aesthetics.
+  - Professional cybersecurity dashboard appearance.
+- **STRICT PROHIBITION:**
+  - Agents must **NOT** copy V1 frontend source code or reuse its components as they are.
+  - Design **NEW** V2 React components with clean, beginner-friendly code.
+  - Never copy old business logic, legacy API integrations, state management, or obsolete features.
+- Build frontend pages using React, Vite, standard CSS, and browser-native `fetch()`. No Axios, no Redux.
+- Consult [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md) for design tokens and component specifications.
 
 ---
 
@@ -114,7 +127,7 @@ This project is an MVP (Minimum Viable Product) for educational and practical em
    - Never overwrite or modify the original `.eml` file.
 5. **PII Redaction & Explicit Approval:**
    - Redact personal information (names, emails, phones, tokens, credentials) before sending text to Gemini.
-   - Show the redacted preview to the user and pause for explicit approval (`WAITING_FOR_AI_APPROVAL`) before contacting the free AI service.
+   - Show the redacted preview to the user and pause for explicit approval (`WAITING_FOR_AI_APPROVAL`) before contacting cloud AI.
 6. **API Keys:** Store all threat provider keys and Gemini keys in environment variables. Never expose keys to the frontend or git.
 
 ---
@@ -126,6 +139,7 @@ This project is an MVP (Minimum Viable Product) for educational and practical em
   1. `emails`: Stores email metadata, file path, SHA-256 hash, status, risk score, verdict, and compact JSONB fields (`auth_data`, `ai_data`).
   2. `indicators`: Stores extracted indicators (URL, DOMAIN, IP, QR_URL, OCR_TEXT) with foreign key `email_id` (`ON DELETE RESTRICT`) and compact provider results in JSONB `details`.
 - Do NOT create additional tables for users, campaigns, cases, or graph nodes.
+- Historical correlation is handled with standard PostgreSQL queries and displayed in normal tables.
 
 ---
 
@@ -143,10 +157,14 @@ This project is an MVP (Minimum Viable Product) for educational and practical em
 
 ## 11. Explanation and Mentoring Rules
 
-The developer wants to learn while building. When completing a task:
-- Explain what was created or changed in simple English.
-- Explain the role of the controller, service, repository, and database.
-- Keep explanations clear and beginner-friendly without jargon.
+The developer wants to learn while building. Whenever completing a task or phase, explain:
+1. **What files were created or modified:** Clear list of paths.
+2. **Why each file is needed:** Its single responsibility in simple English.
+3. **How data flows through the feature:** Controller -> Service -> Provider/Repository -> Database.
+4. **How to test the implementation:** Concrete commands and expected outputs.
+5. **What the developer should understand before moving to the next phase.**
+
+Keep explanations beginner-friendly without unnecessary jargon.
 
 ---
 
@@ -154,18 +172,21 @@ The developer wants to learn while building. When completing a task:
 
 Before executing development work, Antigravity AI agents must consult the appropriate workspace rules and skills:
 
+- **Authoritative Specification:**
+  - [architecture-v2.md](docs/architecture-v2.md) - Single source of truth for V2 architecture.
+
 - **Rules (`.agents/rules/`):**
-  - [development-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/development-rules.md) - Coding standards, naming, zero comments.
-  - [git-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/git-rules.md) - Branch protection, development branch only.
-  - [mvp-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/mvp-rules.md) - MVP scope constraints, avoiding bloat.
-  - [email-security-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/email-security-rules.md) - Evidence preservation, untrusted data handling.
-  - [spring-boot-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/spring-boot-rules.md) - Backend rules, no Lombok, basic annotations.
-  - [frontend-rules.md](file:///c:/Users/Aniket%20Lohar/Documents/Web/github-repos/email-forensics/.agents/rules/frontend-rules.md) - Frontend design reference, component reuse.
+  - [development-rules.md](.agents/rules/development-rules.md) - Coding standards, naming, zero comments.
+  - [git-rules.md](.agents/rules/git-rules.md) - Branch protection, absolute manual commit/push policy.
+  - [mvp-rules.md](.agents/rules/mvp-rules.md) - MVP scope constraints, avoiding bloat.
+  - [email-security-rules.md](.agents/rules/email-security-rules.md) - Evidence preservation, untrusted data handling.
+  - [spring-boot-rules.md](.agents/rules/spring-boot-rules.md) - Backend rules, no Lombok, basic annotations.
+  - [frontend-rules.md](.agents/rules/frontend-rules.md) - Frontend design rules, V1 visual reference only.
 
 - **Skills (`.agents/skills/`):**
   - `project-understanding`: Step-by-step procedure to inspect project state before coding.
   - `spring-boot-beginner`: Practical guide to writing beginner-friendly Spring Boot code.
-  - `frontend-reference`: Practical guide to replicating the v1 design system in React.
+  - `frontend-reference`: Practical guide to creating new React components matching V1 visual design.
   - `email-forensics`: Technical reference for email parsing, auth checks, threat intel, and risk scoring.
   - `database-development`: Practical instructions for PostgreSQL entities, schema, and correlation queries.
   - `testing-and-debugging`: Procedures for running unit, integration, fixture, and mock tests.

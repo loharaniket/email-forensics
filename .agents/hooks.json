@@ -1,0 +1,17 @@
+{
+  "git-safety-gate": {
+    "enabled": true,
+    "PreToolUse": [
+      {
+        "matcher": "run_command",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node scripts/block-git-commits.mjs",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
+  }
+}

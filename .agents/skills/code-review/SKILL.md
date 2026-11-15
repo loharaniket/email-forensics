@@ -7,12 +7,7 @@ description: Use this skill before marking any task complete to run a thorough q
 
 This skill provides a standardized pre-completion review checklist to ensure every pull request or feature addition complies with project rules.
 
-## When to Use This Skill
-
-Activate this skill:
-- Immediately after implementing a feature or bug fix.
-- Before declaring any task, phase, or subtask complete.
-- When evaluating changes proposed by subagents or developers.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ---
 
@@ -21,12 +16,12 @@ Activate this skill:
 Review all changed files against these 12 criteria:
 
 ### 1. Correct Feature Behaviour
-- Does the code implement exactly what was specified in the task description?
+- Does the code implement exactly what was specified in the task description and [docs/architecture-v2.md](docs/architecture-v2.md)?
 - Are edge cases (empty files, missing headers, timeouts) handled gracefully?
 
 ### 2. Beginner-Friendly Simplicity
 - Is the code easy for a Spring Boot beginner to read and understand?
-- Are method implementations concise and focused on one task?
+- Are method implementations concise (under 25 lines where possible) and focused on one task?
 - Are loops and conditionals simple and flat rather than deeply nested?
 - Has unnecessary generic typing or pattern complexity been avoided?
 
@@ -46,15 +41,16 @@ Review all changed files against these 12 criteria:
   - No HTML (`<!-- -->`) or CSS comments in frontend files.
 - If any comment is found, remove it immediately.
 
-### 5. Annotation Verification
+### 5. Annotation & Lombok Verification
 - Check that Lombok was **NOT** used anywhere (`@Data`, `@Getter`, `@Setter`, etc.).
 - Ensure getters, setters, and constructors are written in standard Java.
 - Check that only essential Spring Boot annotations are present.
 - Verify constructor injection is used instead of `@Autowired` on private fields.
 
-### 6. Dependency and Import Audit
-- Were any unapproved external libraries added to `pom.xml` or `package.json`?
-- Are there unused imports in modified files? Clean up unused imports.
+### 6. V1 Code Copying Audit (Frontend)
+- Confirm that the frontend developer wrote **BRAND-NEW** Version 2 components.
+- Verify that no legacy Version 1 JavaScript files or obsolete components were copied as-is into the V2 application.
+- Confirm that V1 was used strictly as a visual design reference.
 
 ### 7. MVP Scope Adherence
 - Does the code avoid introducing microservices, Kafka, Redis, or distributed message queues?
@@ -68,9 +64,10 @@ Review all changed files against these 12 criteria:
 - Are URLs evaluated purely via threat intelligence without live network fetching?
 - Is PII redacted before sending text to Gemini?
 
-### 9. API Contract Accuracy
-- Do endpoint routes, HTTP verbs, and status codes match the specification?
-- Do error responses return the standard error DTO with no leaked stack traces?
+### 9. Provider Normalization and Fallbacks
+- Do provider clients return normalized statuses: `MATCH`, `NO_MATCH`, `ERROR`, `UNKNOWN`?
+- Confirm that `NO_MATCH` is NOT treated as safe.
+- Confirm that provider failures do not abort the overall pipeline.
 
 ### 10. Database Schema and Integrity
 - Are queries using proper indexes (`type`, `normalized_value`, `sha256`)?
@@ -81,10 +78,10 @@ Review all changed files against these 12 criteria:
 - Were relevant unit or integration tests written for the new functionality?
 - Were the tests actually executed and did they pass?
 
-### 12. Scope Boundary Check
-- Check `git status` or `git diff --stat`.
-- Verify that no unrelated files were modified or reformatted.
-- Verify that `main` branch was not touched.
+### 12. Git Safety and Manual Commit Policy
+- Confirm that **NO** automated `git commit` or `git push` commands were executed.
+- Confirm that `main` branch was not modified.
+- Verify that working tree files are clean and ready for the human developer to inspect and commit manually.
 
 ---
 
@@ -92,7 +89,7 @@ Review all changed files against these 12 criteria:
 
 Present review findings using this simple, clear structure:
 
-1. **Files Reviewed:** List all reviewed files with clickable links.
+1. **Files Reviewed:** List all reviewed files with repository-relative markdown links.
 2. **Compliance Status:** Pass / Needs Minor Fix.
-3. **Checklist Results:** Brief status on simplicity, no comments, annotations, and security.
+3. **Checklist Results:** Brief status on simplicity, no comments, no Lombok, no copied V1 code, and security.
 4. **Action Items (if any):** Specific small fixes required before completion.

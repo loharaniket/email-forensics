@@ -7,12 +7,7 @@ description: Use this skill when generating, modifying, or explaining Spring Boo
 
 This skill provides practical rules, templates, and patterns for writing clean, simple Spring Boot code that a beginner Java developer can easily understand, debug, and maintain.
 
-## When to Use This Skill
-
-Activate this skill whenever:
-- Creating or editing Java classes in `backend/src/main/java/com/emailforensics/`.
-- Creating REST controllers, service layers, repositories, or entities.
-- Explaining how backend components work to the developer.
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
 
 ---
 
@@ -23,14 +18,13 @@ Activate this skill whenever:
 3. **No Code Comments:** The source code must contain no comments (`//`, `/* */`, `/** */`). Use simple names and small methods to make code clear. Explanations belong in chat responses or docs.
 4. **Constructor Injection:** Always inject dependencies via normal public constructors. Avoid `@Autowired` on private fields.
 5. **Basic Annotations Only:** Stick to foundational Spring Boot annotations: `@RestController`, `@RequestMapping`, `@GetMapping`, `@PostMapping`, `@Service`, `@Repository`, `@Entity`, `@Id`, `@GeneratedValue`, `@Column`.
+6. **No Git Commit/Push:** Never run `git commit` or `git push`. Leave working tree for manual developer commit.
 
 ---
 
 ## 2. Standard Class Templates
 
 ### Entity Template (Without Lombok)
-Entities map Java classes to PostgreSQL tables. Keep them straightforward with explicit getters and setters:
-
 ```java
 package com.emailforensics.entity;
 
@@ -127,8 +121,6 @@ public class Email {
 ```
 
 ### Repository Template
-Use simple Spring Data JPA interfaces. Spring generates standard CRUD queries automatically:
-
 ```java
 package com.emailforensics.repository;
 
@@ -145,8 +137,6 @@ public interface EmailRepository extends JpaRepository<Email, Long> {
 ```
 
 ### Service Template
-Services contain business logic and coordinate repositories and helpers:
-
 ```java
 package com.emailforensics.service;
 
@@ -172,8 +162,6 @@ public class EmailService {
 ```
 
 ### Controller Template
-Controllers handle incoming HTTP requests, validate input, call the service layer, and return response DTOs:
-
 ```java
 package com.emailforensics.controller;
 
@@ -206,10 +194,11 @@ public class EmailController {
 
 ---
 
-## 3. Explaining Code to the Developer
+## 3. Explaining Code to the Developer (Mentoring Requirements)
 
 Whenever you complete a backend feature, provide a simple summary explaining:
-1. **What classes were created or modified:** List the file names.
-2. **Why each class exists:** State its specific job in one or two sentences.
+1. **What files were created or modified:** List the file paths.
+2. **Why each file is needed:** State its specific job in one or two sentences.
 3. **How data flows:** Trace the request from the Controller through the Service to the Repository and PostgreSQL database.
-4. **Key methods:** Explain what each important method does using plain, beginner-friendly terms.
+4. **How to test the implementation:** Exact commands to run and expected outputs.
+5. **What the developer should understand before moving to the next phase.**

@@ -2,6 +2,8 @@
 
 This guide explains the complete AI agent instruction system configured for the Email Forensics Version 2 project.
 
+Consult the authoritative specification in [docs/architecture-v2.md](../architecture-v2.md).
+
 All explanations use very simple English so that any beginner developer can easily follow and use this setup.
 
 ---
@@ -13,6 +15,8 @@ When developing with an AI assistant in Antigravity, the AI needs clear instruct
 - Add code comments that clutter the source files.
 - Use advanced Spring Boot features (like Lombok or complex generic classes) that make learning harder.
 - Accidentally modify or break the stable Version 1 code on the `main` branch.
+- Execute unauthorized `git commit` or `git push` commands.
+- Copy legacy Version 1 frontend code instead of building clean Version 2 components.
 - Introduce bloated enterprise systems (like Kafka, Redis, or microservices) into a simple MVP.
 - Compromise security by visiting malicious links or sending confidential email text to cloud AI.
 
@@ -28,19 +32,22 @@ email-forensics/
 ├── AGENTS.md                                   # Root master instructions (always loaded)
 │
 ├── .agents/
+│   ├── hooks.json                              # Command-blocking PreToolUse lifecycle hook (blocks git commit/push)
+│   ├── scripts/
+│   │   └── block-git-commits.mjs               # Node.js script enforcing the manual git policy
 │   │
 │   ├── rules/                                  # Project rule files with triggers
 │   │   ├── development-rules.md                # Always-on: Beginner code, simple names, no comments
-│   │   ├── git-rules.md                        # Always-on: Never touch main, work on development
+│   │   ├── git-rules.md                        # Always-on: Absolute manual commit policy, protect main
 │   │   ├── mvp-rules.md                        # Always-on: Avoid enterprise bloat, simple MVP only
 │   │   ├── email-security-rules.md             # Always-on: Untrusted inputs, hash integrity, PII redaction
 │   │   ├── spring-boot-rules.md                # Model-decision: Spring Boot rules, no Lombok, basic annotations
-│   │   └── frontend-rules.md                   # Model-decision: V1 visual identity, React + Vite, native fetch
+│   │   └── frontend-rules.md                   # Model-decision: V1 visual reference only, React + Vite
 │   │
 │   ├── skills/                                 # Progressive disclosure runbooks
 │   │   ├── project-understanding/SKILL.md      # 10-step pre-development project check
 │   │   ├── spring-boot-beginner/SKILL.md       # Spring Boot class templates and beginner patterns
-│   │   ├── frontend-reference/SKILL.md         # Replicating V1 UI, layout, and API client patterns
+│   │   ├── frontend-reference/SKILL.md         # Replicating V1 UI styling with new V2 components
 │   │   ├── email-forensics/SKILL.md            # The 20-step forensic pipeline and risk formula
 │   │   ├── database-development/SKILL.md       # PostgreSQL schema (2 tables), JSONB, correlation SQL
 │   │   ├── testing-and-debugging/SKILL.md      # Testing guides, safe test fixtures, mocking providers
@@ -53,6 +60,7 @@ email-forensics/
 │       └── code-reviewer/agent.md              # Audits code for simplicity and compliance (read-only)
 │
 └── docs/
+    ├── architecture-v2.md                      # Single authoritative Version 2 architecture document
     └── ai/
         ├── agent-setup-guide.md                # This setup and operating guide
         └── frontend-reference-guide.md         # Visual design tokens and UI component catalog
@@ -60,20 +68,33 @@ email-forensics/
 
 ---
 
-## 3. How Antigravity Discovers and Uses These Files
+## 3. How the Coordinator Agent Orchestrates the Specialists
 
-Antigravity uses a system called **hierarchical discovery** and **progressive disclosure**:
+The main coordinator agent manages the end-to-end development process and delegates tasks to the four specialists:
 
-1. **Root `AGENTS.md`:** Loaded automatically on every turn. It provides permanent project-wide constraints.
-2. **Rules (`.agents/rules/`):**
-   - **`always_on`:** Rules marked with `trigger: always_on` (`development-rules.md`, `git-rules.md`, `mvp-rules.md`, `email-security-rules.md`) are automatically included in the agent's context budget.
-   - **`model_decision`:** Rules marked with `trigger: model_decision` (`spring-boot-rules.md`, `frontend-rules.md`) are automatically brought into the conversation when the user or task mentions backend or frontend development.
-3. **Skills (`.agents/skills/`):**
-   - The agent only sees the skill name and description initially.
-   - When a specific task matches a skill's description (for example, parsing an email or writing a database query), Antigravity loads the full `SKILL.md` file on demand. This saves context tokens while providing deep, exact instructions.
-4. **Agents (`.agents/agents/`):**
-   - Defines four distinct specialist roles with clear permissions, model tiers (`flash`), and tool grants.
-   - The coordinator agent can delegate subtasks to these roles or use their system prompts during feature development.
+```
+[User Request]
+      │
+      v
+[Coordinator Agent]
+      │
+      ├──> 1. [project-planner] (Read-Only)
+      │       Reviews docs/architecture-v2.md, plans files & tests
+      │
+      ├──> 2. [spring-boot-developer]
+      │       Implements backend features (no Lombok, no comments, constructor DI)
+      │
+      ├──> 3. [frontend-developer]
+      │       Implements new V2 React components (V1 visual reference only)
+      │
+      └──> 4. [code-reviewer] (Read-Only)
+              Audits changes against 12-point checklist before completion
+```
+
+### Coordinator Guardrails:
+- The coordinator prevents parallel agents from modifying the same files simultaneously.
+- The coordinator ensures that all backend and database choices strictly adhere to `docs/architecture-v2.md`.
+- The coordinator ensures that `git commit` and `git push` are never executed by any agent.
 
 ---
 
@@ -82,39 +103,39 @@ Antigravity uses a system called **hierarchical discovery** and **progressive di
 | Rule File | Trigger | Purpose |
 | :--- | :--- | :--- |
 | **`development-rules.md`** | `always_on` | Enforces simple names, small methods, single responsibility, and **strictly zero comments** in code. |
-| **`git-rules.md`** | `always_on` | Locks `main` branch, enforces all work on `development`, bans destructive git commands. |
+| **`git-rules.md`** | `always_on` | Locks `main` branch, enforces all work on `development`, bans automated git commits/pushes. |
 | **`mvp-rules.md`** | `always_on` | Prevents enterprise overengineering (no Kafka, Redis, microservices, or Spring Security). |
 | **`email-security-rules.md`** | `always_on` | Enforces evidence preservation, SHA-256 hashing, safe UUID paths, and PII redaction. |
 | **`spring-boot-rules.md`** | `model_decision` | Enforces standard Java without Lombok, constructor injection, and simple layers. |
-| **`frontend-rules.md`** | `model_decision` | Enforces copying the Version 1 visual style, dark theme, and using native `fetch()`. |
+| **`frontend-rules.md`** | `model_decision` | Enforces V1 as visual reference only; strictly prohibits copying V1 code. |
 
 ---
 
-## 5. Summary of the 7 Available Skills
+## 5. Absolute Git Commit and Push Protection
 
-1. **`project-understanding`:** Use before every task to verify the git branch, read documentation, and locate existing files.
-2. **`spring-boot-beginner`:** Provides standard Java entity, repository, service, and controller templates written for a beginner.
-3. **`frontend-reference`:** Details how to construct React pages and components matching Version 1 design tokens.
-4. **`email-forensics`:** Outlines the 20-step forensic analysis pipeline, threat intelligence lookups, and risk scoring formula.
-5. **`database-development`:** Documents the exact two-table schema (`emails` and `indicators`), JSONB usage, and historical correlation query.
-6. **`testing-and-debugging`:** Explains how to run tests, write safe `.eml` fixtures without real malware, and mock external APIs.
-7. **`code-review`:** 12-point quality checklist to run before declaring any task complete.
+To guarantee that no agent creates automated commits or pushes:
+1. **Rule Enforcement:** `AGENTS.md` and `git-rules.md` declare an absolute prohibition on git write operations.
+2. **Technical Enforcement:** Configured via `.agents/hooks.json` using Antigravity's `PreToolUse` lifecycle hook:
+   - Matcher: `run_command`
+   - Command: `node scripts/block-git-commits.mjs`
+   - Any terminal command containing `git commit`, `git push`, `git tag`, or `gh pr create` is automatically intercepted and denied before execution.
+3. **Manual Human Ownership:** The developer runs `git status` and `git diff` to inspect changes, and manually executes git commits and pushes.
 
 ---
 
 ## 6. How to Build Version 2 Phase by Phase
 
-Do not ask Antigravity to build the entire system in one prompt. Build the application one phase at a time following the roadmap:
+Build the application one phase at a time following the roadmap:
 
 ### Phase 1: Project Foundation
 - **Goal:** Set up Spring Boot backend, React/Vite frontend, connect to PostgreSQL, and verify health endpoint.
 - **Example Prompt:**
-  > "Read AGENTS.md and use the project-understanding skill. Work strictly on the development branch. Create the Spring Boot backend and React/Vite frontend foundation. Configure the two PostgreSQL tables (emails and indicators). Add a GET /api/health endpoint. Do not add Spring Security, JWT, or extra tables. Show me the created files and test results."
+  > "Read docs/architecture-v2.md and use the project-understanding skill. Work strictly on the development branch. Create the Spring Boot backend and React/Vite frontend foundation. Configure the two PostgreSQL tables (emails and indicators). Add a GET /api/health endpoint. Do not add Spring Security, JWT, or extra tables. Show me the created files and test results."
 
 ### Phase 2: EML Upload and Evidence Preservation
 - **Goal:** Build file upload card, server-side `.eml` validation, SHA-256 hashing, and saving to `storage/emails/<uuid>/original.eml`.
 - **Example Prompt:**
-  > "Read AGENTS.md and use spring-boot-beginner and email-forensics skills. Implement Phase 2: EML upload endpoint (POST /api/emails/analyze), SHA-256 calculation with Java MessageDigest, and safe storage under a UUID path. Save a row to the emails table with status RECEIVED. Add unit tests verifying the hash. Do not add external APIs yet."
+  > "Read docs/architecture-v2.md and use spring-boot-beginner and email-forensics skills. Implement Phase 2: EML upload endpoint (POST /api/emails/analyze), SHA-256 calculation with Java MessageDigest, and safe storage under a UUID path. Save a row to the emails table with status RECEIVED. Add unit tests verifying the hash. Do not add external APIs yet."
 
 ### Phase 3: Email Parser
 - **Goal:** Integrate Jakarta Mail / Angus Mail and Jsoup to parse headers, Received hops, body text, HTML, and image parts.
@@ -134,7 +155,7 @@ Do not ask Antigravity to build the entire system in one prompt. Build the appli
 ### Phase 6: Threat Intelligence Providers
 - **Goal:** Implement one provider at a time (Safe Browsing v5, PhishTank, OpenPhish feed, URLhaus, ThreatFox, AbuseIPDB, IPinfo Lite).
 - **Example Prompt:**
-  > "Implement SafeBrowsingClient and PhishTankClient in com.emailforensics.provider. Use Spring RestClient with connection and read timeouts. Normalize provider responses into ProviderObservation objects. Mock provider calls with WireMock in tests."
+  > "Implement SafeBrowsingClient and PhishTankClient in com.emailforensics.provider. Use Spring RestClient with connection and read timeouts. Normalize provider responses into ProviderObservation objects with MATCH, NO_MATCH, ERROR, or UNKNOWN. Mock provider calls with WireMock in tests."
 
 ### Phase 7: Image OCR and QR Decoding
 - **Goal:** Run local Tesseract OCR on images and decode QR codes with ZXing.
@@ -154,18 +175,9 @@ Do not ask Antigravity to build the entire system in one prompt. Build the appli
 ### Phase 10: Risk Scoring and PDF Report
 - **Goal:** Calculate explainable risk score (0-100) and generate PDF report with Apache PDFBox.
 - **Example Prompt:**
-  > "Implement Phase 10: RiskScoreService using the approved weighting formula (+40, +40, +15, +15, +10, +5, +10). Build PDFBox report generator for downloading forensic summaries."
+  > "Implement Phase 10: RiskScoreService using the provisional weighting formula (+40, +40, +15, +15, +10, +5, +10). Build PDFBox report generator for downloading forensic summaries."
 
 ### Phase 11: End-to-End Testing and Verification
 - **Goal:** Test full pipeline from upload to report download using sample fixtures.
 - **Example Prompt:**
   > "Run end-to-end verification. Check all unit tests, run the frontend, test a full email analysis with a fixture EML file, verify the risk score breakdown, and inspect the generated PDF."
-
----
-
-## 7. How to Verify That Antigravity Has Discovered the Setup
-
-You can confirm that Antigravity recognizes your configuration at any time:
-1. In the chat interface, type `@` to see that rules and workspace files are discoverable.
-2. Ask Antigravity: *"What are the project rules for code comments and Lombok?"* - Antigravity will immediately quote `AGENTS.md` and `development-rules.md`.
-3. Ask Antigravity: *"What tables exist in the database?"* - Antigravity will refer to `database-development` skill and confirm only `emails` and `indicators` exist.

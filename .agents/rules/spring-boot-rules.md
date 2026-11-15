@@ -7,6 +7,10 @@ description: Rules for Spring Boot backend development, minimal annotations, str
 
 These rules govern all backend development in Java and Spring Boot.
 
+Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+
+---
+
 ## 1. Minimal and Essential Annotations Only
 
 Only use standard, essential Spring Boot annotations. Do not use advanced or unnecessary annotations that obscure how the application works.
@@ -14,12 +18,14 @@ Only use standard, essential Spring Boot annotations. Do not use advanced or unn
 Allowed and preferred annotations:
 - **Controllers:** `@RestController`, `@RequestMapping`, `@GetMapping`, `@PostMapping`
 - **Services:** `@Service`
-- **Repositories:** `@Repository` (when required, or standard Spring Data `JpaRepository` interface)
+- **Repositories:** `@Repository` (or standard Spring Data `JpaRepository` interface)
 - **Entities:** `@Entity`, `@Table`, `@Id`, `@GeneratedValue`, `@Column` (when mapping requires it), `@Enumerated`
 - **Transactions:** `@Transactional` (only when a service method modifies multiple database records in one unit of work)
 - **Configuration:** `@Configuration`, `@Bean`, `@ConfigurationProperties`
 
 Avoid complex annotations like `@Async` (unless configured simply via `ThreadPoolTaskExecutor`), `@Cacheable`, `@Aspect`, or custom annotation frameworks.
+
+---
 
 ## 2. Strictly No Lombok
 
@@ -28,6 +34,8 @@ Do not use Project Lombok in any part of this project.
 - Always write standard Java constructors, getters, and setters explicitly.
 - Write standard static loggers using SLF4J: `private static final Logger log = LoggerFactory.getLogger(ClassName.class);`.
 - Explicit code helps a beginner understand Java object models without annotation magic.
+
+---
 
 ## 3. Constructor-Based Dependency Injection
 
@@ -49,6 +57,8 @@ public class EmailService {
 }
 ```
 
+---
+
 ## 4. Simple Architecture and Clean Layering
 
 Organize backend code strictly into simple packages:
@@ -64,6 +74,8 @@ Organize backend code strictly into simple packages:
 
 Do not create generic base services, abstract controllers, or unnecessary intermediary layers.
 
+---
+
 ## 5. Minimal and Practical Validation
 
 - Validate only what is necessary for the MVP:
@@ -74,6 +86,8 @@ Do not create generic base services, abstract controllers, or unnecessary interm
   - Check required database values before saving.
 - Do not create custom validation annotation frameworks.
 
+---
+
 ## 6. Simple Exception Handling
 
 - Use a single `@RestControllerAdvice` class (`GlobalExceptionHandler`).
@@ -83,6 +97,8 @@ Do not create generic base services, abstract controllers, or unnecessary interm
   - `code` (short error category string)
   - `message` (safe, user-friendly message)
 - Never return raw Java stack traces, database details, or file paths in API error responses.
+
+---
 
 ## 7. External HTTP Calls
 
