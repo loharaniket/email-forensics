@@ -6,7 +6,7 @@ trigger: always_on
 
 The Email Forensics Version 2 application is an academic and functional MVP (Minimum Viable Product). These rules keep the project simple, achievable, and maintainable.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../docs/architecture-v2.md).
 
 ---
 

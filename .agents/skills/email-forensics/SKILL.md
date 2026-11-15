@@ -7,7 +7,7 @@ description: Use this skill when implementing, verifying, or debugging the core 
 
 This skill serves as the comprehensive technical guide for the 20-step forensic email analysis pipeline defined in Version 2.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../../docs/architecture-v2.md).
 
 ---
 
@@ -68,7 +68,7 @@ Extract all relevant headers and body parts:
 
 ## 4. Email Authentication Verification (`mailauth` Helper)
 
-Run the Node.js helper `tools/mailauth/verify.mjs` via `ProcessBuilder`:
+Run the Node.js helper `tools/mailauth/verify.mjs` (requires Node.js 22.19.0 or later) via `ProcessBuilder`:
 - Check SPF, DKIM, DMARC, and ARC using the original email bytes.
 - Standard protocol outcome states:
   - `PASS`: Signature or policy passed.
@@ -102,16 +102,28 @@ Query threat providers based on indicator type:
 
 ---
 
-## 6. OCR and QR Code Processing
+## 6. Standard Indicator Origins
+
+Extracted indicators must use strictly one of the six database-approved origins:
+- `HEADER`: Extracted from email headers (From/Reply-To domains, Received hops, relay IPs).
+- `BODY`: Extracted from plain-text email body.
+- `HTML`: Extracted from HTML anchor hrefs, image tags, or form actions.
+- `DNS`: Discovered through domain DNS lookups (A/AAAA/MX records).
+- `IMAGE_OCR`: Extracted as visible text from an image by local Tesseract OCR.
+- `QR`: Decoded destination URLs from QR codes by ZXing.
+
+---
+
+## 7. OCR and QR Code Processing
 
 1. Extract supported image MIME types (`image/jpeg`, `image/png`, `image/gif`, `image/webp`).
 2. Run local **Tesseract OCR** to extract visible text (store in temporary derived file, delete after analysis).
 3. Run **ZXing** to decode QR codes.
-4. If a QR code contains a URL, label it as indicator type `QR_URL` and route it through the standard URL threat intelligence pipeline.
+4. If a QR code contains a URL, label it as indicator type `QR_URL` with origin `QR` and route it through the standard URL threat intelligence pipeline.
 
 ---
 
-## 7. PII Redaction and AI Assessment Contract
+## 8. PII Redaction and AI Assessment Contract
 
 1. Redact personal identifiers using pattern replacement:
    - Names -> `[PERSON]`
@@ -138,7 +150,7 @@ Query threat providers based on indicator type:
 
 ---
 
-## 8. Risk Score Calculation and Risk Levels
+## 9. Risk Score Calculation and Risk Levels
 
 The risk score is calculated strictly by backend deterministic rules in `RiskScoreService`. The AI model does NOT determine the numeric score.
 

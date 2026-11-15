@@ -7,7 +7,7 @@ description: Use this skill when executing unit tests, integration tests, mock p
 
 This skill provides testing procedures, test fixture standards, mock provider configurations, and debugging workflows for the Email Forensics application.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../../docs/architecture-v2.md).
 
 ---
 

@@ -7,7 +7,7 @@ description: Rules for Spring Boot backend development, minimal annotations, str
 
 These rules govern all backend development in Java and Spring Boot.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../docs/architecture-v2.md).
 
 ---
 

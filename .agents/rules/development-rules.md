@@ -6,7 +6,7 @@ trigger: always_on
 
 These rules apply to all code generated or modified in this repository.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../docs/architecture-v2.md).
 
 ---
 

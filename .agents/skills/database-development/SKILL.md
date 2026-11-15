@@ -7,13 +7,13 @@ description: Use this skill when writing PostgreSQL queries, creating or modifyi
 
 This skill outlines the database schema, entity mapping, JSONB handling, and query design for the Email Forensics application.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../../docs/architecture-v2.md).
 
 ---
 
 ## 1. Database Architecture: Two Tables Only
 
-The system uses exactly two tables in PostgreSQL (`email_forensics_db`):
+The system uses strictly two tables in PostgreSQL (`email_forensics_db`):
 
 ```
 ┌─────────────────────────────────┐
@@ -134,7 +134,19 @@ CREATE INDEX idx_indicators_details_gin ON indicators USING GIN(details);
 
 ---
 
-## 3. Why JSONB is Used
+## 3. Indicator Origin Mapping Standards
+
+The `origin` column uses strictly one of the six allowed values:
+- `HEADER`: Extracted from RFC 5322 headers (From/Reply-To domains, Received hops, relay IPs).
+- `BODY`: Extracted from plain-text email bodies.
+- `HTML`: Extracted from HTML anchor hrefs, image tags, or form actions.
+- `DNS`: Discovered through domain DNS lookups (A/AAAA/MX records).
+- `IMAGE_OCR`: Extracted as visible text from an image by local Tesseract OCR.
+- `QR`: Decoded destination URLs from QR codes by ZXing.
+
+---
+
+## 4. Why JSONB is Used
 
 External threat intelligence providers return different response schemas. Rather than adding dozens of nullable columns, store compact normalized observations in JSONB columns:
 - `emails.auth_data`: Holds parsed SPF, DKIM, DMARC, ARC evaluation results and Received hop records.
@@ -143,7 +155,7 @@ External threat intelligence providers return different response schemas. Rather
 
 ---
 
-## 4. Historical Correlation SQL Query
+## 5. Historical Correlation SQL Query
 
 Historical correlation identifies past investigations that encountered the same normalized indicator:
 

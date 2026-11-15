@@ -13,6 +13,7 @@ Thumbs.db
 .env.local
 .env.*.local
 *.local
+!.env.example
 
 # Node & Frontend
 node_modules/
@@ -30,14 +31,23 @@ build/
 .mvn/wrapper/maven-wrapper.jar
 *.class
 
-# Evidence Vault & Raw Storage
+# Evidence Vault, Raw Storage & Preserved EML Files
+storage/
 evidence_vault/
 vault/
 *.eml.vault
+*.eml
+!test-fixtures/*.eml
+!test-fixtures/**/*.eml
+
+# Temporary Extracted Media, OCR, and Local Reports
+storage/temp/
+*.ocr
+*.ocr.txt
+reports/
+*.pdf
 
 # Temporary files and logs
 logs/
 *.log
 scratch/
-
-

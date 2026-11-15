@@ -69,7 +69,24 @@ Use these colors consistently across badges, score meters, and status indicators
 
 ---
 
-## 3. Spacing, Borders, and Shadows
+## 3. Standard Indicator Origin Labels
+
+Frontend tables, cards, and tooltips must use the exact database origin values defined in [docs/architecture-v2.md](../architecture-v2.md):
+
+| Origin Code | Display Label | Description |
+| :--- | :--- | :--- |
+| `HEADER` | Header Hop / Header Domain | Extracted from RFC 5322 email headers (From, Reply-To, Received hops, DKIM d=). |
+| `BODY` | Plain Text Body | Extracted from the plain-text body of the message. |
+| `HTML` | HTML Link / Element | Extracted from HTML anchor hrefs, image tags, or form actions. |
+| `DNS` | DNS Lookup | Public IP discovered by resolving domain DNS records (A, AAAA, MX). |
+| `IMAGE_OCR` | Image OCR Text | Extracted as visible text from an image by local Tesseract OCR. |
+| `QR` | QR Destination | Decoded as a destination URL from a QR code by ZXing. |
+
+Never invent custom origin strings like `MAIL_HOP` or `URL_DNS`. Always use the standard 6 origin values.
+
+---
+
+## 4. Spacing, Borders, and Shadows
 
 - **Spacing Scale:** Standard 4px grid (multiples of 4):
   - Small gap: `0.5rem` (8px)
@@ -86,7 +103,7 @@ Use these colors consistently across badges, score meters, and status indicators
 
 ---
 
-## 4. Reusable UI Components Catalog (Brand-New V2 Components)
+## 5. Reusable UI Components Catalog (Brand-New V2 Components)
 
 Version 2 organizes the frontend into clean, brand-new components located in `frontend/src/components/`:
 
@@ -112,13 +129,13 @@ Version 2 organizes the frontend into clean, brand-new components located in `fr
 - Chronological timeline of mail hops from sender to receiver, highlighting untrusted hops.
 
 ### 7. `UrlFindings.jsx`
-- Table of extracted URLs/domains with provider check statuses and verdicts.
+- Table of extracted URLs/domains with origin (`BODY`, `HTML`), provider check statuses, and consolidated verdicts.
 
 ### 8. `IpFindings.jsx`
-- Table of public IPs with origin, geolocation (IPinfo/MaxMind), abuse score (AbuseIPDB), and verdict.
+- Table of public IPs with origin (`HEADER`, `DNS`, `BODY`), geolocation (IPinfo/MaxMind), abuse score (AbuseIPDB), and verdict.
 
 ### 9. `ImageFindings.jsx`
-- Displays inline/attached image previews, local Tesseract OCR text, and decoded ZXing QR destination URLs.
+- Displays inline/attached image previews, local Tesseract OCR text (`IMAGE_OCR`), and decoded ZXing QR destination URLs (`QR`).
 
 ### 10. `AiAssessment.jsx`
 - Displays Gemini's structured evaluation: classification, plain-English summary, detected signals, evidence tags, limitations, and recommendations.
@@ -137,7 +154,7 @@ Version 2 organizes the frontend into clean, brand-new components located in `fr
 
 ---
 
-## 5. Frontend API Client Pattern (`src/api/emailApi.js`)
+## 6. Frontend API Client Pattern (`src/api/emailApi.js`)
 
 All API communication must be isolated in `src/api/emailApi.js` using native `fetch()`:
 

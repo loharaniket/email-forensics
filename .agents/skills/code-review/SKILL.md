@@ -7,16 +7,25 @@ description: Use this skill before marking any task complete to run a thorough q
 
 This skill provides a standardized pre-completion review checklist to ensure every pull request or feature addition complies with project rules.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../../docs/architecture-v2.md).
 
 ---
 
-## Code Review Checklist
+## 1. Operating Boundaries for the Reviewer
+
+The code reviewer is strictly **read-only**:
+- It inspects changed files and reports findings with exact file paths and line numbers.
+- It must **NEVER** edit, create, or delete source files directly.
+- **Test Verification Integrity:** Because the reviewer does not possess terminal tools, it cannot run tests. It must **NEVER** claim that tests passed without actual execution results or terminal logs provided by the developer or coordinator. If no test logs are provided, it must report that testing still needs to be performed.
+
+---
+
+## 2. 12-Point Code Review Checklist
 
 Review all changed files against these 12 criteria:
 
 ### 1. Correct Feature Behaviour
-- Does the code implement exactly what was specified in the task description and [docs/architecture-v2.md](docs/architecture-v2.md)?
+- Does the code implement exactly what was specified in the task description and [docs/architecture-v2.md](../../../docs/architecture-v2.md)?
 - Are edge cases (empty files, missing headers, timeouts) handled gracefully?
 
 ### 2. Beginner-Friendly Simplicity
@@ -39,7 +48,7 @@ Review all changed files against these 12 criteria:
   - No `TODO` comments.
   - No commented-out code blocks.
   - No HTML (`<!-- -->`) or CSS comments in frontend files.
-- If any comment is found, remove it immediately.
+- If any comment is found, flag it for immediate removal.
 
 ### 5. Annotation & Lombok Verification
 - Check that Lombok was **NOT** used anywhere (`@Data`, `@Getter`, `@Setter`, etc.).
@@ -54,7 +63,7 @@ Review all changed files against these 12 criteria:
 
 ### 7. MVP Scope Adherence
 - Does the code avoid introducing microservices, Kafka, Redis, or distributed message queues?
-- Has Spring Security or JWT been avoided (as required in Version 2 MVP)?
+- Has Spring Security, JWT, or OAuth been avoided (as required in Version 2 MVP)?
 - Does the database interaction remain restricted to `emails` and `indicators`?
 
 ### 8. Security and Trust Boundaries
@@ -69,27 +78,30 @@ Review all changed files against these 12 criteria:
 - Confirm that `NO_MATCH` is NOT treated as safe.
 - Confirm that provider failures do not abort the overall pipeline.
 
-### 10. Database Schema and Integrity
+### 10. Database Schema and Origin Integrity
 - Are queries using proper indexes (`type`, `normalized_value`, `sha256`)?
 - Is `ON DELETE RESTRICT` preserved on the `indicators.email_id` foreign key?
+- Are indicator origins strictly restricted to the 6 allowed values: `HEADER`, `BODY`, `HTML`, `DNS`, `IMAGE_OCR`, `QR`?
 - Are JSONB values structured cleanly without storing bloated raw provider payloads?
 
 ### 11. Test Execution Verification
-- Were relevant unit or integration tests written for the new functionality?
-- Were the tests actually executed and did they pass?
+- Have unit or integration tests been written for the new functionality?
+- Verify actual execution logs: did the tests actually run and pass?
+- If no test logs are provided, explicitly state: **"Tests not verified: developer/coordinator must run tests."**
 
-### 12. Git Safety and Manual Commit Policy
-- Confirm that **NO** automated `git commit` or `git push` commands were executed.
+### 12. Git Safety and Branch Policy
+- Confirm that **NO** automated `git commit`, `git push`, or branch-switching commands were executed.
 - Confirm that `main` branch was not modified.
 - Verify that working tree files are clean and ready for the human developer to inspect and commit manually.
 
 ---
 
-## Review Report Format
+## 3. Review Report Format
 
 Present review findings using this simple, clear structure:
 
 1. **Files Reviewed:** List all reviewed files with repository-relative markdown links.
 2. **Compliance Status:** Pass / Needs Minor Fix.
 3. **Checklist Results:** Brief status on simplicity, no comments, no Lombok, no copied V1 code, and security.
-4. **Action Items (if any):** Specific small fixes required before completion.
+4. **Test Execution Status:** Actual verified test results, or notice that tests still need to be run.
+5. **Action Items (if any):** Specific small fixes required before completion.

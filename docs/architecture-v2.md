@@ -2,6 +2,8 @@
 
 This document serves as the single authoritative source of truth for the **Email Forensics Version 2** system architecture, data models, threat intelligence integrations, risk scoring methodology, and security guardrails. All agent rules, skills, and implementation plans must align with this specification.
 
+`README.md` is managed manually by the repository owner. Agents must not read, modify, or treat `README.md` as the architecture reference; this document is the single source of truth.
+
 ---
 
 ## 1. System Overview and Architecture Style
@@ -12,9 +14,9 @@ Email Forensics Version 2 is an AI-assisted forensic web application designed fo
 - **Frontend:** React.js (v18+) with Vite, styled with modern CSS.
 - **Backend:** Java 21 with Spring Boot 4.1.x.
 - **Database:** PostgreSQL (`email_forensics_db`) with strictly **two** application tables: `emails` and `indicators`.
-- **Email Authentication Helper:** Node.js 22+ with the `mailauth` library executed as an isolated local process.
+- **Email Authentication Helper:** Node.js 22.19.0 or later with the `mailauth` library executed as an isolated local child process.
 - **Local OCR & Barcode Engines:** Local Tesseract OCR 5 engine for image text extraction and ZXing for QR code decoding.
-- **AI Integration:** Spring AI with the official Google GenAI starter (Gemini), operating strictly on pattern-redacted text after explicit analyst approval.
+- **AI Integration:** Spring AI with the official Google GenAI starter (Gemini), operating strictly on pattern-redacted text after explicit analyst approval. Ollama as an optional local fallback.
 - **Reporting Engine:** Apache PDFBox (v3.0.x) generating standalone, downloadable forensic summary reports.
 
 ```
@@ -64,7 +66,7 @@ Email Forensics Version 2 is an AI-assisted forensic web application designed fo
 5. **MIME & Header Extraction:** Parse all RFC 5322 headers, MIME parts, plain text, and HTML bodies using Jakarta Mail (Eclipse Angus) and Jsoup.
 6. **Sender Identity Analysis:** Compare From, Reply-To, Return-Path, DKIM signing domain, and Received hops to detect spoofing or inconsistencies.
 7. **Delivery Path Reconstruction:** Trace Received headers chronologically from newest to oldest, identifying relay hops and untrusted boundaries.
-8. **Mail Authentication Verification:** Call Node.js `mailauth` helper to verify SPF, DKIM, DMARC, and ARC using original email bytes and DNS queries.
+8. **Mail Authentication Verification:** Call Node.js 22.19.0+ `mailauth` helper to verify SPF, DKIM, DMARC, and ARC using original email bytes and DNS queries.
 9. **Indicator Extraction & Normalization:** Extract URLs, domains, and IP addresses; normalize for duplicate matching while preserving original raw values.
 10. **URL & Domain Reputation:** Check extracted URLs and domains against Google Safe Browsing, PhishTank, OpenPhish feed, URLhaus, and ThreatFox.
 11. **IP Intelligence:** Check public IPs against AbuseIPDB for abuse reputation, IPinfo Lite for country and ASN, and VirusTotal/GreyNoise context.
@@ -206,6 +208,17 @@ CREATE INDEX idx_indicators_normalized_value ON indicators(normalized_value);
 CREATE INDEX idx_indicators_details_gin ON indicators USING GIN(details);
 ```
 
+### Indicator Origin Standards
+The `origin` column defines where the indicator was extracted from. Exactly six origins are allowed:
+- `HEADER`: Extracted from RFC 5322 email headers (e.g., From, Reply-To, Return-Path domains, DKIM signing domain, Received hops, and public relay IPs in Received headers).
+- `BODY`: Extracted from the plain-text email body (e.g., plain-text URLs or IP addresses).
+- `HTML`: Extracted from HTML elements (e.g., `<a href="...">` links, `<form action="...">`, `<img src="...">`).
+- `DNS`: Discovered via DNS resolution of extracted domains (e.g., domain A/AAAA or MX IP addresses).
+- `IMAGE_OCR`: Extracted as visible text from an image processed by local Tesseract OCR.
+- `QR`: Decoded as a destination URL from a QR code processed by ZXing.
+
+All frontend labels, backend entities, DTOs, and database constraints must strictly use these six values.
+
 ### Historical Correlation SQL Query
 ```sql
 SELECT
@@ -272,6 +285,7 @@ The existing Version 1 frontend located in `frontend/` serves as a **visual refe
 ## 8. Git Safety and Manual Commit Policy
 
 - **Developer Owns Git:** The human developer manually reviews, stages, commits, and pushes all code.
-- **Absolute Prohibition for Agents:** No AI agent may execute `git commit`, `git push`, `git push --force`, or any GitHub write commands under any circumstance.
+- **Absolute Prohibition for Agents:** No AI agent may execute `git commit`, `git push`, `git push --force`, `git reset`, `git clean`, `git checkout .`, `git restore .`, or any GitHub write commands under any circumstance.
+- **No Automatic Branch Switching:** Agents must **NEVER** switch branches automatically. If the active branch is not `development`, the agent must stop and ask the developer to switch manually.
 - **Branch Protection:** The `main` branch contains stable Version 1 and must **never** be modified. All work occurs on `development` (or feature branches cut from `development`).
 - **Enforcement:** Enforced technically via Antigravity `PreToolUse` lifecycle hook in `.agents/hooks.json` and `.agents/scripts/block-git-commits.mjs`, backed by explicit agent rules.

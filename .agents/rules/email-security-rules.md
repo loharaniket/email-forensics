@@ -6,7 +6,7 @@ trigger: always_on
 
 Forensic investigation tools handle potentially malicious and sensitive evidence. Follow these security principles strictly.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../docs/architecture-v2.md).
 
 ---
 

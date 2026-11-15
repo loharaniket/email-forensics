@@ -7,7 +7,7 @@ description: Rules for React frontend development, preserving the Version 1 visu
 
 These rules apply to all frontend development, styling, and UI components in the React application.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md) before implementing frontend features.
+Consult the authoritative specification in [docs/architecture-v2.md](../../docs/architecture-v2.md) before implementing frontend features.
 
 ---
 
@@ -32,7 +32,7 @@ Consult the authoritative specification in [docs/architecture-v2.md](docs/archit
 ## 2. Technology Stack and Dependencies
 
 - **Framework:** React with Vite.
-- **Styling:** Standard modern CSS matching the design tokens in [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md).
+- **Styling:** Standard modern CSS matching the design tokens in [docs/ai/frontend-reference-guide.md](../../docs/ai/frontend-reference-guide.md).
 - **Icons:** `lucide-react` for consistent interface icons.
 - **HTTP Client:** Use the browser's native `fetch()` API. Do not install Axios or heavy HTTP wrappers.
 - **State Management:** Use standard React component state (`useState`, `useEffect`) and lightweight custom hooks (such as `useEmailAnalysis`). Do not install Redux, Zustand, or large state stores.

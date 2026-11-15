@@ -7,7 +7,7 @@ description: Use this skill when generating, modifying, or explaining Spring Boo
 
 This skill provides practical rules, templates, and patterns for writing clean, simple Spring Boot code that a beginner Java developer can easily understand, debug, and maintain.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../../docs/architecture-v2.md).
 
 ---
 

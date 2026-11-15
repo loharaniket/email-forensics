@@ -7,7 +7,7 @@ description: Use this skill when building or styling React frontend pages, compo
 
 This skill provides step-by-step guidance on how to replicate and maintain the visual identity, dark theme, and design tokens of the Version 1 frontend while writing clean, brand-new Version 2 components.
 
-Consult the authoritative specification in [docs/architecture-v2.md](docs/architecture-v2.md) and design tokens in [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md).
+Consult the authoritative specification in [docs/architecture-v2.md](../../../docs/architecture-v2.md) and design tokens in [docs/ai/frontend-reference-guide.md](../../../docs/ai/frontend-reference-guide.md).
 
 ---
 
@@ -30,7 +30,7 @@ The existing Version 1 frontend located in `frontend/` is a **VISUAL REFERENCE O
 
 ## 2. Design Tokens and Colors
 
-Use these standard colors from [docs/ai/frontend-reference-guide.md](docs/ai/frontend-reference-guide.md):
+Use these standard colors from [docs/ai/frontend-reference-guide.md](../../../docs/ai/frontend-reference-guide.md):
 - Primary Accent: `#3b82f6` (blue-500)
 - Background Canvas: `#0f172a` (slate-900)
 - Card/Surface Background: `#1e293b` (slate-800)

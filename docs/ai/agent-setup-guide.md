@@ -15,7 +15,7 @@ When developing with an AI assistant in Antigravity, the AI needs clear instruct
 - Add code comments that clutter the source files.
 - Use advanced Spring Boot features (like Lombok or complex generic classes) that make learning harder.
 - Accidentally modify or break the stable Version 1 code on the `main` branch.
-- Execute unauthorized `git commit` or `git push` commands.
+- Execute unauthorized `git commit`, `git push`, or automatic branch-switch commands.
 - Copy legacy Version 1 frontend code instead of building clean Version 2 components.
 - Introduce bloated enterprise systems (like Kafka, Redis, or microservices) into a simple MVP.
 - Compromise security by visiting malicious links or sending confidential email text to cloud AI.
@@ -24,7 +24,15 @@ This setup teaches Antigravity your project rules, your coding preferences, your
 
 ---
 
-## 2. Complete File and Folder Structure
+## 2. Protection of README.md
+
+`README.md` is currently managed manually by the repository owner.
+- AI agents must **NOT** read, open, modify, rewrite, or use `README.md` as the authoritative architecture reference until the owner explicitly updates it.
+- The **ONLY** authoritative Version 2 technical reference is [docs/architecture-v2.md](../architecture-v2.md).
+
+---
+
+## 3. Complete File and Folder Structure
 
 ```
 email-forensics/
@@ -32,13 +40,14 @@ email-forensics/
 ├── AGENTS.md                                   # Root master instructions (always loaded)
 │
 ├── .agents/
-│   ├── hooks.json                              # Command-blocking PreToolUse lifecycle hook (blocks git commit/push)
+│   ├── hooks.json                              # Command-blocking PreToolUse lifecycle hook (blocks git write/switch/push)
 │   ├── scripts/
-│   │   └── block-git-commits.mjs               # Node.js script enforcing the manual git policy
+│   │   ├── block-git-commits.mjs               # Node.js script enforcing the manual git policy
+│   │   └── test-git-hook.mjs                   # Internal automated test suite for the git safety gate
 │   │
 │   ├── rules/                                  # Project rule files with triggers
 │   │   ├── development-rules.md                # Always-on: Beginner code, simple names, no comments
-│   │   ├── git-rules.md                        # Always-on: Absolute manual commit policy, protect main
+│   │   ├── git-rules.md                        # Always-on: Absolute manual commit policy, no auto branch switch
 │   │   ├── mvp-rules.md                        # Always-on: Avoid enterprise bloat, simple MVP only
 │   │   ├── email-security-rules.md             # Always-on: Untrusted inputs, hash integrity, PII redaction
 │   │   ├── spring-boot-rules.md                # Model-decision: Spring Boot rules, no Lombok, basic annotations
@@ -68,62 +77,64 @@ email-forensics/
 
 ---
 
-## 3. How the Coordinator Agent Orchestrates the Specialists
+## 4. Specialized Agents and Supported Tool Configurations
 
-The main coordinator agent manages the end-to-end development process and delegates tasks to the four specialists:
+All custom agent files use supported Antigravity tool names, explicit permissions, and `inheritCustomizations: true`:
 
+| Agent | Model | Tools | Read/Write Role |
+| :--- | :--- | :--- | :--- |
+| **`project-planner`** | `flash` | `[view_file, grep_search, find_by_name, list_dir, search_web, send_message]` | **Read-Only:** Inspects architecture and prepares implementation plans. No file-editing tools. |
+| **`spring-boot-developer`** | `flash` | `[view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]` | **Read/Write:** Implements simple Java backend features, runs tests, explains data flow. |
+| **`frontend-developer`** | `flash` | `[view_file, write_to_file, replace_file_content, multi_replace_file_content, grep_search, find_by_name, list_dir, run_command, manage_task, search_web, send_message]` | **Read/Write:** Builds brand-new React components using V1 visual design tokens. |
+| **`code-reviewer`** | `flash` | `[view_file, grep_search, find_by_name, list_dir, search_web, send_message]` | **Read-Only:** Audits code against beginner simplicity, zero code comments, no Lombok. Cannot claim tests passed without execution logs. |
+
+---
+
+## 5. Absolute Git Safety Gate
+
+The repository owner manually reviews, stages, commits, and pushes all code.
+
+### Technical Hook Enforcement
+Configured via `.agents/hooks.json` and executed via `.agents/scripts/block-git-commits.mjs`:
+- Intercepts `run_command` and `github_*` MCP tool calls before execution.
+- Automatically denies:
+  - `git commit`
+  - `git push` (including `--force`)
+  - `git reset` (including `--hard`)
+  - `git clean`
+  - `git checkout .` or `git restore .`
+  - `git switch` or `git checkout <branch>` (agents must never switch branches automatically)
+  - GitHub CLI write commands (`gh pr create`, `gh repo`, etc.)
+  - GitHub MCP write tools (`github_create_pull_request`, `github_create_commit`, etc.)
+- Safely permits read-only inspection commands:
+  - `git status`
+  - `git diff`
+  - `git log`
+  - `git branch --show-current`
+  - `git show`
+- Normal project commands (`npm test`, `mvn test`, `dir`, `node`) run without restriction.
+
+---
+
+## 6. Standard Indicator Origins Across Backend and Database
+
+The PostgreSQL database `indicators.origin` column enforces:
+```sql
+CONSTRAINT chk_indicator_origin
+    CHECK (origin IN ('HEADER', 'BODY', 'HTML', 'DNS', 'IMAGE_OCR', 'QR'))
 ```
-[User Request]
-      │
-      v
-[Coordinator Agent]
-      │
-      ├──> 1. [project-planner] (Read-Only)
-      │       Reviews docs/architecture-v2.md, plans files & tests
-      │
-      ├──> 2. [spring-boot-developer]
-      │       Implements backend features (no Lombok, no comments, constructor DI)
-      │
-      ├──> 3. [frontend-developer]
-      │       Implements new V2 React components (V1 visual reference only)
-      │
-      └──> 4. [code-reviewer] (Read-Only)
-              Audits changes against 12-point checklist before completion
-```
+- `HEADER`: Extracted from RFC 5322 headers (From/Reply-To domains, Received hops, relay IPs).
+- `BODY`: Extracted from plain-text email bodies.
+- `HTML`: Extracted from HTML anchor hrefs, image tags, or form actions.
+- `DNS`: Discovered through domain DNS lookups (A/AAAA/MX records).
+- `IMAGE_OCR`: Extracted as visible text from images by local Tesseract OCR.
+- `QR`: Decoded destination URLs from QR codes by ZXing.
 
-### Coordinator Guardrails:
-- The coordinator prevents parallel agents from modifying the same files simultaneously.
-- The coordinator ensures that all backend and database choices strictly adhere to `docs/architecture-v2.md`.
-- The coordinator ensures that `git commit` and `git push` are never executed by any agent.
+All frontend components, backend entities, and DTOs use this exact origin vocabulary.
 
 ---
 
-## 4. Summary of the 6 Project Rules
-
-| Rule File | Trigger | Purpose |
-| :--- | :--- | :--- |
-| **`development-rules.md`** | `always_on` | Enforces simple names, small methods, single responsibility, and **strictly zero comments** in code. |
-| **`git-rules.md`** | `always_on` | Locks `main` branch, enforces all work on `development`, bans automated git commits/pushes. |
-| **`mvp-rules.md`** | `always_on` | Prevents enterprise overengineering (no Kafka, Redis, microservices, or Spring Security). |
-| **`email-security-rules.md`** | `always_on` | Enforces evidence preservation, SHA-256 hashing, safe UUID paths, and PII redaction. |
-| **`spring-boot-rules.md`** | `model_decision` | Enforces standard Java without Lombok, constructor injection, and simple layers. |
-| **`frontend-rules.md`** | `model_decision` | Enforces V1 as visual reference only; strictly prohibits copying V1 code. |
-
----
-
-## 5. Absolute Git Commit and Push Protection
-
-To guarantee that no agent creates automated commits or pushes:
-1. **Rule Enforcement:** `AGENTS.md` and `git-rules.md` declare an absolute prohibition on git write operations.
-2. **Technical Enforcement:** Configured via `.agents/hooks.json` using Antigravity's `PreToolUse` lifecycle hook:
-   - Matcher: `run_command`
-   - Command: `node scripts/block-git-commits.mjs`
-   - Any terminal command containing `git commit`, `git push`, `git tag`, or `gh pr create` is automatically intercepted and denied before execution.
-3. **Manual Human Ownership:** The developer runs `git status` and `git diff` to inspect changes, and manually executes git commits and pushes.
-
----
-
-## 6. How to Build Version 2 Phase by Phase
+## 7. How to Build Version 2 Phase by Phase
 
 Build the application one phase at a time following the roadmap:
 
@@ -143,14 +154,14 @@ Build the application one phase at a time following the roadmap:
   > "Implement Phase 3: Email parsing with Angus Mail and Jsoup. Extract From, Reply-To, Subject, Date, Message-ID, Received headers, plain text, and HTML links. Test against plain text and HTML fixtures. Remember: zero code comments and no Lombok."
 
 ### Phase 4: Mail Authentication (SPF, DKIM, DMARC, ARC)
-- **Goal:** Integrate Node.js 22+ `mailauth` helper and execute via `ProcessBuilder`.
+- **Goal:** Integrate Node.js 22.19.0+ `mailauth` helper and execute via `ProcessBuilder`.
 - **Example Prompt:**
-  > "Implement Phase 4: Node.js mailauth helper in tools/mailauth/verify.mjs. Call the helper from AuthenticationService in Java with a process timeout. Store normalized SPF, DKIM, DMARC, and ARC results in emails.auth_data. Never convert NOT_VERIFIABLE into PASS or FAIL."
+  > "Implement Phase 4: Node.js mailauth helper in tools/mailauth/verify.mjs using Node.js 22.19.0+. Call the helper from AuthenticationService in Java with a process timeout. Store normalized SPF, DKIM, DMARC, and ARC results in emails.auth_data. Never convert NOT_VERIFIABLE into PASS or FAIL."
 
 ### Phase 5: URL, Domain, and IP Extraction
 - **Goal:** Extract unique URLs, hostnames, and public IPs, storing them in the `indicators` table.
 - **Example Prompt:**
-  > "Implement Phase 5: Extract indicators from parsed email headers, text, and HTML. Normalize URLs and domains. Extract public IPs and skip private RFC 1918 ranges. Save rows to the indicators table."
+  > "Implement Phase 5: Extract indicators from parsed email headers, text, and HTML. Normalize URLs and domains. Extract public IPs and skip private RFC 1918 ranges. Save rows to the indicators table using standard origins (HEADER, BODY, HTML, DNS)."
 
 ### Phase 6: Threat Intelligence Providers
 - **Goal:** Implement one provider at a time (Safe Browsing v5, PhishTank, OpenPhish feed, URLhaus, ThreatFox, AbuseIPDB, IPinfo Lite).
@@ -160,7 +171,7 @@ Build the application one phase at a time following the roadmap:
 ### Phase 7: Image OCR and QR Decoding
 - **Goal:** Run local Tesseract OCR on images and decode QR codes with ZXing.
 - **Example Prompt:**
-  > "Implement Phase 7: Extract inline/attached images. Run local Tesseract to extract text and ZXing to decode QR URLs. Feed decoded QR URLs into the URL threat pipeline."
+  > "Implement Phase 7: Extract inline/attached images. Run local Tesseract to extract text and ZXing to decode QR URLs. Feed decoded QR URLs into the URL threat pipeline with origin QR."
 
 ### Phase 8: PII Redaction and Gemini AI Analysis
 - **Goal:** Redact sensitive data, show preview to user, and send approved text to Gemini using Spring AI.
