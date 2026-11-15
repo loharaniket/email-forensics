@@ -1,24 +1,24 @@
-﻿import React from 'react'
-import { Link, useLocation } from 'react-router-dom'
-import { Shield, LayoutDashboard, Activity } from 'lucide-react'
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { Shield, LayoutDashboard, Activity } from 'lucide-react';
 
 export default function Navbar() {
-  const location = useLocation()
+  const location = useLocation();
 
   return (
-    <header className="border-b border-[#E4E7EC] bg-white sticky top-0 z-50 px-6 py-3">
-      <div className="max-w-6xl mx-auto flex items-center justify-between">
+    <header className="border-b border-[#334155] bg-[#1e293b] sticky top-0 z-50 px-6 py-3 shadow-md">
+      <div className="max-w-7xl mx-auto flex items-center justify-between">
         <div className="flex items-center gap-8">
-          <Link to="/" className="flex items-center gap-2.5">
-            <div className="h-9 w-9 rounded-lg bg-[#EFF6FF] border border-blue-100 flex items-center justify-center text-[#2563EB]">
+          <Link to="/" className="flex items-center gap-2.5 group">
+            <div className="h-9 w-9 rounded-lg bg-blue-950 border border-blue-800/60 flex items-center justify-center text-blue-400 group-hover:text-blue-300 transition">
               <Shield className="h-5 w-5" />
             </div>
             <div>
-              <span className="text-base font-semibold tracking-tight text-[#202938] block leading-tight">
+              <span className="text-base font-bold tracking-tight text-white block leading-tight">
                 Email Forensics
               </span>
-              <span className="text-xs text-[#202938] hidden sm:block">
-                Automated forensic investigation dashboard
+              <span className="text-xs text-slate-400 hidden sm:block">
+                Version 2 Forensic Investigation
               </span>
             </div>
           </Link>
@@ -27,10 +27,10 @@ export default function Navbar() {
             <Link
               to="/"
               id="nav-dashboard-link"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 location.pathname === '/' || location.pathname.startsWith('/evidence')
-                  ? 'bg-[#EFF6FF] text-[#2563EB]'
-                  : 'text-[#202938] hover:bg-slate-50'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-300 hover:bg-[#334155] hover:text-white'
               }`}
             >
               <LayoutDashboard className="h-4 w-4" />
@@ -40,10 +40,10 @@ export default function Navbar() {
             <Link
               to="/health"
               id="nav-health-link"
-              className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
                 location.pathname === '/health'
-                  ? 'bg-[#EFF6FF] text-[#2563EB]'
-                  : 'text-[#202938] hover:bg-slate-50'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-slate-300 hover:bg-[#334155] hover:text-white'
               }`}
             >
               <Activity className="h-4 w-4" />
@@ -53,5 +53,5 @@ export default function Navbar() {
         </div>
       </div>
     </header>
-  )
+  );
 }

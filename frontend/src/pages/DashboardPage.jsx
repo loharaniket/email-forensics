@@ -1,52 +1,66 @@
-import React from 'react'
-import Navbar from '../components/Navbar'
-import EvidenceUploadSection from '../components/EvidenceUploadSection'
-import { Shield, Sparkles, Network, FileCheck } from 'lucide-react'
+import React, { useState } from 'react';
+import Navbar from '../components/Navbar';
+import FileUpload from '../components/FileUpload';
+import RecentUploads from '../components/RecentUploads';
+import { Shield, Sparkles, Network, FileCheck, Database } from 'lucide-react';
 
 export default function DashboardPage() {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  const handleUploadSuccess = () => {
+    setRefreshTrigger((prev) => prev + 1);
+  };
+
   return (
-    <div className="h-screen bg-[#F8FAFC] flex flex-col overflow-hidden">
+    <div className="min-h-screen bg-[#0f172a] text-slate-100 flex flex-col">
       <Navbar />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-5 flex flex-col gap-3 overflow-hidden">
-        {/* Compact Minimal Header Banner */}
-        <div className="bg-white border border-[#E4E7EC] rounded-xl p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+      <main className="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 flex flex-col gap-6">
+        <div className="bg-[#1e293b] border border-[#334155] rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg">
           <div>
             <div className="flex items-center gap-2">
-              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-[#EFF6FF] text-[#2563EB] text-[11px] font-semibold border border-blue-100">
-                <Shield className="h-3 w-3" />
-                <span>Email Forensics Pipeline</span>
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-blue-950 text-blue-400 text-xs font-semibold border border-blue-800/50">
+                <Shield className="h-3.5 w-3.5" />
+                <span>Email Forensics V2</span>
               </span>
-              <span className="text-[11px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-[#202938] border border-[#E4E7EC]">
+              <span className="text-xs font-mono bg-[#0f172a] px-2 py-0.5 rounded text-slate-300 border border-[#334155]">
                 RFC 5322 .eml
               </span>
             </div>
-            <h1 className="text-base sm:text-lg font-bold text-[#202938] mt-1">
+            <h1 className="text-lg sm:text-xl font-bold text-white mt-1.5">
               Email Forensics &amp; Threat Investigation
             </h1>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Cryptographic evidence preservation, header analysis, threat intelligence, and AI-assisted evaluation
+            </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-xs text-[#202938]">
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#F8FAFC] border border-[#E4E7EC] rounded-md">
-              <FileCheck className="h-3.5 w-3.5 text-[#2563EB]" />
-              <span>SHA-256 Verified</span>
+          <div className="flex flex-wrap items-center gap-2 text-xs">
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-slate-300">
+              <FileCheck className="h-3.5 w-3.5 text-blue-400" />
+              <span>SHA-256 Hashed</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#F8FAFC] border border-[#E4E7EC] rounded-md">
-              <Network className="h-3.5 w-3.5 text-[#15803D]" />
-              <span>Route &amp; URLs</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-slate-300">
+              <Database className="h-3.5 w-3.5 text-emerald-400" />
+              <span>PostgreSQL Preserved</span>
             </div>
-            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-[#F8FAFC] border border-[#E4E7EC] rounded-md">
-              <Sparkles className="h-3.5 w-3.5 text-[#7C3AED]" />
-              <span>AI Grounded</span>
+            <div className="flex items-center gap-1.5 px-3 py-1.5 bg-[#0f172a] border border-[#334155] rounded-lg text-slate-300">
+              <Sparkles className="h-3.5 w-3.5 text-purple-400" />
+              <span>Privacy-Safe AI</span>
             </div>
           </div>
         </div>
 
-        {/* Side-by-Side Split Workspace */}
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <EvidenceUploadSection />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 flex-1 items-start">
+          <div className="lg:col-span-7">
+            <FileUpload onUploadSuccess={handleUploadSuccess} />
+          </div>
+
+          <div className="lg:col-span-5 h-[560px]">
+            <RecentUploads refreshTrigger={refreshTrigger} />
+          </div>
         </div>
       </main>
     </div>
-  )
+  );
 }

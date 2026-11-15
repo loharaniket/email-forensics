@@ -1,11 +1,9 @@
-import apiClient from './client'
+import { apiFetch } from './client';
 
-export const fetchHealth = async () => {
-  const response = await apiClient.get('/health')
-  return response.data
+export async function fetchHealth() {
+  return apiFetch('/health');
 }
 
-export const truncateDatabaseAndEvidence = async () => {
-  const response = await apiClient.post('/system/truncate-all')
-  return response.data
+export async function truncateDatabaseAndEvidence() {
+  return apiFetch('/system/truncate-all', { method: 'POST' });
 }

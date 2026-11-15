@@ -23,16 +23,7 @@ public class SystemMaintenanceService {
     @Transactional
     public TruncateResultDto truncateAllTablesAndEvidence() {
         List<String> tables = List.of(
-                "ai_assessments",
-                "email_matches",
-                "qr_codes",
-                "email_files",
-                "email_ip_addresses",
-                "email_urls",
-                "email_hops",
-                "risk_reasons",
-                "email_analysis_results",
-                "email_analysis_runs",
+                "indicators",
                 "emails"
         );
 
@@ -40,7 +31,6 @@ public class SystemMaintenanceService {
         entityManager.createNativeQuery(sql).executeUpdate();
         entityManager.clear();
 
-        // Clear all evidence files from the storage vault
         int deletedFiles = evidenceStorageService.clearAllStoredFiles();
 
         return new TruncateResultDto(

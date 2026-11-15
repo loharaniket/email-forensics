@@ -21,21 +21,25 @@ class HealthControllerTest {
     private MockMvc mockMvc;
 
     @Test
-    void shouldReturnOkStatus() throws Exception {
-        mockMvc.perform(get("/api/v1/health")
+    void shouldReturnHealthStatusUp() throws Exception {
+        mockMvc.perform(get("/api/health")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-                .andExpect(jsonPath("$.status").value("ok"));
+                .andExpect(jsonPath("$.status").value("UP"))
+                .andExpect(jsonPath("$.database").value("CONNECTED"))
+                .andExpect(jsonPath("$.tables").isArray())
+                .andExpect(jsonPath("$.tables[0]").value("emails"))
+                .andExpect(jsonPath("$.tables[1]").value("indicators"));
     }
 
     @Test
     void shouldTruncateAllTablesAndEvidence() throws Exception {
-        mockMvc.perform(post("/api/v1/system/truncate-all")
+        mockMvc.perform(post("/api/system/truncate-all")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("SUCCESS"))
                 .andExpect(jsonPath("$.truncatedTables").isArray())
-                .andExpect(jsonPath("$.truncatedTables.length()").value(11));
+                .andExpect(jsonPath("$.truncatedTables.length()").value(2));
     }
 }

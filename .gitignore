@@ -1,4 +1,5 @@
 # IDE & Editors
+.agents/.agents/
 .idea/
 .vscode/
 *.iml
@@ -33,6 +34,7 @@ build/
 
 # Evidence Vault, Raw Storage & Preserved EML Files
 storage/
+backend/storage/
 evidence_vault/
 vault/
 *.eml.vault
@@ -46,6 +48,8 @@ storage/temp/
 *.ocr.txt
 reports/
 *.pdf
+dashboard-chrome-verified.png
+*.png
 
 # Temporary files and logs
 logs/

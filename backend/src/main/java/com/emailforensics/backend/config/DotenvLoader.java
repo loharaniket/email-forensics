@@ -7,9 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Simple helper to load environment variables from a local .env file.
- */
 public class DotenvLoader {
 
     private static boolean loaded = false;
@@ -70,7 +67,6 @@ public class DotenvLoader {
             }
         }
 
-        // Set datasource and AI fallbacks for Spring Boot properties
         String dbPass = envMap.get("DB_PASSWORD");
         if (dbPass != null && System.getProperty("spring.datasource.password") == null) {
             System.setProperty("spring.datasource.password", dbPass);

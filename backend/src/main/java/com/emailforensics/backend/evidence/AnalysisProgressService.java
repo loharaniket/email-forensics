@@ -78,29 +78,31 @@ public class AnalysisProgressService {
         return analysisRunRepository.saveAndFlush(run);
     }
 
-    @EventListener(ApplicationReadyEvent.class)
-    @Transactional
     public void recoverStuckRuns() {
-        List<AnalysisRun> runningRuns = analysisRunRepository.findByStatus(AnalysisStatus.RUNNING);
-        for (AnalysisRun run : runningRuns) {
-            run.setStatus(AnalysisStatus.FAILED);
-            run.setCompletedAt(Instant.now());
-            run.setErrorCode("SERVER_RESTARTED");
-            run.setSafeErrorMessage("The analysis pipeline was interrupted by a server restart. You may retry analysis.");
-        }
-        if (!runningRuns.isEmpty()) {
-            analysisRunRepository.saveAllAndFlush(runningRuns);
-        }
+        try {
+            List<AnalysisRun> runningRuns = analysisRunRepository.findByStatus(AnalysisStatus.RUNNING);
+            for (AnalysisRun run : runningRuns) {
+                run.setStatus(AnalysisStatus.FAILED);
+                run.setCompletedAt(Instant.now());
+                run.setErrorCode("SERVER_RESTARTED");
+                run.setSafeErrorMessage("The analysis pipeline was interrupted by a server restart. You may retry analysis.");
+            }
+            if (!runningRuns.isEmpty()) {
+                analysisRunRepository.saveAllAndFlush(runningRuns);
+            }
 
-        List<AnalysisRun> queuedRuns = analysisRunRepository.findByStatus(AnalysisStatus.QUEUED);
-        for (AnalysisRun run : queuedRuns) {
-            run.setStatus(AnalysisStatus.FAILED);
-            run.setCompletedAt(Instant.now());
-            run.setErrorCode("SERVER_RESTARTED");
-            run.setSafeErrorMessage("The analysis was queued prior to server restart. You may retry analysis.");
-        }
-        if (!queuedRuns.isEmpty()) {
-            analysisRunRepository.saveAllAndFlush(queuedRuns);
+            List<AnalysisRun> queuedRuns = analysisRunRepository.findByStatus(AnalysisStatus.QUEUED);
+            for (AnalysisRun run : queuedRuns) {
+                run.setStatus(AnalysisStatus.FAILED);
+                run.setCompletedAt(Instant.now());
+                run.setErrorCode("SERVER_RESTARTED");
+                run.setSafeErrorMessage("The analysis was queued prior to server restart. You may retry analysis.");
+            }
+            if (!queuedRuns.isEmpty()) {
+                analysisRunRepository.saveAllAndFlush(queuedRuns);
+            }
+        } catch (Exception ex) {
+            log.info("Legacy analysis run recovery skipped in Version 2");
         }
     }
 }
