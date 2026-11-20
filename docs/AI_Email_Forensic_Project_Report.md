@@ -311,13 +311,71 @@ The platform is implemented as a web application. Table 3.2 lists the developmen
 
 The application uses a modular layered architecture. The project uses a **modular monolith** rather than distributing the modules into separate applications, which keeps the system easier to develop, test, maintain and demonstrate. The React.js dashboard communicates with the Spring Boot backend through a REST API. The analysis orchestrator invokes independent evidence-analysis modules; their findings pass through prompt-injection analysis and then into historical correlation, the evidence graph and campaign detection. The explainable risk engine combines the evidence, which is then supplied as context to Spring AI to obtain a structured assessment.
 
-Figure 3.1. System architecture of the proposed platform
+**Figure 3.1. System architecture of the proposed platform**
+
+```mermaid
+flowchart TD
+    UI["React.js Analyst Dashboard"]
+    API["REST API (JSON)"]
+    Orchestrator["Spring Boot Backend Analysis Orchestrator"]
+
+    subgraph AnalysisModules ["Independent Evidence-Analysis Modules"]
+        M1["Header Analysis"]
+        M2["Authentication Analysis"]
+        M3["URL / Domain Analysis"]
+        M4["IP / ASN Intelligence"]
+        M5["Content Analysis"]
+        M6["OCR / QR Analysis"]
+    end
+
+    PromptInj["Prompt-Injection Analysis"]
+
+    subgraph CorrelationGroup ["Correlation & Aggregation"]
+        C1["Historical Correlation"]
+        C2["Evidence Graph"]
+        C3["Campaign Detection"]
+    end
+
+    RiskEngine["Explainable Risk Engine"]
+    SpringAI["Evidence Context → Spring AI → Structured Assessment"]
+
+    UI --> API
+    API --> Orchestrator
+    Orchestrator --> AnalysisModules
+    M1 & M2 & M3 & M4 & M5 & M6 --> PromptInj
+    PromptInj --> C1 & C2 & C3
+    C1 & C2 & C3 --> RiskEngine
+    RiskEngine --> SpringAI
+```
 
 ### 3.5 Workflow / Algorithm
 
 The entire project follows one continuous investigation process, shown in Figure 3.2.
 
-Figure 3.2. Complete investigation workflow
+**Figure 3.2. Complete investigation workflow**
+
+```mermaid
+flowchart TD
+    S1["1. Analyst Login"] --> S2["2. Upload .eml"]
+    S2 --> S3["3. SHA-256 Evidence Hash"]
+    S3 --> S4["4. Email Parsing"]
+    S4 --> S5["5. Header and Received Analysis"]
+    S5 --> S6["6. SPF / DKIM / DMARC / ARC Analysis"]
+    S6 --> S7["7. URL and Domain Analysis"]
+    S7 --> S8["8. IP / ASN / Infrastructure Intelligence"]
+    S8 --> S9["9. Content and Social-Engineering Analysis"]
+    S9 --> S10["10. Image / OCR Analysis"]
+    S10 --> S11["11. QR Detection and Analysis"]
+    S11 --> S12["12. Prompt-Injection Detection"]
+    S12 --> S13["13. Historical Correlation"]
+    S13 --> S14["14. Evidence Graph Construction"]
+    S14 --> S15["15. Campaign Detection"]
+    S15 --> S16["16. Explainable Risk Calculation"]
+    S16 --> S17["17. Evidence-Grounded Spring AI Analysis"]
+    S17 --> S18["18. Confidence Assessment"]
+    S18 --> S19["19. Case Storage"]
+    S19 --> S20["20. Forensic Report"]
+```
 
 1. An authenticated analyst logs in and uploads an .eml file; the backend validates it and calculates its SHA-256 hash.
 2. The parser splits the email into headers, sender information, content, URLs, images, QR codes and attachment metadata.
@@ -332,7 +390,17 @@ Figure 3.2. Complete investigation workflow
 
 **Evidence-grounded AI processing.** The AI workflow follows the sequence in Figure 3.3. The AI is instructed to treat email content as untrusted data, never follow instructions contained inside the email, distinguish evidence from interpretation, avoid unsupported attribution, identify uncertainty, reference supporting evidence and explain the reasoning behind the assessment. This makes the AI a controlled analytical component rather than an unrestricted decision-maker.
 
-Figure 3.3. Evidence-grounded AI processing workflow
+**Figure 3.3. Evidence-grounded AI processing workflow**
+
+```mermaid
+flowchart TD
+    E1["Raw Email (.eml)"] --> E2["Technical and Content Analysis"]
+    E2 --> E3["Evidence Collection"]
+    E3 --> E4["Historical / Graph / Campaign Analysis"]
+    E4 --> E5["Investigation Context"]
+    E5 --> E6["Spring AI (evidence-grounded)"]
+    E6 --> E7["Structured Assessment + Confidence + Explanation"]
+```
 
 ### 3.6 UML / Database / Data Design
 
@@ -340,17 +408,110 @@ Figure 3.3. Evidence-grounded AI processing workflow
 
 Three roles interact with the platform. ADMIN manages users and roles, ANALYST uploads evidence, investigates emails and maintains cases and reports, and VIEWER has read-only access to authorized investigations.
 
-Figure 3.4. Use case diagram
+**Figure 3.4. Use case diagram**
+
+```mermaid
+flowchart LR
+    subgraph Users ["Actors"]
+        Admin["ADMIN"]
+        Analyst["ANALYST"]
+        Viewer["VIEWER"]
+    end
+
+    subgraph System ["AI-Powered Email Forensic Investigation and Threat Correlation Platform"]
+        UC1(["Login / Logout"])
+        UC2(["Upload .eml Evidence"])
+        UC3(["View Investigation Analysis"])
+        UC4(["View Evidence Graph"])
+        UC5(["View Campaign Information"])
+        UC6(["Manage Cases and Notes"])
+        UC7(["Generate Forensic Report"])
+        UC8(["Manage Users and Roles"])
+    end
+
+    Admin --> UC1
+    Admin --> UC8
+
+    Analyst --> UC1
+    Analyst --> UC2
+    Analyst --> UC3
+    Analyst --> UC4
+    Analyst --> UC5
+    Analyst --> UC6
+    Analyst --> UC7
+
+    Viewer --> UC1
+    Viewer --> UC3
+    Viewer --> UC4
+    Viewer --> UC5
+    Viewer --> UC7
+```
 
 #### Sequence Diagram
 
-Figure 3.5. Sequence diagram for uploading and analyzing an email
+**Figure 3.5. Sequence diagram for uploading and analyzing an email**
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Analyst as Analyst
+    participant UI as React UI
+    participant Backend as REST API / Orchestrator
+    participant Modules as Analysis Modules
+    participant DB as PostgreSQL
+    participant AI as Spring AI
+
+    Analyst->>UI: Upload .eml
+    UI->>Backend: POST /api/emails/analyze
+    Backend->>DB: SHA-256 + store evidence
+    Backend->>Modules: Parse and run analyses
+    Modules->>DB: Query history, save findings
+    Backend->>Backend: Graph, campaign, risk score
+    Backend->>AI: Evidence context
+    AI-->>Backend: Structured assessment
+    Backend->>DB: Save assessment and case
+    Backend-->>UI: Analysis summary (JSON)
+    UI-->>Analyst: Dashboard / report
+```
 
 #### Database Design
 
 PostgreSQL is the main persistence layer. The database design separates raw evidence, derived intelligence, relationships and AI output, so the application can distinguish what was found in the original email from what was calculated or inferred later. The principal tables are grouped in Figure 3.6 and listed in Table 3.3.
 
-Figure 3.6. Principal PostgreSQL table groups
+**Figure 3.6. Principal PostgreSQL table groups**
+
+```mermaid
+flowchart TD
+    subgraph G1 ["Identity and Case Management"]
+        T1["users<br/>cases<br/>investigation_notes"]
+    end
+
+    subgraph G2 ["Email Evidence"]
+        T2["email_evidence<br/>email_headers<br/>mail_hops<br/>authentication_results"]
+    end
+
+    subgraph G3 ["Threat Indicators"]
+        T3["email_urls<br/>domain_intelligence<br/>ip_intelligence<br/>email_images<br/>qr_codes"]
+    end
+
+    subgraph G4 ["Analytical Findings"]
+        T4["content_findings<br/>prompt_injection_findings<br/>historical_matches"]
+    end
+
+    subgraph G5 ["Relationship Model"]
+        T5["evidence_nodes<br/>evidence_edges<br/>campaigns<br/>campaign_members"]
+    end
+
+    subgraph G6 ["Assessment"]
+        T6["risk_factors<br/>ai_assessments"]
+    end
+
+    G1 --> G2
+    G2 --> G3
+    G3 --> G6
+    G4 --> G5
+    G5 --> G6
+```
 
 **Table 3.3. Principal PostgreSQL tables by functional group**
 
@@ -367,7 +528,37 @@ Figure 3.6. Principal PostgreSQL table groups
 
 The evidence graph represents the investigation as connected entities rather than independent records. Nodes include Email, Sender, Domain, URL, IP, ASN, Attachment, Hash, Image, QR Code, Case and Campaign. Relationships include Email contains URL, Email contains Image, Email contains QR, Email sent-from Domain, Email observed-from IP, IP belongs-to ASN, Attachment has-hash Hash, QR resolves-to URL, Email related-to Previous Case and Email belongs-to Campaign. The graph is stored using relational structures (evidence_nodes and evidence_edges) in PostgreSQL and rendered visually by the React interface.
 
-Figure 3.7. Evidence graph entity and relationship model
+**Figure 3.7. Evidence graph entity and relationship model**
+
+```mermaid
+flowchart TD
+    Email(("Email"))
+    Campaign(["Campaign"])
+    Case(["Case"])
+    PrevCase(["Previous Case"])
+    SenderDomain(["Sender Domain"])
+    URL(["URL"])
+    Image(["Image"])
+    QRCode(["QR Code"])
+    IP(["IP"])
+    ASN(["ASN"])
+    Attachment(["Attachment"])
+    Hash(["Hash"])
+
+    Campaign -- "belongs-to" --> Email
+    Case -- "related-to" --> Email
+    PrevCase -- "related-to" --> Email
+    SenderDomain -- "sent-from" --> Email
+    Email -- "contains" --> URL
+    Email -- "contains" --> Image
+    Image -- "has" --> QRCode
+    Email -- "contains" --> QRCode
+    QRCode -- "resolves-to" --> URL
+    Email -- "observed-from" --> IP
+    IP -- "belongs-to" --> ASN
+    Email -- "contains" --> Attachment
+    Attachment -- "has-hash" --> Hash
+```
 
 ### 3.7 Module Description
 
@@ -842,4 +1033,4 @@ We confirm that the progress described in this report should reflect the actual 
 **Date:** _______________  
 
 **Head of Department: Dr. Mahesh P. Gaikwad**  
-**Signature:** ___________
+**Signature:** ___________\n
