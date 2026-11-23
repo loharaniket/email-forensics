@@ -19,8 +19,6 @@ export const getEvidenceList = async (page = 0, size = 20) => {
   return response.data;
 };
 
-export const getCaseEvidence = getEvidenceList;
-
 export const getEvidenceStatus = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/status`);
   return response.data;
@@ -72,11 +70,6 @@ export const getEvidenceInfrastructure = async (emailId) => {
 
 export const getEvidenceAttachments = async (emailId) => {
   const response = await client.get(`/evidence/${emailId}/attachments`);
-  return response.data;
-};
-
-export const getEvidenceVisuals = async (emailId) => {
-  const response = await client.get(`/evidence/${emailId}/images`);
   return response.data;
 };
 

@@ -90,7 +90,6 @@ export default function InvestigationReport({
   const caseNumber = detail.caseNumber || 'N/A'
   const caseTitle = detail.caseTitle || 'Email Evidence Investigation'
   const examinerName = reportData?.analystSignoff?.certifyingAnalyst || user?.username || 'analyst'
-  const examinerRole = user?.role || 'Digital Forensics Analyst'
   const reportDate = formatLocalDate(reportData?.generatedAt || new Date())
   const sentDateDisplay = formatUtcDate(parsed?.sentDate || parsed?.rawDate)
   const uploadDateDisplay = formatUtcDate(detail?.uploadedAt)

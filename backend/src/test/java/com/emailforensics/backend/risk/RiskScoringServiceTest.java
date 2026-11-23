@@ -1,12 +1,10 @@
 package com.emailforensics.backend.risk;
 
-import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.content.ContentAnalysisService;
 import com.emailforensics.backend.dto.content.ContentAnalysisDto;
 import com.emailforensics.backend.dto.headers.HeaderAnalysisDto;
 import com.emailforensics.backend.dto.headers.ReceivedHopDto;
-import com.emailforensics.backend.dto.infrastructure.IpArtifactDto;
 import com.emailforensics.backend.dto.risk.ChannelStatusDto;
 import com.emailforensics.backend.dto.risk.RiskBreakdownDto;
 import com.emailforensics.backend.dto.risk.RiskCategoryScoreDto;
@@ -26,7 +24,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,7 +34,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.when;
 

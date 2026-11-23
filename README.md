@@ -70,7 +70,7 @@ The repository is organized into three main modules:
 email-forensics/
 ├── backend/                  # Java 21 & Spring Boot 4 Application
 │   ├── src/main/java/        # Forensic pipeline services & REST controllers
-│   ├── src/main/resources/   # Flyway database migrations (V1 to V15)
+│   ├── src/main/resources/   # Application configuration and static data
 │   └── pom.xml               # Maven configuration
 ├── frontend/                 # React 19 & Vite 8 Web App
 │   ├── src/pages/            # Dashboard, Investigation Studio, and Health pages
@@ -137,7 +137,7 @@ cd backend
 ```
 
 When the server starts:
-- Flyway automatically runs database migrations and creates all 11 required tables.
+- The database tables are automatically validated against JPA/Hibernate entity mappings.
 - The evidence vault directory (`./evidence_vault`) is automatically created.
 - The server starts listening at: `http://localhost:8080`
 

@@ -3,9 +3,6 @@ package com.emailforensics.backend.common;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.AccessDeniedException;
-import org.springframework.security.authentication.BadCredentialsException;
-import org.springframework.security.core.AuthenticationException;
 import org.springframework.validation.FieldError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -69,30 +66,6 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
-    @ExceptionHandler({BadCredentialsException.class, AuthenticationException.class})
-    public ResponseEntity<ApiErrorResponse> handleAuthenticationException(Exception ex, HttpServletRequest request) {
-        ApiErrorResponse error = new ApiErrorResponse(
-                HttpStatus.UNAUTHORIZED.value(),
-                "UNAUTHORIZED",
-                "Invalid username or password",
-                request.getRequestURI(),
-                UUID.randomUUID().toString()
-        );
-        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-    }
-
-    @ExceptionHandler(AccessDeniedException.class)
-    public ResponseEntity<ApiErrorResponse> handleAccessDenied(AccessDeniedException ex, HttpServletRequest request) {
-        ApiErrorResponse error = new ApiErrorResponse(
-                HttpStatus.FORBIDDEN.value(),
-                "FORBIDDEN",
-                "Access denied",
-                request.getRequestURI(),
-                UUID.randomUUID().toString()
-        );
-        return ResponseEntity.status(HttpStatus.FORBIDDEN).body(error);
-    }
-
     @ExceptionHandler(org.springframework.web.servlet.resource.NoResourceFoundException.class)
     public ResponseEntity<ApiErrorResponse> handleNoResourceFound(org.springframework.web.servlet.resource.NoResourceFoundException ex, HttpServletRequest request) {
         ApiErrorResponse error = new ApiErrorResponse(
@@ -103,6 +76,24 @@ public class GlobalExceptionHandler {
                 UUID.randomUUID().toString()
         );
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
+    }
+
+    @ExceptionHandler({
+            org.springframework.web.multipart.support.MissingServletRequestPartException.class,
+            org.springframework.web.bind.MissingServletRequestParameterException.class,
+            org.springframework.web.multipart.MultipartException.class,
+            org.springframework.web.method.annotation.MethodArgumentTypeMismatchException.class,
+            IllegalArgumentException.class
+    })
+    public ResponseEntity<ApiErrorResponse> handleBadRequestTypes(Exception ex, HttpServletRequest request) {
+        ApiErrorResponse error = new ApiErrorResponse(
+                HttpStatus.BAD_REQUEST.value(),
+                "BAD_REQUEST",
+                ex.getMessage(),
+                request.getRequestURI(),
+                UUID.randomUUID().toString()
+        );
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
     }
 
     @ExceptionHandler(Exception.class)

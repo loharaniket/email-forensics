@@ -23,13 +23,13 @@ class MlClassifierServiceTest {
 
         MlEvaluationMetricsDto metrics = service.getModelMetrics();
         assertNotNull(metrics);
-        assertTrue(metrics.getTrainingSampleCount() >= 20);
-        assertTrue(metrics.getTestSampleCount() >= 8);
-        assertTrue(metrics.getAccuracy() >= 0.75);
-        assertTrue(metrics.getPrecision() >= 0.75);
-        assertTrue(metrics.getRecall() >= 0.75);
-        assertTrue(metrics.getF1() >= 0.75);
-        assertTrue(metrics.getTruePositives() + metrics.getTrueNegatives() >= 6);
+        assertTrue(metrics.getTrainingSampleCount() >= 500);
+        assertTrue(metrics.getTestSampleCount() >= 100);
+        assertTrue(metrics.getAccuracy() >= 0.80);
+        assertTrue(metrics.getPrecision() >= 0.80);
+        assertTrue(metrics.getRecall() >= 0.80);
+        assertTrue(metrics.getF1() >= 0.80);
+        assertTrue(metrics.getTruePositives() + metrics.getTrueNegatives() >= 150);
     }
 
     @Test
@@ -48,6 +48,29 @@ class MlClassifierServiceTest {
     void shouldPredictBenignForStandardInternalAnnouncement() {
         String benign = "Engineering sprint planning notes and weekly holiday schedule updates for the development team.";
         MlClassifierService.PredictionResult result = service.predict(benign);
+
+        assertNotNull(result);
+        assertEquals("BENIGN", result.getPredictedLabel());
+        assertEquals("EVALUATED", result.getMlStatus());
+        assertNotNull(result.getProbability());
+    }
+
+    @Test
+    void shouldPredictPhishingForSuspiciousUrl() {
+        String phishUrl = "http://webmail-brinkster.com/ex/?email=account";
+        MlClassifierService.PredictionResult result = service.predict(phishUrl);
+
+        assertNotNull(result);
+        assertEquals("PHISHING", result.getPredictedLabel());
+        assertEquals("EVALUATED", result.getMlStatus());
+        assertNotNull(result.getProbability());
+        assertTrue(result.getProbability() > 0.5);
+    }
+
+    @Test
+    void shouldPredictBenignForLegitimateUrl() {
+        String benignUrl = "http://billsportsmaps.com/?p=1206";
+        MlClassifierService.PredictionResult result = service.predict(benignUrl);
 
         assertNotNull(result);
         assertEquals("BENIGN", result.getPredictedLabel());
