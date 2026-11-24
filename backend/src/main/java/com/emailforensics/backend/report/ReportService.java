@@ -241,13 +241,12 @@ public class ReportService {
             rUrl.setDomain(u.getDomain());
             boolean suspicious = Boolean.TRUE.equals(u.getAnchorMismatch()) ||
                     Boolean.TRUE.equals(u.getIsIpUrl()) ||
-                    Boolean.TRUE.equals(u.getIsShortened()) ||
-                    Boolean.TRUE.equals(u.getLookalike());
+                    Boolean.TRUE.equals(u.getIsShortened());
             rUrl.setSuspicious(suspicious);
             rUrl.setIpLiteral(Boolean.TRUE.equals(u.getIsIpUrl()));
             rUrl.setShortener(Boolean.TRUE.equals(u.getIsShortened()));
             rUrl.setAnchorMismatch(Boolean.TRUE.equals(u.getAnchorMismatch()));
-            rUrl.setPunycode(Boolean.TRUE.equals(u.getLookalike()));
+            rUrl.setPunycode(false);
             rUrl.setThreatCategory(suspicious ? "SUSPICIOUS_HEURISTIC" : "BENIGN");
             if (suspicious) {
                 suspCount++;

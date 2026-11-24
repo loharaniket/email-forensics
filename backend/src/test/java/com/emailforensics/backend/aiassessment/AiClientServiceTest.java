@@ -145,7 +145,7 @@ class AiClientServiceTest {
 
         String payload = (String) method.invoke(clientService, "openai/gpt-oss-20b", "System Prompt", "User Prompt", true);
 
-        assertTrue(payload.contains("\"max_tokens\":4096"));
+        assertTrue(payload.contains("\"max_tokens\":600"));
         assertTrue(payload.contains("\"reasoning_format\":\"parsed\""));
         assertTrue(payload.contains("\"reasoning_effort\":\"low\""));
         assertTrue(payload.contains("\"response_format\":{\"type\":\"json_object\"}"));

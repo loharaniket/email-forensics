@@ -179,7 +179,7 @@ class RiskScoringServiceTest {
             ExtractedUrlDto u = new ExtractedUrlDto();
             u.setDomain("evil-paypal.com");
             u.setNormalizedUrl("http://evil-paypal.com/login?id=" + i);
-            u.setLookalike(true);
+            u.setAnchorMismatch(true);
             u.setIsShortened(true);
             urls.add(u);
         }
@@ -203,7 +203,7 @@ class RiskScoringServiceTest {
 
         ExtractedUrlDto url = new ExtractedUrlDto();
         url.setDomain("login-bank.com");
-        url.setLookalike(true);
+        url.setAnchorMismatch(true);
         when(urlAnalysisService.getExtractedUrls(emailId)).thenReturn(List.of(url));
 
         ContentAnalysisDto content = new ContentAnalysisDto();
@@ -242,7 +242,7 @@ class RiskScoringServiceTest {
         ExtractedUrlDto url = new ExtractedUrlDto();
         url.setDomain("phish.com");
         url.setIsIpUrl(true);
-        url.setLookalike(true);
+        url.setUnusualPort(true);
         url.setAnchorMismatch(true);
         url.setDnsStatus("NXDOMAIN");
         when(urlAnalysisService.getExtractedUrls(emailId)).thenReturn(List.of(url));
@@ -293,7 +293,7 @@ class RiskScoringServiceTest {
 
         ExtractedUrlDto url = new ExtractedUrlDto();
         url.setDomain("example.com");
-        url.setLookalike(true); // Triggers URL category
+        url.setIsIpUrl(true);
         when(urlAnalysisService.getExtractedUrls(emailId)).thenReturn(List.of(url));
 
         ContentAnalysisDto content = new ContentAnalysisDto();

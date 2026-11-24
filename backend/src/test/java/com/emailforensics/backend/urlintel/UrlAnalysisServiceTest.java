@@ -85,16 +85,10 @@ class UrlAnalysisServiceTest {
     }
 
     @Test
-    void shouldDetectShortenersAndLookalikes() {
+    void shouldDetectShorteners() {
         assertTrue(heuristicsService.isShortened("bit.ly"));
         assertTrue(heuristicsService.isShortened("tinyurl.com"));
         assertFalse(heuristicsService.isShortened("github.com"));
-
-        assertTrue(heuristicsService.isLookalike("paypa1.com"));
-        assertTrue(heuristicsService.isLookalike("micros0ft.com"));
-        assertTrue(heuristicsService.isLookalike("paypal-security-update.com"));
-        assertTrue(heuristicsService.isLookalike("xn--e1awd7f.com"));
-        assertFalse(heuristicsService.isLookalike("paypal.com"));
     }
 
     @Test

@@ -114,7 +114,9 @@ public class EvidenceContextAssembler {
         List<ReceivedHop> hops = receivedHopRepository.findByAnalysisRunIdOrderByHopOrderAsc(run.getId());
         if (!hops.isEmpty()) {
             sb.append("2. MAIL ROUTE HOPS (").append(hops.size()).append(" hops recorded):\n");
-            for (ReceivedHop hop : hops) {
+            int hopLimit = Math.min(hops.size(), 6);
+            for (int i = 0; i < hopLimit; i++) {
+                ReceivedHop hop = hops.get(i);
                 sb.append(" - Hop #").append(hop.getHopOrder())
                         .append(": from ").append(hop.getFromHost() != null ? hop.getFromHost() : "unknown")
                         .append(" by ").append(hop.getByHost() != null ? hop.getByHost() : "unknown")
@@ -132,11 +134,10 @@ public class EvidenceContextAssembler {
         List<ExtractedUrl> urls = extractedUrlRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         if (!urls.isEmpty()) {
             sb.append("3. EXTRACTED URLS & WEB INTEL (").append(urls.size()).append(" URLs):\n");
-            int limit = Math.min(urls.size(), 15);
+            int limit = Math.min(urls.size(), 8);
             for (int i = 0; i < limit; i++) {
                 ExtractedUrl u = urls.get(i);
-                boolean isSuspicious = Boolean.TRUE.equals(u.getLookalike()) ||
-                        Boolean.TRUE.equals(u.getIsShortened()) ||
+                boolean isSuspicious = Boolean.TRUE.equals(u.getIsShortened()) ||
                         Boolean.TRUE.equals(u.getIsIpUrl()) ||
                         Boolean.TRUE.equals(u.getUnusualPort());
                 boolean isMismatch = Boolean.TRUE.equals(u.getAnchorMismatch());
@@ -157,7 +158,7 @@ public class EvidenceContextAssembler {
         List<IpArtifact> ips = ipArtifactRepository.findByAnalysisRunIdOrderByCreatedAtAsc(run.getId());
         if (!ips.isEmpty()) {
             sb.append("4. NETWORK INFRASTRUCTURE (").append(ips.size()).append(" IPs):\n");
-            int limit = Math.min(ips.size(), 10);
+            int limit = Math.min(ips.size(), 5);
             for (int i = 0; i < limit; i++) {
                 IpArtifact ip = ips.get(i);
                 sb.append(" - ").append(ip.getIpAddress())
@@ -266,8 +267,8 @@ public class EvidenceContextAssembler {
             }
             if (bodySnippet != null) {
                 bodySnippet = bodySnippet.replaceAll("[\\r\\n]+", " ").trim();
-                if (bodySnippet.length() > 2000) {
-                    bodySnippet = bodySnippet.substring(0, 2000) + "... [truncated]";
+                if (bodySnippet.length() > 600) {
+                    bodySnippet = bodySnippet.substring(0, 600) + "... [truncated]";
                 }
                 sb.append("Body Excerpt: ").append(bodySnippet).append("\n");
             }

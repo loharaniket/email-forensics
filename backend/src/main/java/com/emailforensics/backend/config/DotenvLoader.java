@@ -7,9 +7,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashMap;
 import java.util.Map;
 
-/**
- * Simple helper to load environment variables from a local .env file.
- */
 public class DotenvLoader {
 
     private static boolean loaded = false;
@@ -70,10 +67,33 @@ public class DotenvLoader {
             }
         }
 
-        // Set datasource and AI fallbacks for Spring Boot properties
         String dbPass = envMap.get("DB_PASSWORD");
         if (dbPass != null && System.getProperty("spring.datasource.password") == null) {
             System.setProperty("spring.datasource.password", dbPass);
+        }
+
+        String geminiKey = envMap.get("GEMINI_API_KEY");
+        if (geminiKey != null && !geminiKey.isBlank()) {
+            if (System.getProperty("spring.ai.gemini.api-key") == null) {
+                System.setProperty("spring.ai.gemini.api-key", geminiKey);
+            }
+            if (System.getProperty("GEMINI_API_KEY") == null) {
+                System.setProperty("GEMINI_API_KEY", geminiKey);
+            }
+        }
+
+        String geminiBaseUrl = envMap.get("GEMINI_BASE_URL");
+        if (geminiBaseUrl != null && !geminiBaseUrl.isBlank()) {
+            if (System.getProperty("spring.ai.gemini.base-url") == null) {
+                System.setProperty("spring.ai.gemini.base-url", geminiBaseUrl);
+            }
+        }
+
+        String geminiModel = envMap.get("GEMINI_MODEL");
+        if (geminiModel != null && !geminiModel.isBlank()) {
+            if (System.getProperty("spring.ai.gemini.chat.options.model") == null) {
+                System.setProperty("spring.ai.gemini.chat.options.model", geminiModel);
+            }
         }
 
         String groqKey = envMap.get("GROQ_API_KEY");
@@ -83,6 +103,9 @@ public class DotenvLoader {
             }
             if (System.getProperty("SPRING_AI_API_KEY") == null) {
                 System.setProperty("SPRING_AI_API_KEY", groqKey);
+            }
+            if (System.getProperty("GROQ_API_KEY") == null) {
+                System.setProperty("GROQ_API_KEY", groqKey);
             }
         }
     }
