@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useParams, useNavigate, Link } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import {
   getInvestigationDetail,
@@ -7,7 +7,6 @@ import {
   getEvidenceHops,
   getEvidenceUrls,
   getEvidenceInfrastructure,
-  getEvidenceVisuals,
   getEvidenceImages,
   getEvidenceQrCodes,
   getEvidenceContentAnalysis,
@@ -101,7 +100,6 @@ function normalizeParsedEmail(detail, hops, reportData, infrastructure) {
 
 export default function InvestigationPage() {
   const { emailId } = useParams()
-  const navigate = useNavigate()
 
   const [detail, setDetail] = useState(null)
   const [pipelineStatus, setPipelineStatus] = useState(null)

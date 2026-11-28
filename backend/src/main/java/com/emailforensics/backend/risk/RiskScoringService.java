@@ -443,7 +443,7 @@ public class RiskScoringService {
 
             if (Boolean.TRUE.equals(url.getIsIpUrl())) {
                 addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_IP_LITERAL", "HIGH", 20,
+                        UUID.randomUUID(), run, CAT_URL, "URL_IP_LITERAL", "HIGH", (url.getUrlRiskScore() != null && url.getUrlRiskScore() > 0) ? url.getUrlRiskScore() : 20,
                         "URL host uses a raw numeric IP address instead of a domain name.",
                         "URL: " + url.getNormalizedUrl()
                 ), "IP_URL:" + dedupeKey);
@@ -451,7 +451,7 @@ public class RiskScoringService {
 
             if (Boolean.TRUE.equals(url.getIsShortened())) {
                 addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_SHORTENER", "MEDIUM", 15,
+                        UUID.randomUUID(), run, CAT_URL, "URL_SHORTENER", "MEDIUM", (url.getUrlRiskScore() != null && url.getUrlRiskScore() > 0) ? url.getUrlRiskScore() : 15,
                         "URL utilizes a public URL shortening service that conceals destination.",
                         "Domain: " + domain
                 ), "SHORTENER:" + dedupeKey);
@@ -459,7 +459,7 @@ public class RiskScoringService {
 
             if (Boolean.TRUE.equals(url.getAnchorMismatch())) {
                 addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_ANCHOR_MISMATCH", "HIGH", 25,
+                        UUID.randomUUID(), run, CAT_URL, "URL_ANCHOR_MISMATCH", "HIGH", (url.getUrlRiskScore() != null && url.getUrlRiskScore() > 0) ? url.getUrlRiskScore() : 25,
                         "Hyperlink anchor text appears to represent a different domain than actual destination.",
                         "Anchor: \"" + url.getAnchorText() + "\" -> " + domain
                 ), "ANCHOR_MISMATCH:" + dedupeKey);
@@ -467,34 +467,18 @@ public class RiskScoringService {
 
             if (Boolean.TRUE.equals(url.getUnusualPort())) {
                 addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_UNUSUAL_PORT", "MEDIUM", 15,
+                        UUID.randomUUID(), run, CAT_URL, "URL_UNUSUAL_PORT", "MEDIUM", (url.getUrlRiskScore() != null && url.getUrlRiskScore() > 0) ? url.getUrlRiskScore() : 15,
                         "URL destination connects to an uncommon or non-standard network port.",
                         "URL: " + url.getNormalizedUrl()
                 ), "UNUSUAL_PORT:" + dedupeKey);
             }
 
-            if (Boolean.TRUE.equals(url.getLookalike())) {
+            if (url.getThreatType() != null && !url.getThreatType().isEmpty()) {
                 addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_LOOKALIKE", "HIGH", 25,
-                        "Domain employs Punycode, homoglyphs, or lookalike typosquatting characters.",
-                        "Domain: " + domain
-                ), "LOOKALIKE:" + dedupeKey);
-            }
-
-            if (Boolean.TRUE.equals(url.getSubdomainExcess())) {
-                addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_EXCESSIVE_SUBDOMAINS", "LOW", 10,
-                        "Domain exhibits excessive subdomain nesting commonly used for evasion.",
-                        "Domain: " + domain
-                ), "SUBDOMAIN_EXCESS:" + dedupeKey);
-            }
-
-            if ("NXDOMAIN".equalsIgnoreCase(url.getDnsStatus()) || "FAILED".equalsIgnoreCase(url.getDnsStatus())) {
-                addFactorIfUnique(factors, deduplicationKeys, new RiskFactor(
-                        UUID.randomUUID(), run, CAT_URL, "URL_DNS_NXDOMAIN", "HIGH", 20,
-                        "Domain failed DNS resolution (NXDOMAIN or unresolvable).",
-                        "Domain: " + domain
-                ), "DNS_NXDOMAIN:" + dedupeKey);
+                        UUID.randomUUID(), run, CAT_URL, "URL_EXTERNAL_THREAT", "HIGH", (url.getUrlRiskScore() != null && url.getUrlRiskScore() > 0) ? url.getUrlRiskScore() : 25,
+                        url.getThreatDetails() != null ? url.getThreatDetails() : "Flagged by external threat intelligence.",
+                        "Threat: " + url.getThreatType() + " for " + domain
+                ), "EXTERNAL_THREAT:" + dedupeKey);
             }
         }
     }

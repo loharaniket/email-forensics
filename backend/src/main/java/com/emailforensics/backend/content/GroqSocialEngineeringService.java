@@ -48,6 +48,10 @@ public class GroqSocialEngineeringService {
             You are an expert digital forensics analyst specializing in email social engineering detection.
             Analyze the provided email content channels to identify social engineering attacks based on context, meaning, and user intent rather than keyword matches.
 
+            PLAIN ENGLISH REQUIREMENT FOR NON-TECHNICAL PERSONS:
+            Write all 'explanation' text in very simple, clear everyday English suitable for an everyday non-technical person.
+            Do not use confusing security jargon. Explain plainly what the email is trying to trick the person into doing.
+
             You must ONLY identify the following 5 categories:
             1. URGENCY: Artificial deadlines, threats of account suspension/revocation, panic inducement, or pressure for hasty action.
             2. CREDENTIAL_REQUEST: Requests or instructions to enter, verify, or reset passwords, PINs, MFA codes, or access credentials.
@@ -69,7 +73,7 @@ public class GroqSocialEngineeringService {
                   "category": "URGENCY",
                   "matchedText": "verbatim text from email",
                   "sourceChannel": "BODY_PLAIN",
-                  "explanation": "concise explanation of the tactic",
+                  "explanation": "simple explanation of the trick in plain English",
                   "severity": "HIGH"
                 }
               ]
@@ -82,6 +86,15 @@ public class GroqSocialEngineeringService {
             }
             """;
 
+    @Value("${spring.ai.gemini.api-key:}")
+    private String geminiApiKey;
+
+    @Value("${spring.ai.gemini.base-url:https://generativelanguage.googleapis.com/v1beta/openai}")
+    private String geminiBaseUrl;
+
+    @Value("${spring.ai.gemini.chat.options.model:gemini-1.5-flash}")
+    private String geminiModel;
+
     @Value("${spring.ai.openai.api-key:}")
     private String apiKey;
 
@@ -90,6 +103,9 @@ public class GroqSocialEngineeringService {
 
     @Value("${spring.ai.openai.chat.options.model:openai/gpt-oss-20b}")
     private String modelName;
+
+    @Value("${spring.ai.groq.max-tokens:500}")
+    private int groqMaxTokens;
 
     @Value("${spring.ai.timeout-seconds:25}")
     private int timeoutSeconds;
@@ -177,6 +193,7 @@ public class GroqSocialEngineeringService {
                                         int timeoutSeconds,
                                         HttpClient httpClient) {
         this.apiKey = apiKey;
+        this.geminiApiKey = "";
         this.baseUrl = baseUrl;
         this.modelName = modelName;
         this.timeoutSeconds = timeoutSeconds > 0 ? timeoutSeconds : 25;
@@ -202,59 +219,118 @@ public class GroqSocialEngineeringService {
                     Collections.emptyList(), "EVALUATED", "All provided content channels are empty.");
         }
 
-        String effectiveKey = resolveApiKey();
-        if (!isValidApiKey(effectiveKey)) {
-            log.warn("Groq API key is not configured. Social engineering detection unavailable.");
+        String effectiveGeminiKey = resolveGeminiApiKey();
+        String effectiveGroqKey = resolveApiKey();
+
+        boolean hasGemini = isValidApiKey(effectiveGeminiKey);
+        boolean hasGroq = isValidApiKey(effectiveGroqKey);
+
+        if (!hasGemini && !hasGroq) {
+            log.warn("Groq and Gemini API keys are not configured. Social engineering detection unavailable.");
             return new SocialEngineeringFindings(false, false, false, false, false,
                     Collections.emptyList(), "UNAVAILABLE", "Groq API key is not configured.");
         }
 
         String userPrompt = buildUserPrompt(channelTexts);
-        String activeModel = resolveModel();
-        String activeBaseUrl = resolveBaseUrl();
 
-        try {
-            String requestPayload = buildChatPayload(activeModel, SYSTEM_PROMPT, userPrompt, true);
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(activeBaseUrl + "/chat/completions"))
-                    .timeout(Duration.ofSeconds(timeoutSeconds))
-                    .header("Content-Type", "application/json")
-                    .header("Authorization", "Bearer " + effectiveKey)
-                    .POST(HttpRequest.BodyPublishers.ofString(requestPayload, StandardCharsets.UTF_8))
-                    .build();
+        if (hasGemini) {
+            String activeGeminiModel = (this.geminiModel != null && !this.geminiModel.isBlank()) ? this.geminiModel.trim() : "gemini-1.5-flash";
+            String activeGeminiBase = (this.geminiBaseUrl != null && !this.geminiBaseUrl.isBlank())
+                    ? this.geminiBaseUrl.trim().replaceAll("/+$", "")
+                    : "https://generativelanguage.googleapis.com/v1beta/openai";
 
-            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+            try {
+                String requestPayload = buildChatPayload(activeGeminiModel, SYSTEM_PROMPT, userPrompt, true, 500);
+                HttpRequest request = HttpRequest.newBuilder()
+                        .uri(URI.create(activeGeminiBase + "/chat/completions"))
+                        .timeout(Duration.ofSeconds(timeoutSeconds))
+                        .header("Content-Type", "application/json")
+                        .header("Authorization", "Bearer " + effectiveGeminiKey)
+                        .POST(HttpRequest.BodyPublishers.ofString(requestPayload, StandardCharsets.UTF_8))
+                        .build();
 
-            // Retry without response_format if model returned 400 json_validate_failed
-            if (response.statusCode() == 400 && response.body() != null && response.body().contains("json_validate_failed")) {
-                String fallbackPayload = buildChatPayload(activeModel, SYSTEM_PROMPT, userPrompt, false);
-                HttpRequest retryRequest = HttpRequest.newBuilder()
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+                if (response.statusCode() == 400 && response.body() != null && response.body().contains("json_validate_failed")) {
+                    String fallbackPayload = buildChatPayload(activeGeminiModel, SYSTEM_PROMPT, userPrompt, false, 500);
+                    HttpRequest retryRequest = HttpRequest.newBuilder()
+                            .uri(URI.create(activeGeminiBase + "/chat/completions"))
+                            .timeout(Duration.ofSeconds(timeoutSeconds))
+                            .header("Content-Type", "application/json")
+                            .header("Authorization", "Bearer " + effectiveGeminiKey)
+                            .POST(HttpRequest.BodyPublishers.ofString(fallbackPayload, StandardCharsets.UTF_8))
+                            .build();
+                    response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                }
+
+                if (response.statusCode() == 200) {
+                    return parseAndValidateGroqResponse(response.body(), channelTexts);
+                }
+                log.warn("Gemini returned HTTP {}, falling back to Groq: {}", response.statusCode(), response.body());
+            } catch (Exception e) {
+                log.warn("Gemini social engineering call failed, falling back to Groq: {}", e.getMessage());
+            }
+        }
+
+        if (hasGroq) {
+            String activeModel = resolveModel();
+            String activeBaseUrl = resolveBaseUrl();
+            int maxTokens = this.groqMaxTokens > 0 ? this.groqMaxTokens : 500;
+
+            try {
+                String requestPayload = buildChatPayload(activeModel, SYSTEM_PROMPT, userPrompt, true, maxTokens);
+                HttpRequest request = HttpRequest.newBuilder()
                         .uri(URI.create(activeBaseUrl + "/chat/completions"))
                         .timeout(Duration.ofSeconds(timeoutSeconds))
                         .header("Content-Type", "application/json")
-                        .header("Authorization", "Bearer " + effectiveKey)
-                        .POST(HttpRequest.BodyPublishers.ofString(fallbackPayload, StandardCharsets.UTF_8))
+                        .header("Authorization", "Bearer " + effectiveGroqKey)
+                        .POST(HttpRequest.BodyPublishers.ofString(requestPayload, StandardCharsets.UTF_8))
                         .build();
-                response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
-            }
 
-            if (response.statusCode() != 200) {
-                log.error("Groq API returned HTTP {}: {}", response.statusCode(), response.body());
+                HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+
+                if (response.statusCode() == 400 && response.body() != null && response.body().contains("json_validate_failed")) {
+                    String fallbackPayload = buildChatPayload(activeModel, SYSTEM_PROMPT, userPrompt, false, maxTokens);
+                    HttpRequest retryRequest = HttpRequest.newBuilder()
+                            .uri(URI.create(activeBaseUrl + "/chat/completions"))
+                            .timeout(Duration.ofSeconds(timeoutSeconds))
+                            .header("Content-Type", "application/json")
+                            .header("Authorization", "Bearer " + effectiveGroqKey)
+                            .POST(HttpRequest.BodyPublishers.ofString(fallbackPayload, StandardCharsets.UTF_8))
+                            .build();
+                    response = httpClient.send(retryRequest, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                }
+
+                if (response.statusCode() == 429) {
+                    try {
+                        Thread.sleep(1500L);
+                        response = httpClient.send(request, HttpResponse.BodyHandlers.ofString(StandardCharsets.UTF_8));
+                    } catch (InterruptedException ignored) {
+                        Thread.currentThread().interrupt();
+                    }
+                }
+
+                if (response.statusCode() != 200) {
+                    log.error("Groq API returned HTTP {}: {}", response.statusCode(), response.body());
+                    return new SocialEngineeringFindings(false, false, false, false, false,
+                            Collections.emptyList(), "UNAVAILABLE", "Groq API error (HTTP " + response.statusCode() + ")");
+                }
+
+                return parseAndValidateGroqResponse(response.body(), channelTexts);
+
+            } catch (HttpTimeoutException e) {
+                log.error("Groq API request timed out after {} seconds", timeoutSeconds, e);
                 return new SocialEngineeringFindings(false, false, false, false, false,
-                        Collections.emptyList(), "UNAVAILABLE", "Groq API error (HTTP " + response.statusCode() + ")");
+                        Collections.emptyList(), "UNAVAILABLE", "Groq API request timed out after " + timeoutSeconds + "s.");
+            } catch (Exception e) {
+                log.error("Groq social engineering detection failed: {}", e.getMessage(), e);
+                return new SocialEngineeringFindings(false, false, false, false, false,
+                        Collections.emptyList(), "UNAVAILABLE", "Groq API request failed: " + e.getMessage());
             }
-
-            return parseAndValidateGroqResponse(response.body(), channelTexts);
-
-        } catch (HttpTimeoutException e) {
-            log.error("Groq API request timed out after {} seconds", timeoutSeconds, e);
-            return new SocialEngineeringFindings(false, false, false, false, false,
-                    Collections.emptyList(), "UNAVAILABLE", "Groq API request timed out after " + timeoutSeconds + "s.");
-        } catch (Exception e) {
-            log.error("Groq social engineering detection failed: {}", e.getMessage(), e);
-            return new SocialEngineeringFindings(false, false, false, false, false,
-                    Collections.emptyList(), "UNAVAILABLE", "Groq API request failed: " + e.getMessage());
         }
+
+        return new SocialEngineeringFindings(false, false, false, false, false,
+                Collections.emptyList(), "UNAVAILABLE", "Groq API key is not configured.");
     }
 
     private SocialEngineeringFindings parseAndValidateGroqResponse(String responseBody, Map<String, String> channelTexts) {
@@ -298,7 +374,6 @@ public class GroqSocialEngineeringService {
                     String declaredChannel = item.path("sourceChannel").asText("").trim();
                     String validatedChannel = findValidChannelForText(channelTexts, declaredChannel, matchedText);
 
-                    // Hallucination verification: Reject match if excerpt does not exist in email content
                     if (validatedChannel == null) {
                         log.warn("Rejecting hallucinated Groq match not found in email content: category={}, text='{}'",
                                 category, matchedText);
@@ -370,7 +445,6 @@ public class GroqSocialEngineeringService {
 
         String target = matchedText.toLowerCase(Locale.ROOT);
 
-        // 1. Check declared channel first
         if (declaredChannel != null && !declaredChannel.isBlank()) {
             for (Map.Entry<String, String> entry : channelTexts.entrySet()) {
                 if (entry.getKey().equalsIgnoreCase(declaredChannel)) {
@@ -382,7 +456,6 @@ public class GroqSocialEngineeringService {
             }
         }
 
-        // 2. Fallback check across all channels
         for (Map.Entry<String, String> entry : channelTexts.entrySet()) {
             String text = entry.getValue();
             if (text != null && text.toLowerCase(Locale.ROOT).contains(target)) {
@@ -430,10 +503,15 @@ public class GroqSocialEngineeringService {
     }
 
     private String buildChatPayload(String model, String systemPrompt, String userPrompt, boolean jsonMode) {
+        return buildChatPayload(model, systemPrompt, userPrompt, jsonMode, 500);
+    }
+
+    private String buildChatPayload(String model, String systemPrompt, String userPrompt, boolean jsonMode, int maxTokens) {
         try {
             Map<String, Object> root = new LinkedHashMap<>();
             root.put("model", model);
             root.put("temperature", 0.0);
+            root.put("max_tokens", maxTokens > 0 ? maxTokens : 500);
             if (jsonMode) {
                 root.put("response_format", Map.of("type", "json_object"));
             }
@@ -445,19 +523,42 @@ public class GroqSocialEngineeringService {
 
             return objectMapper.writeValueAsString(root);
         } catch (Exception e) {
-            throw new RuntimeException("Failed to construct Groq chat request payload", e);
+            throw new RuntimeException("Failed to construct chat request payload", e);
         }
+    }
+
+    private String resolveGeminiApiKey() {
+        if (this.geminiApiKey != null) {
+            return this.geminiApiKey.trim();
+        }
+        String key = System.getProperty("spring.ai.gemini.api-key");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getProperty("GEMINI_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getenv("GEMINI_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getProperty("GOOGLE_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getenv("GOOGLE_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        return "";
     }
 
     private String resolveApiKey() {
         if (this.apiKey != null) {
             return this.apiKey.trim();
         }
-        String key = System.getProperty("GROQ_API_KEY");
-        if (key == null || key.isBlank()) {
-            key = System.getenv("GROQ_API_KEY");
-        }
-        return key != null ? key.trim() : "";
+        String key = System.getProperty("spring.ai.openai.api-key");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getProperty("GROQ_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getenv("GROQ_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getProperty("SPRING_AI_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        key = System.getenv("SPRING_AI_API_KEY");
+        if (isValidApiKey(key)) return key.trim();
+        return "";
     }
 
     private boolean isValidApiKey(String key) {
@@ -506,12 +607,12 @@ public class GroqSocialEngineeringService {
 
     private String defaultExplanation(String category) {
         return switch (category) {
-            case "URGENCY" -> "High pressure or artificial time constraint detected in message content.";
-            case "CREDENTIAL_REQUEST" -> "Solicitation for authentication credentials, password reset, or login actions.";
-            case "PAYMENT_INSTRUCTION" -> "Financial transaction demand, invoice diversion, or payment instructions.";
-            case "IMPERSONATION" -> "Pretending to represent authority, executive leadership, or IT support.";
-            case "SECRECY" -> "Instructing recipient to maintain secrecy or bypass standard communication protocols.";
-            default -> "Potential social engineering indicator observed.";
+            case "URGENCY" -> "The email tries to rush or panic you into acting quickly before you can check if it is real.";
+            case "CREDENTIAL_REQUEST" -> "The email asks you to enter your username, password, or login credentials.";
+            case "PAYMENT_INSTRUCTION" -> "The email asks for money, wire transfers, or changes to payment information.";
+            case "IMPERSONATION" -> "The sender pretends to be a boss, coworker, tech support, or trusted organization.";
+            case "SECRECY" -> "The email tells you to keep this secret and not tell anyone else.";
+            default -> "A deceptive tactic was detected that tries to trick you.";
         };
     }
 }

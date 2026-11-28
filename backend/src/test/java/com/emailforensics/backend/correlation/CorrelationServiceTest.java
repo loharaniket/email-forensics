@@ -8,11 +8,9 @@ import com.emailforensics.backend.evidence.AnalysisRun;
 import com.emailforensics.backend.evidence.AnalysisRunRepository;
 import com.emailforensics.backend.evidence.AnalysisStatus;
 import com.emailforensics.backend.evidence.EmailEvidence;
-import com.emailforensics.backend.analysis.AnalysisResult;
 import com.emailforensics.backend.analysis.AnalysisResultRepository;
 import com.emailforensics.backend.evidence.EmailEvidenceRepository;
 import com.emailforensics.backend.evidence.EvidenceStorageService;
-import com.emailforensics.backend.infrastructure.IpArtifact;
 import com.emailforensics.backend.infrastructure.IpArtifactRepository;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
@@ -26,21 +24,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.core.io.ByteArrayResource;
 
 import java.io.InputStream;
-import java.time.Instant;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)

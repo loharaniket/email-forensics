@@ -3,8 +3,6 @@ package com.emailforensics.backend.urlintel;
 import org.springframework.stereotype.Service;
 
 import java.net.URI;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Locale;

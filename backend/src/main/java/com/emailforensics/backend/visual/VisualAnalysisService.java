@@ -12,6 +12,7 @@ import com.emailforensics.backend.infrastructure.DataProvenance;
 import com.emailforensics.backend.infrastructure.DnsLookupService;
 import com.emailforensics.backend.urlintel.ExtractedUrl;
 import com.emailforensics.backend.urlintel.ExtractedUrlRepository;
+import com.emailforensics.backend.urlintel.UrlCheckResult;
 import com.emailforensics.backend.urlintel.UrlCheckService;
 import com.emailforensics.backend.urlintel.UrlNormalizationService;
 import jakarta.mail.Multipart;
@@ -374,9 +375,18 @@ public class VisualAnalysisService {
             boolean isIp = urlCheckService.isIpUrl(norm.getDomain());
             boolean unusualPort = urlCheckService.isUnusualPort(norm.getPort());
             boolean isShortened = urlCheckService.isShortened(norm.getDomain());
-            boolean subdomainExcess = urlCheckService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = urlCheckService.isLookalike(norm.getDomain());
+            boolean subdomainExcess = false;
+            boolean lookalike = false;
             int riskScore = urlCheckService.calculateRiskScore(false, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+
+            UrlCheckResult externalResult = urlCheckService.checkWithExternalServices(rawUrl, norm.getDomain());
+            if (externalResult != null && externalResult.isFlagged()) {
+                riskScore = Math.max(riskScore, externalResult.getRiskScore());
+            }
+            if ((isIp || isShortened || unusualPort || (externalResult != null && externalResult.isFlagged())) && riskScore < 40) {
+                riskScore = 40;
+            }
+
             String dnsStatus = isIp ? "SKIPPED_IP" : dnsLookupService.lookupDomain(norm.getDomain()).getStatus();
 
             ExtractedUrl entity = new ExtractedUrl(
@@ -396,6 +406,19 @@ public class VisualAnalysisService {
                     dnsStatus,
                     riskScore
             );
+            String sourceApi = null;
+            if (externalResult != null && externalResult.isFlagged()) {
+                entity.setThreatType(externalResult.getThreatType());
+                entity.setThreatDetails(externalResult.getSummary());
+                sourceApi = externalResult.getServiceName();
+            } else if (isIp) {
+                sourceApi = "IP Address Inspector";
+            } else if (isShortened) {
+                sourceApi = "URL Shortener Detector";
+            } else if (unusualPort) {
+                sourceApi = "Port Inspector";
+            }
+            entity.setSourceApi(sourceApi);
             extractedUrlRepository.save(entity);
         } catch (Exception ignored) {
         }

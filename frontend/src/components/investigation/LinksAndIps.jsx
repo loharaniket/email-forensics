@@ -1,4 +1,4 @@
-﻿import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo } from 'react'
 import {
   Search,
   Copy,
@@ -119,7 +119,7 @@ export default function LinksAndIps({
                       <span
                         className={`px-2.5 py-1 rounded-lg text-xs font-mono font-bold border ${riskBadgeClass}`}
                       >
-                        Risk score: {u.urlRiskScore ?? 0}/100
+                        Risk score: {u.urlRiskScore ?? 0}
                       </span>
                     </div>
                   </div>
@@ -142,6 +142,16 @@ export default function LinksAndIps({
                   )}
 
                   <div className="flex flex-wrap items-center gap-1.5 pt-3">
+                    {u.sourceApi && (
+                      <span className="px-2 py-0.5 rounded text-[11px] bg-[#EFF8FF] text-[#175CD3] border border-[#B2DDFF] font-medium">
+                        Source: {u.sourceApi}
+                      </span>
+                    )}
+                    {u.threatType && (
+                      <span className="px-2 py-0.5 rounded text-[11px] bg-[#FEF2F2] text-[#B42318] border border-red-200 font-medium">
+                        Threat check: {u.threatDetails || u.threatType}
+                      </span>
+                    )}
                     {u.isIpUrl && (
                       <span className="px-2 py-0.5 rounded text-[11px] bg-[#FEF2F2] text-[#B42318] border border-red-200">
                         IP address in URL
@@ -155,16 +165,6 @@ export default function LinksAndIps({
                     {u.unusualPort && (
                       <span className="px-2 py-0.5 rounded text-[11px] bg-[#FFFBEB] text-[#B45309] border border-amber-200">
                         Unusual port number
-                      </span>
-                    )}
-                    {u.subdomainExcess && (
-                      <span className="px-2 py-0.5 rounded text-[11px] bg-[#FFFBEB] text-[#B45309] border border-amber-200">
-                        Many subdomains (&gt;3)
-                      </span>
-                    )}
-                    {u.lookalike && (
-                      <span className="px-2 py-0.5 rounded text-[11px] bg-[#FFFBEB] text-[#B45309] border border-amber-200">
-                        Lookalike characters
                       </span>
                     )}
                   </div>

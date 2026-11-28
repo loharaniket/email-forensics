@@ -18,6 +18,9 @@ public class ExtractedUrlDto {
     private Boolean lookalike;
     private String dnsStatus;
     private Integer urlRiskScore;
+    private String threatType;
+    private String threatDetails;
+    private String sourceApi;
     private String dataMode;
 
     public ExtractedUrlDto() {
@@ -165,6 +168,30 @@ public class ExtractedUrlDto {
 
     public void setUrlRiskScore(Integer urlRiskScore) {
         this.urlRiskScore = urlRiskScore;
+    }
+
+    public String getThreatType() {
+        return threatType;
+    }
+
+    public void setThreatType(String threatType) {
+        this.threatType = threatType;
+    }
+
+    public String getThreatDetails() {
+        return threatDetails;
+    }
+
+    public void setThreatDetails(String threatDetails) {
+        this.threatDetails = threatDetails;
+    }
+
+    public String getSourceApi() {
+        return sourceApi;
+    }
+
+    public void setSourceApi(String sourceApi) {
+        this.sourceApi = sourceApi;
     }
 
     public String getDataMode() {

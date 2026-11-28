@@ -10,7 +10,9 @@ import org.tribuo.classification.Label;
 import org.tribuo.classification.LabelFactory;
 import org.tribuo.classification.evaluation.LabelEvaluation;
 import org.tribuo.classification.evaluation.LabelEvaluator;
-import org.tribuo.classification.sgd.linear.LogisticRegressionTrainer;
+import org.tribuo.classification.sgd.linear.LinearSGDTrainer;
+import org.tribuo.classification.sgd.objectives.LogMulticlass;
+import org.tribuo.math.optimisers.AdaGrad;
 import org.tribuo.impl.ArrayExample;
 import org.tribuo.provenance.SimpleDataSourceProvenance;
 
@@ -113,7 +115,7 @@ public class MlClassifierService {
             trainDataset.add(example);
         }
 
-        LogisticRegressionTrainer trainer = new LogisticRegressionTrainer();
+        LinearSGDTrainer trainer = new LinearSGDTrainer(new LogMulticlass(), new AdaGrad(1.0, 0.1), 10, 12345L);
         this.model = trainer.train(trainDataset);
 
         MutableDataset<Label> testDataset = new MutableDataset<>(

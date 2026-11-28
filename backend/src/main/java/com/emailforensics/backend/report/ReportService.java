@@ -29,7 +29,6 @@ import com.emailforensics.backend.visual.QrArtifactRepository;
 import com.emailforensics.backend.visual.VisualArtifact;
 import com.emailforensics.backend.visual.VisualArtifactRepository;
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,13 +37,9 @@ import java.io.InputStream;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 @Service
 public class ReportService {
@@ -246,13 +241,12 @@ public class ReportService {
             rUrl.setDomain(u.getDomain());
             boolean suspicious = Boolean.TRUE.equals(u.getAnchorMismatch()) ||
                     Boolean.TRUE.equals(u.getIsIpUrl()) ||
-                    Boolean.TRUE.equals(u.getIsShortened()) ||
-                    Boolean.TRUE.equals(u.getLookalike());
+                    Boolean.TRUE.equals(u.getIsShortened());
             rUrl.setSuspicious(suspicious);
             rUrl.setIpLiteral(Boolean.TRUE.equals(u.getIsIpUrl()));
             rUrl.setShortener(Boolean.TRUE.equals(u.getIsShortened()));
             rUrl.setAnchorMismatch(Boolean.TRUE.equals(u.getAnchorMismatch()));
-            rUrl.setPunycode(Boolean.TRUE.equals(u.getLookalike()));
+            rUrl.setPunycode(false);
             rUrl.setThreatCategory(suspicious ? "SUSPICIOUS_HEURISTIC" : "BENIGN");
             if (suspicious) {
                 suspCount++;
@@ -408,22 +402,6 @@ public class ReportService {
             return objectMapper.readValue(json, new TypeReference<List<String>>() {});
         } catch (Exception e) {
             return Collections.emptyList();
-        }
-    }
-
-    private String extractSimpleJson(String json, String parentKey, String childKey) {
-        if (json == null || parentKey == null || childKey == null) {
-            return null;
-        }
-        try {
-            JsonNode root = objectMapper.readTree(json);
-            JsonNode parent = root.get(parentKey);
-            if (parent == null || parent.isNull()) return null;
-            JsonNode child = parent.get(childKey);
-            if (child == null || child.isNull()) return null;
-            return child.asText();
-        } catch (Exception e) {
-            return null;
         }
     }
 }

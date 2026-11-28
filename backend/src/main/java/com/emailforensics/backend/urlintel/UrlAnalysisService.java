@@ -96,10 +96,18 @@ public class UrlAnalysisService {
             boolean isIp = urlCheckService.isIpUrl(norm.getDomain());
             boolean unusualPort = urlCheckService.isUnusualPort(norm.getPort());
             boolean isShortened = urlCheckService.isShortened(norm.getDomain());
-            boolean subdomainExcess = urlCheckService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = urlCheckService.isLookalike(norm.getDomain());
+            boolean subdomainExcess = false;
+            boolean lookalike = false;
             boolean anchorMismatch = urlCheckService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
             int riskScore = urlCheckService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+
+            UrlCheckResult externalResult = urlCheckService.checkWithExternalServices(raw.getRawUrl(), norm.getDomain());
+            if (externalResult != null && externalResult.isFlagged()) {
+                riskScore = Math.max(riskScore, externalResult.getRiskScore());
+            }
+            if ((isIp || isShortened || unusualPort || anchorMismatch || (externalResult != null && externalResult.isFlagged())) && riskScore < 40) {
+                riskScore = 40;
+            }
 
             String dnsStatus;
             String dataMode;
@@ -132,6 +140,21 @@ public class UrlAnalysisService {
                     riskScore,
                     dataMode
             );
+            String sourceApi = null;
+            if (externalResult != null && externalResult.isFlagged()) {
+                entity.setThreatType(externalResult.getThreatType());
+                entity.setThreatDetails(externalResult.getSummary());
+                sourceApi = externalResult.getServiceName();
+            } else if (isIp) {
+                sourceApi = "IP Address Inspector";
+            } else if (anchorMismatch) {
+                sourceApi = "Anchor Mismatch Detector";
+            } else if (isShortened) {
+                sourceApi = "URL Shortener Detector";
+            } else if (unusualPort) {
+                sourceApi = "Port Inspector";
+            }
+            entity.setSourceApi(sourceApi);
             entitiesToSave.add(entity);
         }
 
@@ -176,10 +199,18 @@ public class UrlAnalysisService {
             boolean isIp = urlCheckService.isIpUrl(norm.getDomain());
             boolean unusualPort = urlCheckService.isUnusualPort(norm.getPort());
             boolean isShortened = urlCheckService.isShortened(norm.getDomain());
-            boolean subdomainExcess = urlCheckService.isSubdomainExcess(norm.getDomain());
-            boolean lookalike = urlCheckService.isLookalike(norm.getDomain());
+            boolean subdomainExcess = false;
+            boolean lookalike = false;
             boolean anchorMismatch = urlCheckService.isAnchorMismatch(norm.getDomain(), raw.getAnchorText());
             int riskScore = urlCheckService.calculateRiskScore(anchorMismatch, isIp, lookalike, unusualPort, subdomainExcess, isShortened);
+
+            UrlCheckResult externalResult = urlCheckService.checkWithExternalServices(raw.getRawUrl(), norm.getDomain());
+            if (externalResult != null && externalResult.isFlagged()) {
+                riskScore = Math.max(riskScore, externalResult.getRiskScore());
+            }
+            if ((isIp || isShortened || unusualPort || anchorMismatch || (externalResult != null && externalResult.isFlagged())) && riskScore < 40) {
+                riskScore = 40;
+            }
 
             String dnsStatus;
             String dataMode;
@@ -192,7 +223,7 @@ public class UrlAnalysisService {
                 dataMode = dnsResult.getDataMode();
             }
 
-            dtos.add(new ExtractedUrlDto(
+            ExtractedUrlDto dto = new ExtractedUrlDto(
                     null,
                     raw.getRawUrl(),
                     norm.getNormalizedUrl(),
@@ -208,7 +239,23 @@ public class UrlAnalysisService {
                     dnsStatus,
                     riskScore,
                     dataMode
-            ));
+            );
+            String sourceApi = null;
+            if (externalResult != null && externalResult.isFlagged()) {
+                dto.setThreatType(externalResult.getThreatType());
+                dto.setThreatDetails(externalResult.getSummary());
+                sourceApi = externalResult.getServiceName();
+            } else if (isIp) {
+                sourceApi = "IP Address Inspector";
+            } else if (anchorMismatch) {
+                sourceApi = "Anchor Mismatch Detector";
+            } else if (isShortened) {
+                sourceApi = "URL Shortener Detector";
+            } else if (unusualPort) {
+                sourceApi = "Port Inspector";
+            }
+            dto.setSourceApi(sourceApi);
+            dtos.add(dto);
         }
 
         return dtos;
@@ -217,7 +264,7 @@ public class UrlAnalysisService {
     private List<ExtractedUrlDto> toDtoList(List<ExtractedUrl> entities) {
         List<ExtractedUrlDto> dtos = new ArrayList<>();
         for (ExtractedUrl e : entities) {
-            dtos.add(new ExtractedUrlDto(
+            ExtractedUrlDto dto = new ExtractedUrlDto(
                     e.getId(),
                     e.getRawUrl(),
                     e.getNormalizedUrl(),
@@ -233,7 +280,32 @@ public class UrlAnalysisService {
                     e.getDnsStatus(),
                     e.getUrlRiskScore(),
                     e.getDataMode()
-            ));
+            );
+            String threatType = e.getThreatType();
+            String threatDetails = e.getThreatDetails();
+            String sourceApi = e.getSourceApi();
+            if (sourceApi == null && e.getUrlRiskScore() != null && e.getUrlRiskScore() > 0) {
+                if (Boolean.TRUE.equals(e.getIsIpUrl())) {
+                    sourceApi = "IP Address Inspector";
+                } else if (Boolean.TRUE.equals(e.getAnchorMismatch())) {
+                    sourceApi = "Anchor Mismatch Detector";
+                } else if (Boolean.TRUE.equals(e.getIsShortened())) {
+                    sourceApi = "URL Shortener Detector";
+                } else if (Boolean.TRUE.equals(e.getUnusualPort())) {
+                    sourceApi = "Port Inspector";
+                } else {
+                    UrlCheckResult ext = urlCheckService.checkWithExternalServices(e.getRawUrl(), e.getDomain());
+                    if (ext != null && ext.isFlagged()) {
+                        sourceApi = ext.getServiceName();
+                        if (threatType == null) threatType = ext.getThreatType();
+                        if (threatDetails == null) threatDetails = ext.getSummary();
+                    }
+                }
+            }
+            dto.setThreatType(threatType);
+            dto.setThreatDetails(threatDetails);
+            dto.setSourceApi(sourceApi);
+            dtos.add(dto);
         }
         return dtos;
     }

@@ -10,6 +10,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 
 import java.time.Instant;
 import java.util.UUID;
@@ -63,6 +64,15 @@ public class ExtractedUrl {
 
     @Column(name = "risk_score")
     private Integer urlRiskScore;
+
+    @Transient
+    private String threatType;
+
+    @Transient
+    private String threatDetails;
+
+    @Transient
+    private String sourceApi;
 
     @Column(name = "data_status", nullable = false, length = 50)
     private String dataMode = DataProvenance.NOT_CHECKED.name();
@@ -243,6 +253,30 @@ public class ExtractedUrl {
 
     public void setDataMode(String dataMode) {
         this.dataMode = dataMode;
+    }
+
+    public String getThreatType() {
+        return threatType;
+    }
+
+    public void setThreatType(String threatType) {
+        this.threatType = threatType;
+    }
+
+    public String getThreatDetails() {
+        return threatDetails;
+    }
+
+    public void setThreatDetails(String threatDetails) {
+        this.threatDetails = threatDetails;
+    }
+
+    public String getSourceApi() {
+        return sourceApi;
+    }
+
+    public void setSourceApi(String sourceApi) {
+        this.sourceApi = sourceApi;
     }
 
     public Instant getCreatedAt() {

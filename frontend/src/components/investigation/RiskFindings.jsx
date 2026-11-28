@@ -19,7 +19,7 @@ const FORENSIC_CHANNELS = [
 const MULTI_CATEGORY_RISK_CATEGORIES = [
   { key: 'IDENTITY', name: 'Identity', desc: 'Display name, sender domain & reply-to alignment' },
   { key: 'AUTHENTICATION', name: 'Authentication', desc: 'SPF, DKIM & DMARC protocol verification failures' },
-  { key: 'URL', name: 'URL', desc: 'Lookalike domains, IP links, suspicious paths & query params' },
+  { key: 'URL', name: 'URL', desc: 'IP links, redirect chains, suspicious paths & query params' },
   { key: 'INFRASTRUCTURE', name: 'Infrastructure', desc: 'Private IPs, routing delays & ASN reputation' },
   { key: 'VISUAL', name: 'Visual', desc: 'Brand impersonation logos, hidden QR codes & malicious images' },
   { key: 'CONTENT', name: 'Content', desc: 'Urgency, credential solicitation & social engineering language' },

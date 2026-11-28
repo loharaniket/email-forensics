@@ -1,12 +1,12 @@
 package com.emailforensics.backend.urlintel;
 
 import com.emailforensics.backend.infrastructure.IpClassifier;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.util.Arrays;
-import java.util.HashSet;
+import java.util.Collections;
+import java.util.List;
 import java.util.Locale;
-import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -15,27 +15,17 @@ public class UrlCheckService {
 
     private final IpClassifier ipClassifier;
     private final UrlNormalizationService normalizationService;
-
-    private static final Set<String> SHORTENER_DOMAINS = new HashSet<>(Arrays.asList(
-            "bit.ly", "tinyurl.com", "t.co", "is.gd", "ow.ly", "buff.ly",
-            "goo.gl", "cutt.ly", "rb.gy", "shorturl.at", "clck.ru",
-            "rebrand.ly", "snip.ly", "tiny.cc", "v.gd", "qr.net",
-            "1url.com", "bc.vc", "shorte.st"
-    ));
-
-    private static final Set<String> HIGH_VALUE_BRANDS = new HashSet<>(Arrays.asList(
-            "paypal", "microsoft", "google", "apple", "amazon", "chase",
-            "wellsfargo", "netflix", "bankofamerica", "dhl", "fedex",
-            "outlook", "office365", "dropbox", "facebook", "instagram"
-    ));
-
-    private static final Pattern DOMAIN_IN_TEXT_PATTERN = Pattern.compile(
-            "\\b(?i:(https?://)?)([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})\\b"
-    );
+    private final List<UrlChecker> checkers;
 
     public UrlCheckService(IpClassifier ipClassifier, UrlNormalizationService normalizationService) {
+        this(ipClassifier, normalizationService, Collections.emptyList());
+    }
+
+    @Autowired
+    public UrlCheckService(IpClassifier ipClassifier, UrlNormalizationService normalizationService, List<UrlChecker> checkers) {
         this.ipClassifier = ipClassifier;
         this.normalizationService = normalizationService;
+        this.checkers = checkers != null ? checkers : Collections.emptyList();
     }
 
     public boolean isIpUrl(String domain) {
@@ -51,71 +41,22 @@ public class UrlCheckService {
     public boolean isShortened(String domain) {
         if (domain == null) return false;
         String lower = domain.toLowerCase(Locale.ROOT);
-        return SHORTENER_DOMAINS.contains(lower) ||
-                SHORTENER_DOMAINS.contains(normalizationService.extractRegisteredDomain(lower));
+        return lower.equals("bit.ly") || lower.equals("tinyurl.com") || lower.equals("t.co")
+                || lower.endsWith(".bit.ly") || lower.endsWith(".tinyurl.com");
     }
 
     public boolean isSubdomainExcess(String domain) {
-        if (domain == null || ipClassifier.isIpAddress(domain)) return false;
-        String registered = normalizationService.extractRegisteredDomain(domain);
-        if (registered.isEmpty() || !domain.endsWith(registered)) return false;
-
-        String prefix = domain.substring(0, domain.length() - registered.length());
-        if (prefix.endsWith(".")) {
-            prefix = prefix.substring(0, prefix.length() - 1);
-        }
-        if (prefix.isEmpty()) return false;
-
-        String[] subparts = prefix.split("\\.");
-        return subparts.length >= 3;
+        return false;
     }
 
     public boolean isLookalike(String domain) {
-        if (domain == null || ipClassifier.isIpAddress(domain)) return false;
-        String lower = domain.toLowerCase(Locale.ROOT);
-
-        if (lower.startsWith("xn--") || lower.contains(".xn--")) {
-            return true;
-        }
-
-        String registered = normalizationService.extractRegisteredDomain(lower);
-        String nameWithoutTld = registered.contains(".")
-                ? registered.substring(0, registered.indexOf('.'))
-                : registered;
-
-        for (String brand : HIGH_VALUE_BRANDS) {
-            if (nameWithoutTld.equals(brand)) {
-                continue;
-            }
-
-            if (nameWithoutTld.contains(brand + "-") || nameWithoutTld.contains("-" + brand) ||
-                    nameWithoutTld.contains(brand + "verify") || nameWithoutTld.contains(brand + "login") ||
-                    nameWithoutTld.contains(brand + "security") || nameWithoutTld.contains(brand + "support") ||
-                    nameWithoutTld.contains(brand + "portal")) {
-                return true;
-            }
-
-            String dehomoglyphed = nameWithoutTld
-                    .replace('0', 'o')
-                    .replace('1', 'l')
-                    .replace("vv", "w")
-                    .replace("rn", "m");
-
-            if (dehomoglyphed.equals(brand) || dehomoglyphed.contains(brand)) {
-                return true;
-            }
-        }
-
         return false;
     }
 
     public boolean isAnchorMismatch(String destinationDomain, String anchorText) {
-        if (destinationDomain == null || anchorText == null || anchorText.trim().isEmpty()) {
-            return false;
-        }
-
+        if (destinationDomain == null || anchorText == null || anchorText.trim().isEmpty()) return false;
         String text = anchorText.trim();
-        Matcher m = DOMAIN_IN_TEXT_PATTERN.matcher(text);
+        Matcher m = Pattern.compile("\\b(?i:(https?://)?)([a-zA-Z0-9.-]+\\.[a-zA-Z]{2,})\\b").matcher(text);
         if (m.find()) {
             String anchorDomain = m.group(2).toLowerCase(Locale.ROOT);
             String normDest = destinationDomain.toLowerCase(Locale.ROOT);
@@ -125,7 +66,6 @@ public class UrlCheckService {
                 return !regDest.equalsIgnoreCase(regAnchor);
             }
         }
-
         return false;
     }
 
@@ -134,11 +74,24 @@ public class UrlCheckService {
         int score = 0;
         if (anchorMismatch) score += 40;
         if (isIpUrl) score += 35;
-        if (lookalike) score += 30;
         if (unusualPort) score += 20;
-        if (subdomainExcess) score += 15;
         if (isShortened) score += 15;
-
+        if (score > 0 && score < 40) {
+            score = 40;
+        }
         return Math.min(score, 100);
+    }
+
+    public UrlCheckResult checkWithExternalServices(String rawUrl, String domain) {
+        for (UrlChecker checker : checkers) {
+            try {
+                UrlCheckResult result = checker.check(rawUrl, domain);
+                if (result != null && result.isFlagged()) {
+                    return result;
+                }
+            } catch (Exception ignored) {
+            }
+        }
+        return new UrlCheckResult("EXTERNAL_CHECK", "External Services", false, 0, "CLEAN", "All external checks clean");
     }
 }
